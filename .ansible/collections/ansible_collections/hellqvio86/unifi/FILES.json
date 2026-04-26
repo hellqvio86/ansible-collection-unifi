@@ -1,0 +1,250 @@
+{
+ "files": [
+  {
+   "name": ".",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "docs",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "README.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "4cc60405886ce944ed7a3822c6e51c2c654d5ff7b1018fa5426f5292f8df1fd4",
+   "format": 1
+  },
+  {
+   "name": "requirements.txt",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "15189ff2c4c6561a341b68c9feef251e4cd922dfdb07aaa14a76f8bf4cf941fa",
+   "format": 1
+  },
+  {
+   "name": "pyproject.toml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "c087f81f7cb12e821fd9357a40b6f9895283c7af08cabb7b683a1a8a60241715",
+   "format": 1
+  },
+  {
+   "name": ".ruff_cache",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": ".ruff_cache/0.15.12",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": ".ruff_cache/0.15.12/741030009221303965",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "c964a74c81092ed66a6a2e42bfe3ccd0a6045e8fa89f805f0b09d2e814c40e97",
+   "format": 1
+  },
+  {
+   "name": ".ruff_cache/0.15.12/6964878107156356832",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "3c2eb9ced8edfc8491822496e898767ba3712714166ba457726d85b5946a4354",
+   "format": 1
+  },
+  {
+   "name": ".ruff_cache/0.15.12/6969409694806251962",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "2893396d26fefa64d5a2d3fff9ee484fb36a0aed10db168209482089aef4e201",
+   "format": 1
+  },
+  {
+   "name": ".ruff_cache/0.15.12/17198432522716142252",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "d7000cdee9dc674d29adf85121ccc591cc86a7629c602a1d03842116e9370839",
+   "format": 1
+  },
+  {
+   "name": ".ruff_cache/CACHEDIR.TAG",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "5953156d7e0c564a427251316eaf26f8870e6483ae2197f916b630e4f93e31ae",
+   "format": 1
+  },
+  {
+   "name": ".ruff_cache/.gitignore",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "9e3a60f1e6ec4ae60215c11d54b171392745ec25e9dded433d5bd921363af316",
+   "format": 1
+  },
+  {
+   "name": ".ansible",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": ".ansible/roles",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": ".ansible/collections",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": ".ansible/collections/ansible_collections",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": ".ansible/collections/ansible_collections/hellqvio86",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": ".ansible/modules",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": ".ansible/.lock",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "format": 1
+  },
+  {
+   "name": "CHANGELOG.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "09603590a9a64bfb73f6c70d8b98bf708a27a25e09ab8435d5a3a6b2f7c031f3",
+   "format": 1
+  },
+  {
+   "name": "meta",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "meta/runtime.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "cf9a39187826340cd4d050490683bdd834b149f1892a14db3eac8dafa502f3eb",
+   "format": 1
+  },
+  {
+   "name": "plugins",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "plugins/README.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "2dfe1fec2fc4f272ddc982d5443fe265df8a238778eee953bcd9111cf9fcc019",
+   "format": 1
+  },
+  {
+   "name": "plugins/modules",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "plugins/modules/unifi_firewall_rule.py",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "7c318c7fd17beea10f7cdc4a27b7893e3ae1ade4b3ac8887f9a2eaa06f1e876a",
+   "format": 1
+  },
+  {
+   "name": "plugins/modules/unifi_firewall_policy.py",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "e06af72b91c36fc664bdbd80f43005213bb5143231353493a7a6b7f6bb28bc20",
+   "format": 1
+  },
+  {
+   "name": "plugins/modules/unifi_ssh_key.py",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "b2e7ce229cce029a61a031c9aee17955725f20112cb3ae1f8de5e93c15fab3f1",
+   "format": 1
+  },
+  {
+   "name": "plugins/modules/unifi_ssl_config.py",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "0ed063a13ff286093360720b027b3336b20c6d0e8ff0260fb65977fac265b121",
+   "format": 1
+  },
+  {
+   "name": "plugins/module_utils",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "plugins/module_utils/unifi_api.py",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "8eacd918e9137358b54c3dbd569547c250806400f4a5cd8ec08177a58abe0553",
+   "format": 1
+  },
+  {
+   "name": "roles",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": ".ansible-lint",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "5234272c083f3b689c7f767aff6e66ef4863a616f65eeb98cd99c6074147ed9f",
+   "format": 1
+  },
+  {
+   "name": ".gitignore",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "96fae6f8b4b7910f53a45f754309febb3ccea2e87903f62c47e0815daf690f42",
+   "format": 1
+  }
+ ],
+ "format": 1
+}

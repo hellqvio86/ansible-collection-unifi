@@ -1,0 +1,25 @@
+---
+namespace: hellqvio86
+name: unifi
+version: 0.0.1
+readme: README.md
+authors:
+  - Olof Hellqvist (@hellqvio86)
+description: Ansible collection for managing UniFi Network and UniFi OS.
+license:
+  - MIT
+license_file: LICENSE.md
+tags:
+  - networking
+  - security
+  - infrastructure
+repository: https://github.com/hellqvio86/ansible-collection-unifi
+documentation: https://github.com/hellqvio86/ansible-collection-unifi
+homepage: https://github.com/hellqvio86/ansible-collection-unifi
+issues: https://github.com/hellqvio86/ansible-collection-unifi/issues
+build_ignore:
+  - ".github"
+  - ".vscode"
+  - "*.pyc"
+  - "*.pyo"
+  - ".antigravity*"

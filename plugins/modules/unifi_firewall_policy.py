@@ -5,7 +5,7 @@ DOCUMENTATION = r'''
 ---
 module: unifi_firewall_policy
 short_description: Manage UniFi v8.3+ Policy Engine Firewall Rules
-version_added: "1.0.0"
+version_added: "0.0.1"
 description:
     - Create, update, or delete firewall policies in a UniFi controller using the modern Policy Engine (Zone-Based Firewall).
     - This module targets the v2 API introduced in UniFi Network 8.x.

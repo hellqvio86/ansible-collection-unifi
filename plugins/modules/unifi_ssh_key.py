@@ -5,7 +5,7 @@ DOCUMENTATION = r'''
 ---
 module: unifi_ssh_key
 short_description: Manage persistent SSH keys on UniFi OS
-version_added: "1.0.0"
+version_added: "0.0.1"
 description:
     - Registers SSH public keys in the UniFi OS system configuration.
     - Unlike authorized_keys, these keys persist across reboots and provisions.

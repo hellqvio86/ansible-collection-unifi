@@ -5,7 +5,7 @@ DOCUMENTATION = r'''
 ---
 module: unifi_firewall_rule
 short_description: Manage UniFi firewall rules
-version_added: "1.0.0"
+version_added: "0.0.1"
 description:
     - Create, update, or delete firewall rules in a UniFi controller.
 options:

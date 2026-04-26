@@ -5,7 +5,7 @@ DOCUMENTATION = r'''
 ---
 module: unifi_ssl_config
 short_description: Manage UniFi OS SSL certificates via SSH
-version_added: "1.0.0"
+version_added: "0.0.1"
 description:
     - Deploys SSL certificates (CRT and KEY) to UniFi OS and restarts the core service.
     - Replaces the default self-signed or existing certificates at specified paths.

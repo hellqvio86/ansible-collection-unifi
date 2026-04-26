@@ -40,7 +40,6 @@ author:
     - hellqvio86 (@hellqvio86)
 '''
 
-from ansible.module_specials import *
 from ansible.module_utils.basic import AnsibleModule
 
 from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI

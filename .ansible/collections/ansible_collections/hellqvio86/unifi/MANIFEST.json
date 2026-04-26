@@ -1,0 +1,34 @@
+{
+ "collection_info": {
+  "namespace": "hellqvio86",
+  "name": "unifi",
+  "version": "0.0.1",
+  "authors": [
+   "Olof Hellqvist (@hellqvio86)"
+  ],
+  "readme": "README.md",
+  "tags": [
+   "networking",
+   "security",
+   "infrastructure"
+  ],
+  "description": "Ansible collection for managing UniFi Network and UniFi OS.",
+  "license": [
+   "MIT"
+  ],
+  "license_file": "LICENSE.md",
+  "dependencies": {},
+  "repository": "https://github.com/hellqvio86/ansible-collection-unifi",
+  "documentation": "https://github.com/hellqvio86/ansible-collection-unifi",
+  "homepage": "https://github.com/hellqvio86/ansible-collection-unifi",
+  "issues": "https://github.com/hellqvio86/ansible-collection-unifi/issues"
+ },
+ "file_manifest_file": {
+  "name": "FILES.json",
+  "ftype": "file",
+  "chksum_type": "sha256",
+  "chksum_sha256": "8ccde4779a5ecde9e1bf1148ad4645f1eb436d1b041d4cb575f9b49d1b04dd99",
+  "format": 1
+ },
+ "format": 1
+}

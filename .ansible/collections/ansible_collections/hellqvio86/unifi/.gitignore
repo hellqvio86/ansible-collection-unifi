@@ -20,14 +20,9 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-.venv/
-.pytest_cache/
-.ruff_cache/
 
 # Ansible
 *.retry
-.ansible/
-ansible_collections/
 .ansible-lint
 
 # IDEs

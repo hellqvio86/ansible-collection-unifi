@@ -78,13 +78,6 @@
    "format": 1
   },
   {
-   "name": ".ruff_cache/0.15.12/7537371019737380073",
-   "ftype": "file",
-   "chksum_type": "sha256",
-   "chksum_sha256": "792d725c0f51b1d3a7e41adc972b6550eb431d71b37c9f2c5963dd78ed89ea6d",
-   "format": 1
-  },
-  {
    "name": ".ruff_cache/0.15.12/1706307828546778321",
    "ftype": "file",
    "chksum_type": "sha256",
@@ -99,10 +92,17 @@
    "format": 1
   },
   {
+   "name": ".ruff_cache/0.15.12/7537371019737380073",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "9a0494ca7d8ed525c94b09ebb4dc4fc1506a785c0657ec8e17b3cde93e470730",
+   "format": 1
+  },
+  {
    "name": ".ruff_cache/0.15.12/7786320610992858266",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "bfdfa5a038f9a996d2db88f2a90e838e42a43064f5e5968cb9cdeda262ebb26f",
+   "chksum_sha256": "c851209b56b4a201b7ba6c28de1d5a0a64fac5243224bb4c2297bf3a10f604d2",
    "format": 1
   },
   {
@@ -130,7 +130,7 @@
    "name": "meta/runtime.yml",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "cf9a39187826340cd4d050490683bdd834b149f1892a14db3eac8dafa502f3eb",
+   "chksum_sha256": "fc5a9eddb9261203fee6431c888c87fc176f22fc91188e5e0f9b142db0ed07bf",
    "format": 1
   },
   {
@@ -183,6 +183,13 @@
    "format": 1
   },
   {
+   "name": "plugins/modules/unifi_port_profile.py",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "8c2988c9b1e55910ca584659b452f5803a26075ba5bd4c701b9b7fbf74c74aa5",
+   "format": 1
+  },
+  {
    "name": "plugins/module_utils",
    "ftype": "dir",
    "chksum_type": null,
@@ -214,7 +221,7 @@
    "name": ".gitignore",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "96fae6f8b4b7910f53a45f754309febb3ccea2e87903f62c47e0815daf690f42",
+   "chksum_sha256": "743512b79493409e01e59bca69a19994aa1ddfadd7ca0fe6a7bb00ce1b5fe2ce",
    "format": 1
   },
   {
@@ -278,6 +285,13 @@
    "ftype": "file",
    "chksum_type": "sha256",
    "chksum_sha256": "580592723eae2028d223a541a756e44a10315f7b17b027132e9f0ca6351b5efa",
+   "format": 1
+  },
+  {
+   "name": "tests/unit/plugins/modules/test_unifi_port_profile.py",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "51f75d1b78b556d7d433b54f365adac90143203d464db68993cd82708f30dcf1",
    "format": 1
   },
   {
@@ -347,7 +361,7 @@
    "name": ".pytest_cache/v/cache/nodeids",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "31155ccc70cdbadb6a15d020f00a0a4fa1314c9b318d25ab5622c775e61c3d1e",
+   "chksum_sha256": "230762bf5d3ea64d1f842e7aa68e55a722f69cdd390a75992db7175c0eb808ce",
    "format": 1
   },
   {

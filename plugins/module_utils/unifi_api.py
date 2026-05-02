@@ -32,11 +32,24 @@ class UnifiAPI:
             data=login_payload,
             method="POST",
             headers={"Content-Type": "application/json"},
-            validate_certs=self.validate_certs,
         )
 
         if info["status"] != 200:
-            self.module.fail_json(msg=f"Login failed: {info.get('msg', 'Unknown error')}")
+            status = info.get("status")
+            if status == 429:
+                self.module.fail_json(
+                    msg=(
+                        "UniFi login rate limit reached. Wait a few minutes before retrying; "
+                        "the module stops after this single login attempt."
+                    ),
+                    info=info,
+                )
+            if status in [401, 403]:
+                self.module.fail_json(
+                    msg="UniFi login failed: invalid credentials or account not permitted for local API login.",
+                    info=info,
+                )
+            self.module.fail_json(msg=f"Login failed: {info.get('msg', 'Unknown error')}", info=info)
 
         # Extract Cookies
         cookies = info.get("set-cookie", "")
@@ -63,9 +76,7 @@ class UnifiAPI:
         headers = {"Content-Type": "application/json", "Cookie": self.session_cookie, "X-CSRF-Token": self.csrf_token}
 
         payload = json.dumps(data) if data else None
-        response, info = fetch_url(
-            self.module, url, data=payload, method=method, headers=headers, validate_certs=self.validate_certs
-        )
+        response, info = fetch_url(self.module, url, data=payload, method=method, headers=headers)
 
         if info["status"] not in [200, 201, 204]:
             return None, info

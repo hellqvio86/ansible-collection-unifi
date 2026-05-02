@@ -8,3 +8,6 @@ plugin_routing:
       redirect: hellqvio86.unifi.unifi_ssh_key
     unifi_ssl_config:
       redirect: hellqvio86.unifi.unifi_ssl_config
+    unifi_port_profile:
+      redirect: hellqvio86.unifi.unifi_port_profile
+

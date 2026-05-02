@@ -111,14 +111,26 @@ from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import 
 
 
 def run_module():
+    policy_spec = dict(
+        state=dict(type="str", choices=["present", "absent"], default="present"),
+        name=dict(type="str", required=True),
+        action=dict(type="str", choices=["ALLOW", "BLOCK", "REJECT", "ISOLATE"], default="ALLOW"),
+        protocol=dict(type="str", choices=["all", "tcp", "udp", "tcp_udp", "icmp", "icmpv6"], default="all"),
+        index=dict(type="int", default=10000),
+        enabled=dict(type="bool", default=True),
+        logging=dict(type="bool", default=False),
+        source=dict(type="dict", default={}),
+        destination=dict(type="dict", default={}),
+    )
     module_args = dict(
         host=dict(type="str", required=True),
         username=dict(type="str", required=True, no_log=True),
         password=dict(type="str", required=True, no_log=True),
         site=dict(type="str", default="default"),
         validate_certs=dict(type="bool", default=False),
+        policies=dict(type="list", elements="dict", options=policy_spec),
         state=dict(type="str", choices=["present", "absent"], default="present"),
-        name=dict(type="str", required=True),
+        name=dict(type="str"),
         action=dict(type="str", choices=["ALLOW", "BLOCK", "REJECT", "ISOLATE"], default="ALLOW"),
         protocol=dict(type="str", choices=["all", "tcp", "udp", "tcp_udp", "icmp", "icmpv6"], default="all"),
         index=dict(type="int", default=10000),
@@ -135,59 +147,93 @@ def run_module():
     password = module.params["password"]
     site = module.params["site"]
     validate_certs = module.params["validate_certs"]
-    state = module.params["state"]
 
     # 1. Initialize API and Login
     api = UnifiAPI(module, host, username, password, validate_certs)
     api.login()
 
-    # 2. Defaults for nested dicts
-    src_params = {"zone": "Internal", "matching_target": "ANY", "ips": [], "port": ""}
-    src_params.update(module.params["source"])
-
-    dst_params = {"zone": "Internal", "matching_target": "ANY", "ips": [], "port": ""}
-    dst_params.update(module.params["destination"])
-
-    # 3. Resolve Zones
+    # 2. Resolve zones once for the full batch.
     zones, info = api.request(f"/proxy/network/v2/api/site/{site}/firewall/zone")
     if not zones:
         module.fail_json(msg="Failed to fetch zones", info=info)
 
     zone_map = {z["name"]: z["_id"] for z in zones}
+
+    # 3. Fetch existing policies once. The old role loop caused one login and
+    # one policy fetch per rule, which quickly trips UniFi API rate limits.
+    policies, info = api.request(f"/proxy/network/v2/api/site/{site}/firewall-policies")
+    if policies is None:
+        module.fail_json(msg="Failed to fetch policies", info=info)
+
+    changed = False
+    results = []
+    desired_policies = module.params["policies"] or [
+        {
+            "state": module.params["state"],
+            "name": module.params["name"],
+            "action": module.params["action"],
+            "protocol": module.params["protocol"],
+            "index": module.params["index"],
+            "enabled": module.params["enabled"],
+            "logging": module.params["logging"],
+            "source": module.params["source"],
+            "destination": module.params["destination"],
+        }
+    ]
+
+    if not module.params["policies"] and not module.params["name"]:
+        module.fail_json(msg="Either name or policies is required")
+
+    for desired in desired_policies:
+        policy_changed, result_policy = apply_policy(module, api, site, zone_map, policies, desired)
+        changed = changed or policy_changed
+        results.append(result_policy)
+
+        if not module.check_mode and result_policy:
+            policies = [p for p in policies if p.get("_id") != result_policy.get("_id")]
+            policies.append(result_policy)
+
+    module.exit_json(changed=changed, policies=results, policy=results[0] if len(results) == 1 else None)
+
+
+def apply_policy(module, api, site, zone_map, policies, desired):
+    state = desired.get("state", "present")
+
+    src_params = {"zone": "Internal", "matching_target": "ANY", "ips": [], "port": ""}
+    src_params.update(desired.get("source") or {})
+
+    dst_params = {"zone": "Internal", "matching_target": "ANY", "ips": [], "port": ""}
+    dst_params.update(desired.get("destination") or {})
+
     src_zone_id = zone_map.get(src_params["zone"])
     dst_zone_id = zone_map.get(dst_params["zone"])
 
     if not src_zone_id or not dst_zone_id:
         module.fail_json(
             msg="Zone not found",
+            name=desired["name"],
             src_zone=src_params["zone"],
             dst_zone=dst_params["zone"],
             available_zones=list(zone_map.keys()),
         )
 
-    # 4. Get existing policies
-    policies, info = api.request(f"/proxy/network/v2/api/site/{site}/firewall-policies")
-    if policies is None:
-        module.fail_json(msg="Failed to fetch policies", info=info)
-
     existing = None
-    for p in policies:
+    for policy in policies:
         if (
-            p.get("name") == module.params["name"]
-            and p.get("source", {}).get("zone_id") == src_zone_id
-            and p.get("destination", {}).get("zone_id") == dst_zone_id
+            policy.get("name") == desired["name"]
+            and policy.get("source", {}).get("zone_id") == src_zone_id
+            and policy.get("destination", {}).get("zone_id") == dst_zone_id
         ):
-            existing = p
+            existing = policy
             break
 
-    # Build the payload for the current desired state
     desired_payload = {
-        "name": module.params["name"],
-        "action": module.params["action"],
-        "protocol": module.params["protocol"],
-        "index": module.params["index"],
-        "enabled": module.params["enabled"],
-        "logging": module.params["logging"],
+        "name": desired["name"],
+        "action": desired.get("action", "ALLOW"),
+        "protocol": desired.get("protocol", "all"),
+        "index": desired.get("index", 10000),
+        "enabled": desired.get("enabled", True),
+        "logging": desired.get("logging", False),
         "ip_version": "BOTH",
         "schedule": {"mode": "ALWAYS"},
         "source": {
@@ -211,48 +257,51 @@ def run_module():
     if dst_params["port"]:
         desired_payload["destination"]["port"] = dst_params["port"]
 
-    changed = False
-    result_policy = existing
-
     if state == "present":
         if not existing:
-            changed = True
-            if not module.check_mode:
-                path = f"/proxy/network/v2/api/site/{site}/firewall-policies"
-                result_policy, info = api.request(path, method="POST", data=desired_payload)
-                if not result_policy:
-                    module.fail_json(msg="Failed to create policy", info=info)
-        else:
-            # Check for differences
-            for key in ["action", "protocol", "index", "enabled", "logging"]:
-                if existing.get(key) != desired_payload[key]:
-                    changed = True
+            if module.check_mode:
+                return True, desired_payload
 
-            if (
-                existing["source"].get("ips") != desired_payload["source"]["ips"]
-                or existing["source"].get("port", "") != desired_payload["source"].get("port", "")
-                or existing["destination"].get("ips") != desired_payload["destination"]["ips"]
-                or existing["destination"].get("port", "") != desired_payload["destination"].get("port", "")
-            ):
-                changed = True
+            result_policy, info = api.request(
+                f"/proxy/network/v2/api/site/{site}/firewall-policies", method="POST", data=desired_payload
+            )
+            if not result_policy:
+                module.fail_json(msg="Failed to create policy", name=desired["name"], info=info)
+            return True, result_policy
 
-            if changed and not module.check_mode:
-                path = f"/proxy/network/v2/api/site/{site}/firewall-policies/{existing['_id']}"
-                result_policy, info = api.request(path, method="PUT", data=desired_payload)
-                if not result_policy:
-                    module.fail_json(msg="Failed to update policy", info=info)
+        changed = policy_needs_update(existing, desired_payload)
+        if changed and not module.check_mode:
+            result_policy, info = api.request(
+                f"/proxy/network/v2/api/site/{site}/firewall-policies/{existing['_id']}",
+                method="PUT",
+                data=desired_payload,
+            )
+            if not result_policy:
+                module.fail_json(msg="Failed to update policy", name=desired["name"], info=info)
+            return True, result_policy
+        return changed, existing
 
-    elif state == "absent":
-        if existing:
-            changed = True
-            if not module.check_mode:
-                path = f"/proxy/network/v2/api/site/{site}/firewall-policies/{existing['_id']}"
-                _, info = api.request(path, method="DELETE")
-                if info["status"] not in [200, 204]:
-                    module.fail_json(msg="Failed to delete policy", info=info)
-            result_policy = None
+    if state == "absent" and existing:
+        if not module.check_mode:
+            _, info = api.request(f"/proxy/network/v2/api/site/{site}/firewall-policies/{existing['_id']}", method="DELETE")
+            if info["status"] not in [200, 204]:
+                module.fail_json(msg="Failed to delete policy", name=desired["name"], info=info)
+        return True, None
 
-    module.exit_json(changed=changed, policy=result_policy)
+    return False, None
+
+
+def policy_needs_update(existing, desired_payload):
+    for key in ["action", "protocol", "index", "enabled", "logging"]:
+        if existing.get(key) != desired_payload[key]:
+            return True
+
+    return (
+        existing["source"].get("ips") != desired_payload["source"]["ips"]
+        or existing["source"].get("port", "") != desired_payload["source"].get("port", "")
+        or existing["destination"].get("ips") != desired_payload["destination"]["ips"]
+        or existing["destination"].get("port", "") != desired_payload["destination"].get("port", "")
+    )
 
 
 if __name__ == "__main__":

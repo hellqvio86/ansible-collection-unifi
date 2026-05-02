@@ -21,6 +21,9 @@ An Ansible collection for managing UniFi Network (v8.x+) and UniFi OS (v3.x+) wi
 ## Included Modules
 
 - `hellqvio86.unifi.unifi_firewall_policy`: Manage modern firewall rules.
+- `hellqvio86.unifi.unifi_port_profile`: Manage port profiles (VLAN, PoE, speed settings).
+- `hellqvio86.unifi.unifi_switch_profile`: Manage switch profiles (port configurations for switches).
+- `hellqvio86.unifi.unifi_switch_profile_assignment`: Assign switch profiles to switches.
 - `hellqvio86.unifi.unifi_ssh_key`: Manage system-level SSH keys.
 - `hellqvio86.unifi.unifi_ssl_config`: Deploy SSL certificates via modulated SSH transport.
 
@@ -38,20 +41,48 @@ ansible-galaxy collection install hellqvio86.unifi
 
 ## Example Usage
 
-### Managing Firewall Rules
+### Managing Port Profiles
 
 ```yaml
-- name: Allow DNS to Local Server
-  hellqvio86.unifi.unifi_firewall_policy:
+- name: Create IoT port profile
+  hellqvio86.unifi.unifi_port_profile:
     host: "{{ unifi_ip }}"
     username: "{{ unifi_user }}"
     password: "{{ unifi_password }}"
-    name: "Allow DNS"
-    action: "ALLOW"
-    protocol: "tcp_udp"
-    destination:
-      ips: ["192.168.1.10"]
-      port: "53"
+    name: "IoT Ports"
+    native_network_name: "IoT"
+    tagged_network_names: ["Camera"]
+    poe_mode: "auto"
+    isolation: true
+```
+
+### Managing Switch Profiles
+
+```yaml
+- name: Create switch profile for access switches
+  hellqvio86.unifi.unifi_switch_profile:
+    host: "{{ unifi_ip }}"
+    username: "{{ unifi_user }}"
+    password: "{{ unifi_password }}"
+    name: "Access Switch Profile"
+    model: "USW-Flex"
+    port_profile_overrides:
+      1: "WAN-Profile"
+      2: "IoT Ports"
+      3: "IoT Ports"
+    description: "Standard access switch configuration"
+```
+
+### Assigning Switch Profiles
+
+```yaml
+- name: Assign profile to switch
+  hellqvio86.unifi.unifi_switch_profile_assignment:
+    host: "{{ unifi_ip }}"
+    username: "{{ unifi_user }}"
+    password: "{{ unifi_password }}"
+    switch_name: "Switch-01"
+    profile_name: "Access Switch Profile"
 ```
 
 ### Managing SSH Keys

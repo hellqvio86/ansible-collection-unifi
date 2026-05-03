@@ -239,18 +239,27 @@ def apply_policy(module, api, site, zone_map, policies, desired):
         "source": {
             "zone_id": src_zone_id,
             "matching_target": src_params["matching_target"],
-            "ips": src_params["ips"],
             "matching_target_type": "SPECIFIC",
             "port_matching_type": "SPECIFIC" if src_params["port"] else "ANY",
         },
         "destination": {
             "zone_id": dst_zone_id,
             "matching_target": dst_params["matching_target"],
-            "ips": dst_params["ips"],
             "matching_target_type": "SPECIFIC",
             "port_matching_type": "SPECIFIC" if dst_params["port"] else "ANY",
         },
     }
+
+    # Only include ips field when matching_target is not ANY
+    if src_params["matching_target"] != "ANY":
+        desired_payload["source"]["ips"] = src_params["ips"]
+    if dst_params["matching_target"] != "ANY":
+        desired_payload["destination"]["ips"] = dst_params["ips"]
+
+    if src_params["port"]:
+        desired_payload["source"]["port"] = src_params["port"]
+    if dst_params["port"]:
+        desired_payload["destination"]["port"] = dst_params["port"]
 
     if src_params["port"]:
         desired_payload["source"]["port"] = src_params["port"]
@@ -296,10 +305,24 @@ def policy_needs_update(existing, desired_payload):
         if existing.get(key) != desired_payload[key]:
             return True
 
+    # Check source ips - only compare if present in desired_payload
+    if "ips" in desired_payload["source"]:
+        if existing["source"].get("ips") != desired_payload["source"]["ips"]:
+            return True
+    elif existing["source"].get("ips"):
+        # If desired doesn't have ips but existing does, they differ
+        return True
+
+    # Check destination ips - only compare if present in desired_payload
+    if "ips" in desired_payload["destination"]:
+        if existing["destination"].get("ips") != desired_payload["destination"]["ips"]:
+            return True
+    elif existing["destination"].get("ips"):
+        # If desired doesn't have ips but existing does, they differ
+        return True
+
     return (
-        existing["source"].get("ips") != desired_payload["source"]["ips"]
-        or existing["source"].get("port", "") != desired_payload["source"].get("port", "")
-        or existing["destination"].get("ips") != desired_payload["destination"]["ips"]
+        existing["source"].get("port", "") != desired_payload["source"].get("port", "")
         or existing["destination"].get("port", "") != desired_payload["destination"].get("port", "")
     )
 

@@ -195,7 +195,7 @@ def run_module():
         module.fail_json(msg="Either name or policies is required")
 
     for desired in desired_policies:
-        policy_changed, result_policy = apply_policy(module, api, site, zone_map, policies, desired)
+        policy_changed, result_policy = apply_policy(module, api, site, zone_map, network_map, policies, desired)
         changed = changed or policy_changed
         results.append(result_policy)
 
@@ -206,7 +206,7 @@ def run_module():
     module.exit_json(changed=changed, policies=results, policy=results[0] if len(results) == 1 else None)
 
 
-def apply_policy(module, api, site, zone_map, policies, desired):
+def apply_policy(module, api, site, zone_map, network_map, policies, desired):
     state = desired.get("state", "present")
 
     src_params = {"zone": "Internal", "matching_target": "ANY", "ips": [], "port": ""}

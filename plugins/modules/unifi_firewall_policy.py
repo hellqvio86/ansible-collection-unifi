@@ -248,7 +248,7 @@ def apply_policy(module, api, site, zone_map, network_map, policies, desired):
         "schedule": {"mode": "ALWAYS"},
         "connection_state_type": "ALL",
         "connection_states": [],
-        "create_allow_respond": True,
+        "create_allow_respond": desired.get("action", "ALLOW") == "ALLOW",
         "icmp_typename": "ANY",
         "icmp_v6_typename": "ANY",
         "match_ip_sec": False,

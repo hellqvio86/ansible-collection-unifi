@@ -236,25 +236,32 @@ def apply_policy(module, api, site, zone_map, policies, desired):
         "logging": desired.get("logging", False),
         "ip_version": "BOTH",
         "schedule": {"mode": "ALWAYS"},
+        "connection_state_type": "ALL",
+        "connection_states": [],
+        "create_allow_respond": True,
+        "icmp_typename": "ANY",
+        "icmp_v6_typename": "ANY",
+        "match_ip_sec": False,
+        "match_opposite_protocol": False,
         "source": {
             "zone_id": src_zone_id,
             "matching_target": src_params["matching_target"],
-            "matching_target_type": "SPECIFIC",
+            "match_opposite_ports": False,
             "port_matching_type": "SPECIFIC" if src_params["port"] else "ANY",
         },
         "destination": {
             "zone_id": dst_zone_id,
             "matching_target": dst_params["matching_target"],
-            "matching_target_type": "SPECIFIC",
+            "match_opposite_ports": False,
             "port_matching_type": "SPECIFIC" if dst_params["port"] else "ANY",
         },
     }
 
-    # Only include ips field when matching_target is not ANY
+    # Only include network_ids when matching_target is not ANY
     if src_params["matching_target"] != "ANY":
-        desired_payload["source"]["ips"] = src_params["ips"]
+        desired_payload["source"]["network_ids"] = src_params["ips"]
     if dst_params["matching_target"] != "ANY":
-        desired_payload["destination"]["ips"] = dst_params["ips"]
+        desired_payload["destination"]["network_ids"] = dst_params["ips"]
 
     if src_params["port"]:
         desired_payload["source"]["port"] = src_params["port"]
@@ -305,20 +312,20 @@ def policy_needs_update(existing, desired_payload):
         if existing.get(key) != desired_payload[key]:
             return True
 
-    # Check source ips - only compare if present in desired_payload
-    if "ips" in desired_payload["source"]:
-        if existing["source"].get("ips") != desired_payload["source"]["ips"]:
+    # Check source network_ids - only compare if present in desired_payload
+    if "network_ids" in desired_payload["source"]:
+        if existing["source"].get("network_ids") != desired_payload["source"]["network_ids"]:
             return True
-    elif existing["source"].get("ips"):
-        # If desired doesn't have ips but existing does, they differ
+    elif existing["source"].get("network_ids"):
+        # If desired doesn't have network_ids but existing does, they differ
         return True
 
-    # Check destination ips - only compare if present in desired_payload
-    if "ips" in desired_payload["destination"]:
-        if existing["destination"].get("ips") != desired_payload["destination"]["ips"]:
+    # Check destination network_ids - only compare if present in desired_payload
+    if "network_ids" in desired_payload["destination"]:
+        if existing["destination"].get("network_ids") != desired_payload["destination"]["network_ids"]:
             return True
-    elif existing["destination"].get("ips"):
-        # If desired doesn't have ips but existing does, they differ
+    elif existing["destination"].get("network_ids"):
+        # If desired doesn't have network_ids but existing does, they differ
         return True
 
     return (

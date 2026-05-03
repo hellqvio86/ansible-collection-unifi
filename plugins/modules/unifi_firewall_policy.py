@@ -323,6 +323,7 @@ def apply_policy(module, api, site, zone_map, network_map, policies, desired):
                 result_policy = result_policy_res["data"][0] if result_policy_res["data"] else {}
             else:
                 result_policy = result_policy_res
+            module.warn(f"Updated policy '{desired['name']}'")
             return True, result_policy
         return changed, existing
 
@@ -351,24 +352,37 @@ def policy_needs_update(existing, desired_payload):
         if existing.get(key) != desired_payload[key]:
             return True
 
+    for side in ["source", "destination"]:
+        existing_side = existing.get(side, {})
+        desired_side = desired_payload.get(side, {})
+
+        # Compare matching_target
+        if existing_side.get("matching_target") != desired_side.get("matching_target"):
+            return True
+
+        # Compare port_matching_type
+        if existing_side.get("port_matching_type") != desired_side.get("port_matching_type"):
+            return True
+
+        # Compare port value
+        if existing_side.get("port", "") != desired_side.get("port", ""):
+            return True
+
     src_field = match_field(desired_payload["source"])
     if src_field:
-        if existing["source"].get(src_field) != desired_payload["source"].get(src_field):
+        if sorted(existing["source"].get(src_field, [])) != sorted(desired_payload["source"].get(src_field, [])):
             return True
     elif existing["source"].get("ips") or existing["source"].get("network_ids"):
         return True
 
     dst_field = match_field(desired_payload["destination"])
     if dst_field:
-        if existing["destination"].get(dst_field) != desired_payload["destination"].get(dst_field):
+        if sorted(existing["destination"].get(dst_field, [])) != sorted(desired_payload["destination"].get(dst_field, [])):
             return True
     elif existing["destination"].get("ips") or existing["destination"].get("network_ids"):
         return True
 
-    return (
-        existing["source"].get("port", "") != desired_payload["source"].get("port", "")
-        or existing["destination"].get("port", "") != desired_payload["destination"].get("port", "")
-    )
+    return False
 
 
 if __name__ == "__main__":

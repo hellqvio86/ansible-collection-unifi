@@ -153,17 +153,27 @@ def run_module():
     api.login()
 
     # 2. Resolve zones once for the full batch.
-    zones, info = api.request(f"/proxy/network/v2/api/site/{site}/firewall/zone")
-    if not zones:
+    zones_res, info = api.request(f"/proxy/network/v2/api/site/{site}/firewall/zone")
+    if zones_res is None:
         module.fail_json(msg="Failed to fetch zones", info=info)
+    zones = zones_res.get("data", []) if isinstance(zones_res, dict) and "data" in zones_res else zones_res
 
     zone_map = {z["name"]: z["_id"] for z in zones}
 
-    # 3. Fetch existing policies once. The old role loop caused one login and
+    # 3. Resolve network names to IDs for NETWORK matching.
+    networks_res, info = api.request(f"/proxy/network/api/s/{site}/rest/networkconf")
+    if networks_res is None:
+        module.fail_json(msg="Failed to fetch networks", info=info)
+    networks = networks_res.get("data", []) if isinstance(networks_res, dict) and "data" in networks_res else networks_res
+
+    network_map = {n["name"]: n["_id"] for n in networks}
+
+    # 4. Fetch existing policies once. The old role loop caused one login and
     # one policy fetch per rule, which quickly trips UniFi API rate limits.
-    policies, info = api.request(f"/proxy/network/v2/api/site/{site}/firewall-policies")
-    if policies is None:
+    policies_res, info = api.request(f"/proxy/network/v2/api/site/{site}/firewall-policies")
+    if policies_res is None:
         module.fail_json(msg="Failed to fetch policies", info=info)
+    policies = policies_res.get("data", []) if isinstance(policies_res, dict) and "data" in policies_res else policies_res
 
     changed = False
     results = []
@@ -257,16 +267,27 @@ def apply_policy(module, api, site, zone_map, policies, desired):
         },
     }
 
-    # Only include network_ids when matching_target is not ANY
-    if src_params["matching_target"] != "ANY":
-        desired_payload["source"]["network_ids"] = src_params["ips"]
-    if dst_params["matching_target"] != "ANY":
-        desired_payload["destination"]["network_ids"] = dst_params["ips"]
+    def resolve_network_ids(names):
+        resolved = []
+        for name in names:
+            if name in network_map:
+                resolved.append(network_map[name])
+            else:
+                module.fail_json(msg=f"Network '{name}' not found for firewall policy", name=desired["name"], network=name)
+        return resolved
 
-    if src_params["port"]:
-        desired_payload["source"]["port"] = src_params["port"]
-    if dst_params["port"]:
-        desired_payload["destination"]["port"] = dst_params["port"]
+    if src_params["matching_target"] != "ANY":
+        desired_payload["source"]["matching_target_type"] = "SPECIFIC"
+        if src_params["matching_target"] == "NETWORK":
+            desired_payload["source"]["network_ids"] = resolve_network_ids(src_params["ips"])
+        else:
+            desired_payload["source"]["ips"] = src_params["ips"]
+    if dst_params["matching_target"] != "ANY":
+        desired_payload["destination"]["matching_target_type"] = "SPECIFIC"
+        if dst_params["matching_target"] == "NETWORK":
+            desired_payload["destination"]["network_ids"] = resolve_network_ids(dst_params["ips"])
+        else:
+            desired_payload["destination"]["ips"] = dst_params["ips"]
 
     if src_params["port"]:
         desired_payload["source"]["port"] = src_params["port"]
@@ -278,22 +299,30 @@ def apply_policy(module, api, site, zone_map, policies, desired):
             if module.check_mode:
                 return True, desired_payload
 
-            result_policy, info = api.request(
+            result_policy_res, info = api.request(
                 f"/proxy/network/v2/api/site/{site}/firewall-policies", method="POST", data=desired_payload
             )
-            if not result_policy:
+            if not result_policy_res:
                 module.fail_json(msg="Failed to create policy", name=desired["name"], info=info)
+            if isinstance(result_policy_res, dict) and "data" in result_policy_res:
+                result_policy = result_policy_res["data"][0] if result_policy_res["data"] else {}
+            else:
+                result_policy = result_policy_res
             return True, result_policy
 
         changed = policy_needs_update(existing, desired_payload)
         if changed and not module.check_mode:
-            result_policy, info = api.request(
+            result_policy_res, info = api.request(
                 f"/proxy/network/v2/api/site/{site}/firewall-policies/{existing['_id']}",
                 method="PUT",
                 data=desired_payload,
             )
-            if not result_policy:
+            if not result_policy_res:
                 module.fail_json(msg="Failed to update policy", name=desired["name"], info=info)
+            if isinstance(result_policy_res, dict) and "data" in result_policy_res:
+                result_policy = result_policy_res["data"][0] if result_policy_res["data"] else {}
+            else:
+                result_policy = result_policy_res
             return True, result_policy
         return changed, existing
 
@@ -308,24 +337,32 @@ def apply_policy(module, api, site, zone_map, policies, desired):
 
 
 def policy_needs_update(existing, desired_payload):
+    def match_field(side):
+        target = side.get("matching_target")
+        if target == "NETWORK":
+            return "network_ids"
+        if target == "IP":
+            return "ips"
+        if target == "DOMAIN":
+            return "ips"
+        return None
+
     for key in ["action", "protocol", "index", "enabled", "logging"]:
         if existing.get(key) != desired_payload[key]:
             return True
 
-    # Check source network_ids - only compare if present in desired_payload
-    if "network_ids" in desired_payload["source"]:
-        if existing["source"].get("network_ids") != desired_payload["source"]["network_ids"]:
+    src_field = match_field(desired_payload["source"])
+    if src_field:
+        if existing["source"].get(src_field) != desired_payload["source"].get(src_field):
             return True
-    elif existing["source"].get("network_ids"):
-        # If desired doesn't have network_ids but existing does, they differ
+    elif existing["source"].get("ips") or existing["source"].get("network_ids"):
         return True
 
-    # Check destination network_ids - only compare if present in desired_payload
-    if "network_ids" in desired_payload["destination"]:
-        if existing["destination"].get("network_ids") != desired_payload["destination"]["network_ids"]:
+    dst_field = match_field(desired_payload["destination"])
+    if dst_field:
+        if existing["destination"].get(dst_field) != desired_payload["destination"].get(dst_field):
             return True
-    elif existing["destination"].get("network_ids"):
-        # If desired doesn't have network_ids but existing does, they differ
+    elif existing["destination"].get("ips") or existing["destination"].get("network_ids"):
         return True
 
     return (

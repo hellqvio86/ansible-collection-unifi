@@ -7,154 +7,179 @@ short_description: Assign Switch Profiles to UniFi Switches
 version_added: "0.0.2"
 description:
     - Assign or remove switch profiles from UniFi switches.
-    - This allows you to apply predefined port configurations to switches.
+    - Supports single assignment mode and batch mode.
 options:
-    host:
-        description: The host of the UniFi controller.
-        required: true
-        type: str
-    username:
-        description: UniFi controller username.
-        required: true
-        type: str
-    password:
-        description: UniFi controller password.
-        required: true
-        type: str
-    site:
-        description: UniFi site name.
-        default: default
-        type: str
-    validate_certs:
-        description: Verify SSL certificates.
-        default: false
-        type: bool
-    state:
-        description: Whether the profile assignment should be present or absent.
-        choices: [ present, absent ]
-        default: present
-        type: str
-    switch_name:
-        description: Name of the switch to assign the profile to.
-        type: str
-    switch_mac:
-        description: MAC address of the switch to assign the profile to.
-        type: str
-    switch_ip:
-        description: IP address of the switch to assign the profile to.
-        type: str
-    profile_name:
-        description: Name of the switch profile to assign.
-        required: true
-        type: str
+    host: {type: str, required: true}
+    username: {type: str, required: true}
+    password: {type: str, required: true}
+    site: {type: str, default: default}
+    validate_certs: {type: bool, default: false}
+    state: {type: str, choices: [present, absent], default: present}
+    switch_name: {type: str}
+    switch_mac: {type: str}
+    switch_ip: {type: str}
+    profile_name: {type: str}
+    assignments:
+        description: Batch input for switch profile assignments.
+        type: list
+        elements: dict
 author:
     - hellqvio86 (@hellqvio86)
 """
 
 from ansible.module_utils.basic import AnsibleModule
-
 from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI
 
 
+def _as_data_list(payload):
+    if payload is None:
+        return []
+    if isinstance(payload, dict):
+        if isinstance(payload.get("data"), list):
+            return payload["data"]
+        return []
+    if isinstance(payload, list):
+        return payload
+    return []
+
+
+def _normalize_desired(module):
+    batch = module.params.get("assignments") or []
+    if batch:
+        return batch
+    if not module.params.get("profile_name"):
+        module.fail_json(msg="Either 'profile_name' (single mode) or 'assignments' (batch mode) must be provided")
+    if not any([module.params.get("switch_name"), module.params.get("switch_mac"), module.params.get("switch_ip")]):
+        module.fail_json(msg="At least one of switch_name, switch_mac, or switch_ip must be provided")
+    return [
+        {
+            "state": module.params["state"],
+            "profile_name": module.params["profile_name"],
+            "switch_name": module.params.get("switch_name"),
+            "switch_mac": module.params.get("switch_mac"),
+            "switch_ip": module.params.get("switch_ip"),
+        }
+    ]
+
+
+def _fetch_switch_profiles(api, site):
+    res, info = api.request(f"/proxy/network/api/s/{site}/rest/switchprofile")
+    if info.get("status") == 200:
+        return _as_data_list(res), True
+    return [], False
+
+
+def _fetch_devices(api, site):
+    res, info = api.request(f"/proxy/network/api/s/{site}/rest/device")
+    if info.get("status") == 200:
+        return _as_data_list(res)
+    res, info = api.request(f"/proxy/network/api/s/{site}/stat/device")
+    if info.get("status") == 200:
+        return _as_data_list(res)
+    return []
+
+
 def run_module():
-    module_args = dict(
-        host=dict(type="str", required=True),
-        username=dict(type="str", required=True, no_log=True),
-        password=dict(type="str", required=True, no_log=True),
-        site=dict(type="str", default="default"),
-        validate_certs=dict(type="bool", default=False),
-        state=dict(type="str", choices=["present", "absent"], default="present"),
-        switch_name=dict(type="str"),
-        switch_mac=dict(type="str"),
-        switch_ip=dict(type="str"),
-        profile_name=dict(type="str", required=True),
+    module = AnsibleModule(
+        argument_spec=dict(
+            host=dict(type="str", required=True),
+            username=dict(type="str", required=True, no_log=True),
+            password=dict(type="str", required=True, no_log=True),
+            site=dict(type="str", default="default"),
+            validate_certs=dict(type="bool", default=False),
+            state=dict(type="str", choices=["present", "absent"], default="present"),
+            switch_name=dict(type="str"),
+            switch_mac=dict(type="str"),
+            switch_ip=dict(type="str"),
+            profile_name=dict(type="str"),
+            assignments=dict(type="list", elements="dict"),
+        ),
+        supports_check_mode=True,
     )
 
-    module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
-
-    # Validate that at least one switch identifier is provided
-    switch_identifiers = [module.params["switch_name"], module.params["switch_mac"], module.params["switch_ip"]]
-    if not any(switch_identifiers):
-        module.fail_json(msg="At least one of switch_name, switch_mac, or switch_ip must be provided")
-
+    desired_items = _normalize_desired(module)
     api = UnifiAPI(
-        module,
-        module.params["host"],
-        module.params["username"],
-        module.params["password"],
-        module.params["validate_certs"],
+        module, module.params["host"], module.params["username"], module.params["password"], module.params["validate_certs"]
     )
     api.login()
-
     site = module.params["site"]
 
-    # 1. Fetch Switch Profiles to resolve name to ID
-    switch_profiles, info = api.request(f"/proxy/network/api/s/{site}/rest/switchprofile")
-    if switch_profiles is None:
-        module.fail_json(msg="Failed to fetch switch profiles", info=info)
+    switch_profiles, switchprofile_supported = _fetch_switch_profiles(api, site)
+    if not switchprofile_supported:
+        module.exit_json(
+            changed=False,
+            results=[],
+            switchprofile_api_supported=False,
+            skipped_assignments=[i.get("profile_name") for i in desired_items],
+            msg="Switch profile API unsupported on this controller; assignments skipped.",
+        )
 
-    profile_map = {p["name"]: p["_id"] for p in switch_profiles}
-    if module.params["profile_name"] not in profile_map:
-        module.fail_json(msg=f"Switch profile '{module.params['profile_name']}' not found")
-    profile_id = profile_map[module.params["profile_name"]]
-
-    # 2. Fetch Devices to find the target switch
-    devices, info = api.request(f"/proxy/network/api/s/{site}/rest/device")
-    if devices is None:
-        module.fail_json(msg="Failed to fetch devices", info=info)
-
-    # Find the target switch
-    target_switch = None
-    for device in devices:
-        if device.get("type") != "usw":  # Only look at switches
-            continue
-
-        # Check if this device matches any of the provided identifiers
-        matches = False
-        if module.params["switch_name"] and device.get("name") == module.params["switch_name"]:
-            matches = True
-        elif module.params["switch_mac"] and device.get("mac") == module.params["switch_mac"]:
-            matches = True
-        elif module.params["switch_ip"] and device.get("ip") == module.params["switch_ip"]:
-            matches = True
-
-        if matches:
-            target_switch = device
-            break
-
-    if not target_switch:
-        module.fail_json(msg="Switch not found with provided identifiers")
-
-    switch_id = target_switch["_id"]
-    current_profile_id = target_switch.get("switch_profile_id")
+    profile_map = {p["name"]: p["_id"] for p in switch_profiles if "name" in p and "_id" in p}
+    devices = _fetch_devices(api, site)
+    if not devices:
+        module.fail_json(msg="Failed to fetch devices from rest/device and stat/device endpoints")
 
     changed = False
+    results = []
+    switches = [d for d in devices if d.get("type") == "usw"]
 
-    if module.params["state"] == "present":
-        if current_profile_id != profile_id:
-            changed = True
-            if not module.check_mode:
-                update_payload = {"switch_profile_id": profile_id}
-                result, info = api.request(
-                    f"/proxy/network/api/s/{site}/rest/device/{switch_id}", method="PUT", data=update_payload
-                )
-                if not result:
-                    module.fail_json(msg="Failed to assign switch profile", info=info)
-                target_switch = result
+    for item in desired_items:
+        profile_name = item.get("profile_name")
+        if not profile_name:
+            module.fail_json(msg="Each assignment item must include 'profile_name'", item=item)
+        if profile_name not in profile_map:
+            module.fail_json(msg=f"Switch profile '{profile_name}' not found", assignment=item)
+        profile_id = profile_map[profile_name]
 
-    elif module.params["state"] == "absent":
-        if current_profile_id is not None:
-            changed = True
-            if not module.check_mode:
-                update_payload = {"switch_profile_id": None}
-                result, info = api.request(
-                    f"/proxy/network/api/s/{site}/rest/device/{switch_id}", method="PUT", data=update_payload
-                )
-                if not result:
-                    module.fail_json(msg="Failed to remove switch profile assignment", info=info)
-                target_switch = result
+        target = None
+        for sw in switches:
+            if item.get("switch_name") and sw.get("name") == item["switch_name"]:
+                target = sw
+                break
+            if item.get("switch_mac") and sw.get("mac") == item["switch_mac"]:
+                target = sw
+                break
+            if item.get("switch_ip") and sw.get("ip") == item["switch_ip"]:
+                target = sw
+                break
 
-    module.exit_json(changed=changed, switch=target_switch)
+        if not target:
+            module.fail_json(msg="Switch not found with provided identifiers", assignment=item)
+
+        switch_id = target["_id"]
+        current_profile_id = target.get("switch_profile_id")
+        desired_state = item.get("state", "present")
+        item_changed = False
+
+        if desired_state == "present":
+            if current_profile_id != profile_id:
+                item_changed = True
+                if not module.check_mode:
+                    result, info = api.request(
+                        f"/proxy/network/api/s/{site}/rest/device/{switch_id}",
+                        method="PUT",
+                        data={"switch_profile_id": profile_id},
+                    )
+                    if not result:
+                        module.fail_json(msg="Failed to assign switch profile", info=info, assignment=item)
+                    target = result
+        else:
+            if current_profile_id is not None:
+                item_changed = True
+                if not module.check_mode:
+                    result, info = api.request(
+                        f"/proxy/network/api/s/{site}/rest/device/{switch_id}",
+                        method="PUT",
+                        data={"switch_profile_id": None},
+                    )
+                    if not result:
+                        module.fail_json(msg="Failed to remove switch profile assignment", info=info, assignment=item)
+                    target = result
+
+        changed = changed or item_changed
+        results.append({"assignment": item, "changed": item_changed, "switch": target})
+
+    module.exit_json(changed=changed, results=results, switchprofile_api_supported=True)
 
 
 if __name__ == "__main__":

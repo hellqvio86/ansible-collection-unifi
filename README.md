@@ -37,106 +37,86 @@ An Ansible collection for managing UniFi Network (v8.x+) and UniFi OS (v3.x+) wi
 ansible-galaxy collection install hellqvio86.unifi
 ```
 
-## Example Usage
+## Authentication (The Login Step)
 
-To avoid cluttering your tasks with credentials, use `module_defaults`. This acts as your **"Login Step"**, applying the host and credentials to all modules in the collection automatically.
+To avoid cluttering your tasks, use `module_defaults` to define your credentials once. This acts as your **"Login Step"**.
 
 ```yaml
-- name: Manage UniFi Infrastructure
+- name: Manage UniFi
   hosts: localhost
-  connection: local
-  
   module_defaults:
     group/hellqvio86.unifi.unifi:
       host: "192.168.1.1"
       username: "admin"
       password: "password"
-      validate_certs: false
+```
 
-  tasks:
-    # --- Network Management ---
+## Usage: WiFi & Networks
 
-    - name: Ensure Home WiFi exists
-      hellqvio86.unifi.unifi_wlan:
-        name: "HomeWiFi"
-        passphrase: "securepassword"
-        network: "Default"
-        state: present
+```yaml
+- name: Ensure Home WiFi exists
+  hellqvio86.unifi.unifi_wlan:
+    name: "HomeWiFi"
+    passphrase: "securepassword"
+    state: present
+```
 
-    - name: Create IoT port profile
-      hellqvio86.unifi.unifi_port_profile:
-        name: "IoT Ports"
-        native_network_name: "IoT"
-        tagged_network_names: ["Camera", "Sensors"]
-        autoneg: true
+## Usage: Switching
 
-    - name: Assign profile to access switch
-      hellqvio86.unifi.unifi_switch_profile_assignment:
-        switch_name: "USW-Lite-16-PoE"
-        profile_name: "Standard Access Profile"
+```yaml
+- name: Create IoT port profile
+  hellqvio86.unifi.unifi_port_profile:
+    name: "IoT Ports"
+    native_network_name: "IoT"
+    tagged_network_names: ["Camera"]
 
-    # --- Firewall & Security (Modern Policy Engine) ---
+- name: Assign profile to switch
+  hellqvio86.unifi.unifi_switch_profile_assignment:
+    switch_name: "Main-Switch"
+    profile_name: "IoT Ports"
+```
 
-    - name: Create Internal Zone
-      hellqvio86.unifi.unifi_firewall_zone:
-        name: "Internal"
-        networks: ["Default", "IoT"]
+## Usage: Firewall (Modern Policy Engine)
 
-    - name: Create Blocklist Group
-      hellqvio86.unifi.unifi_firewall_group:
-        name: "Malicious IPs"
-        type: address_group
-        members: ["1.2.3.4", "5.6.7.8"]
+```yaml
+- name: Create Internal Zone
+  hellqvio86.unifi.unifi_firewall_zone:
+    name: "Internal"
+    networks: ["Default", "IoT"]
 
-    - name: Block IoT to Gateway
-      hellqvio86.unifi.unifi_firewall_policy:
-        name: "Block IoT to Gateway"
-        action: BLOCK
-        source:
-          zone: "Internal"
-          ips: ["192.168.20.0/24"]
-        destination:
-          zone: "External"
-        protocol: all
+- name: Block IoT to Gateway
+  hellqvio86.unifi.unifi_firewall_policy:
+    name: "Block IoT to Gateway"
+    action: BLOCK
+    source: { zone: "Internal" }
+    destination: { zone: "External" }
+```
 
-    # --- System & Settings ---
+## Usage: System & Security
 
-    - name: Configure activity logging (Syslog)
-      hellqvio86.unifi.unifi_rsyslog:
-        ip: "192.168.1.50"
-        enabled: true
+```yaml
+- name: Configure activity logging
+  hellqvio86.unifi.unifi_rsyslog:
+    ip: "192.168.1.50"
+    enabled: true
 
-    - name: Ensure admin SSH keys are present
-      hellqvio86.unifi.unifi_ssh_key:
-        keys:
-          - "ssh-rsa AAAAB3Nza..."
+- name: Ensure admin SSH keys are present
+  hellqvio86.unifi.unifi_ssh_key:
+    keys: ["ssh-rsa AAAAB3Nza..."]
+```
 
-    - name: Deploy Wildcard SSL
-      hellqvio86.unifi.unifi_ssl_config:
-        cert_path: "/path/to/fullchain.pem"
-        key_path: "/path/to/privkey.pem"
+## Usage: Information Gathering
 
-    - name: Update Web UI Certificate
-      hellqvio86.unifi.unifi_user_certificate:
-        certificate: "{{ lookup('file', 'cert.pem') }}"
-        private_key: "{{ lookup('file', 'key.pem') }}"
-
-    # --- Information Gathering ---
-
-    - name: Gather all live state
-      hellqvio86.unifi.unifi_info:
-        gather_subset: [ wifi, firewall_groups, firewall_policies ]
-      register: unifi_state
+```yaml
+- name: Gather all live state
+  hellqvio86.unifi.unifi_info:
+    gather_subset: [ wifi, firewall_groups ]
+  register: unifi_state
 ```
 
 ## Environment Variables
 
-Alternatively, you can skip credentials in your playbooks entirely by setting these environment variables:
-
-* `UNIFI_HOST`
-* `UNIFI_USERNAME`
-* `UNIFI_PASSWORD`
-* `UNIFI_VALIDATE_CERTS`
+You can also skip credentials entirely by setting `UNIFI_HOST`, `UNIFI_USERNAME`, and `UNIFI_PASSWORD`.
 
 ## License
 

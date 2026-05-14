@@ -1,25 +1,26 @@
 #!/usr/bin/python
+# (c) 2026, hellqvio86 (@hellqvio86)
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 DOCUMENTATION = r"""
 ---
 module: unifi_port_profile
-short_description: Manage UniFi Port Profiles (Port Configurations)
+short_description: Manage UniFi switch port profiles
 version_added: "0.0.1"
 description:
     - Create, update, or delete port profiles in a UniFi controller.
-    - These profiles define settings like native VLAN, tagged VLANs, PoE, and speed for switch ports.
 options:
     host:
         description: The host of the UniFi controller.
-        required: true
+        required: false
         type: str
     username:
         description: UniFi controller username.
-        required: true
+        required: false
         type: str
     password:
         description: UniFi controller password.
-        required: true
+        required: false
         type: str
     site:
         description: UniFi site name.
@@ -36,7 +37,7 @@ options:
         type: str
     name:
         description: Name of the port profile.
-        required: true
+        required: false
         type: str
     native_network_name:
         description: Name of the native (untagged) network.
@@ -45,17 +46,9 @@ options:
         description: List of names of tagged networks.
         type: list
         elements: str
-    poe_mode:
-        description: PoE mode for the port.
-        choices: [ auto, off, passthrough ]
-        type: str
-    isolation:
-        description: Enable port isolation.
-        type: bool
     autoneg:
-        description: Enable auto-negotiation.
+        description: Whether to enable auto-negotiation.
         type: bool
-        default: true
 author:
     - hellqvio86 (@hellqvio86)
 """
@@ -67,18 +60,16 @@ from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import 
 
 def run_module():
     module_args = dict(
-        host=dict(type="str", required=True),
-        username=dict(type="str", required=True, no_log=True),
-        password=dict(type="str", required=True, no_log=True),
+        host=dict(type="str"),
+        username=dict(type="str", no_log=True),
+        password=dict(type="str", no_log=True),
         site=dict(type="str", default="default"),
         validate_certs=dict(type="bool", default=False),
         state=dict(type="str", choices=["present", "absent"], default="present"),
         name=dict(type="str", required=True),
         native_network_name=dict(type="str"),
         tagged_network_names=dict(type="list", elements="str"),
-        poe_mode=dict(type="str", choices=["auto", "off", "passthrough"]),
-        isolation=dict(type="bool"),
-        autoneg=dict(type="bool", default=True),
+        autoneg=dict(type="bool"),
     )
 
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
@@ -94,46 +85,38 @@ def run_module():
 
     site = module.params["site"]
 
-    # 1. Fetch Networks to resolve names to IDs
-    networks, info = api.request(f"/proxy/network/api/s/{site}/rest/networkconf")
-    if not networks:
-        module.fail_json(msg="Failed to fetch networks", info=info)
-
-    network_map = {n["name"]: n["_id"] for n in networks}
-
-    # 2. Resolve Native Network ID
-    native_id = None
-    if module.params["native_network_name"]:
-        native_id = network_map.get(module.params["native_network_name"])
-        if not native_id:
-            module.fail_json(msg=f"Native network '{module.params['native_network_name']}' not found")
-
-    # 3. Resolve Tagged Network IDs
-    tagged_ids = []
-    if module.params["tagged_network_names"]:
-        for name in module.params["tagged_network_names"]:
-            tid = network_map.get(name)
-            if not tid:
-                module.fail_json(msg=f"Tagged network '{name}' not found")
-            tagged_ids.append(tid)
-
-    # 4. Fetch Port Profiles
-    profiles, info = api.request(f"/proxy/network/api/s/{site}/rest/portconf")
-    if profiles is None:
+    # Fetch existing port profiles
+    res, info = api.request(f"/proxy/network/api/s/{site}/rest/portconf")
+    profiles = api.as_list(res)
+    if res is None:
         module.fail_json(msg="Failed to fetch port profiles", info=info)
 
     existing = next((p for p in profiles if p.get("name") == module.params["name"]), None)
 
-    # 5. Build Desired Payload
-    desired_payload = {"name": module.params["name"], "autoneg": module.params["autoneg"]}
-    if native_id:
-        desired_payload["native_networkconf_id"] = native_id
-    if tagged_ids:
-        desired_payload["tagged_networkconf_ids"] = tagged_ids
-    if module.params["poe_mode"]:
-        desired_payload["poe_mode"] = module.params["poe_mode"]
-    if module.params["isolation"] is not None:
-        desired_payload["isolation"] = module.params["isolation"]
+    # Fetch networks once for resolution
+    networks_res, info = api.request(f"/proxy/network/api/s/{site}/rest/networkconf")
+    networks = api.as_list(networks_res)
+    network_map = {n["name"]: n["_id"] for n in networks if isinstance(n, dict)}
+
+    # Build payload
+    desired_payload = {"name": module.params["name"]}
+    if module.params["native_network_name"]:
+        nn_id = network_map.get(module.params["native_network_name"])
+        if not nn_id:
+            module.fail_json(msg=f"Native network '{module.params['native_network_name']}' not found")
+        desired_payload["native_networkconf_id"] = nn_id
+
+    if module.params["tagged_network_names"] is not None:
+        tn_ids = []
+        for name in module.params["tagged_network_names"]:
+            tn_id = network_map.get(name)
+            if not tn_id:
+                module.fail_json(msg=f"Tagged network '{name}' not found")
+            tn_ids.append(tn_id)
+        desired_payload["tagged_networkconf_ids"] = tn_ids
+
+    if module.params["autoneg"] is not None:
+        desired_payload["autoneg"] = module.params["autoneg"]
 
     changed = False
     result_profile = existing
@@ -142,22 +125,25 @@ def run_module():
         if not existing:
             changed = True
             if not module.check_mode:
-                result_profile, info = api.request(
+                res, info = api.request(
                     f"/proxy/network/api/s/{site}/rest/portconf", method="POST", data=desired_payload
                 )
+                res_list = api.as_list(res)
+                result_profile = res_list[0] if res_list else res
                 if not result_profile:
                     module.fail_json(msg="Failed to create port profile", info=info)
         else:
-            # Compare and update
             for key, value in desired_payload.items():
                 if existing.get(key) != value:
                     changed = True
                     break
 
             if changed and not module.check_mode:
-                result_profile, info = api.request(
+                res, info = api.request(
                     f"/proxy/network/api/s/{site}/rest/portconf/{existing['_id']}", method="PUT", data=desired_payload
                 )
+                res_list = api.as_list(res)
+                result_profile = res_list[0] if res_list else res
                 if not result_profile:
                     module.fail_json(msg="Failed to update port profile", info=info)
 
@@ -165,7 +151,9 @@ def run_module():
         if existing:
             changed = True
             if not module.check_mode:
-                _, info = api.request(f"/proxy/network/api/s/{site}/rest/portconf/{existing['_id']}", method="DELETE")
+                _, info = api.request(
+                    f"/proxy/network/api/s/{site}/rest/portconf/{existing['_id']}", method="DELETE"
+                )
                 if info["status"] not in [200, 204]:
                     module.fail_json(msg="Failed to delete port profile", info=info)
             result_profile = None

@@ -1,14 +1,13 @@
 ---
 namespace: hellqvio86
 name: unifi
-version: 0.0.2
+version: 0.0.4
 readme: README.md
 authors:
   - Olof Hellqvist (@hellqvio86)
 description: Ansible collection for managing UniFi Network and UniFi OS.
 license:
   - MIT
-license_file: LICENSE.md
 tags:
   - networking
   - security
@@ -23,3 +22,15 @@ build_ignore:
   - "*.pyc"
   - "*.pyo"
   - ".antigravity*"
+  - ".venv"
+  - "tests"
+  - "Makefile"
+  - "pytest.out"
+  - ".ruff_cache"
+  - ".pytest_cache"
+  - "releases"
+  - "requirements.txt"
+  - "pyproject.toml"
+  - ".ansible"
+  - "test_output.txt"
+  - "agents.md"

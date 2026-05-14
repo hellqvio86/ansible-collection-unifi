@@ -1,4 +1,6 @@
 #!/usr/bin/python
+# (c) 2026, hellqvio86 (@hellqvio86)
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 
 DOCUMENTATION = r"""
@@ -12,15 +14,15 @@ description:
 options:
     host:
         description: The host of the UniFi controller.
-        required: true
+        required: false
         type: str
     username:
         description: UniFi controller username.
-        required: true
+        required: false
         type: str
     password:
         description: UniFi controller password.
-        required: true
+        required: false
         type: str
     validate_certs:
         description: Verify SSL certificates.
@@ -28,7 +30,7 @@ options:
         type: bool
     keys:
         description: List of SSH public keys to ensure are present.
-        required: true
+        required: false
         type: list
         elements: str
     state:
@@ -47,11 +49,11 @@ from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import 
 
 def run_module():
     module_args = dict(
-        host=dict(type="str", required=True),
-        username=dict(type="str", required=True, no_log=True),
-        password=dict(type="str", required=True, no_log=True),
+        host=dict(type="str"),
+        username=dict(type="str", no_log=True),
+        password=dict(type="str", no_log=True),
         validate_certs=dict(type="bool", default=False),
-        keys=dict(type="list", elements="str", required=True),
+        keys=dict(type="list", elements="str", required=False),
         state=dict(type="str", choices=["present"], default="present"),
     )
 

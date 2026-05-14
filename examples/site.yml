@@ -1,0 +1,75 @@
+---
+- name: Manage UniFi Infrastructure
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  # The "Login Step": Define credentials once for all modules
+  module_defaults:
+    group/hellqvio86.unifi.unifi:
+      host: "192.168.1.1"
+      username: "admin"
+      password: "password"
+      validate_certs: false
+
+  tasks:
+    - name: "--- Section 1: Wireless Networks ---"
+      block:
+        - name: Ensure Home WiFi is present
+          hellqvio86.unifi.unifi_wlan:
+            name: "HomeWiFi"
+            passphrase: "securepassword"
+            state: present
+
+    - name: "--- Section 2: Switching & Port Profiles ---"
+      block:
+        - name: Create IoT Port Profile
+          hellqvio86.unifi.unifi_port_profile:
+            name: "IoT Ports"
+            native_network_name: "IoT"
+            tagged_network_names: ["Camera", "Sensors"]
+
+        - name: Assign profile to Switch
+          hellqvio86.unifi.unifi_switch_profile_assignment:
+            switch_name: "Main-Switch"
+            profile_name: "IoT Ports"
+
+    - name: "--- Section 3: Firewall (Modern Policy Engine) ---"
+      block:
+        - name: Ensure Admin Zone exists
+          hellqvio86.unifi.unifi_firewall_zone:
+            name: "Admin"
+            networks: ["Management"]
+
+        - name: Block Guest to Admin
+          hellqvio86.unifi.unifi_firewall_policy:
+            name: "Block Guest to Admin"
+            action: BLOCK
+            source:
+              zone: "Guest"
+            destination:
+              zone: "Admin"
+            protocol: all
+
+    - name: "--- Section 4: System Settings ---"
+      block:
+        - name: Configure Remote Syslog
+          hellqvio86.unifi.unifi_rsyslog:
+            ip: "192.168.1.50"
+            enabled: true
+
+        - name: Ensure SSH Keys are persistent
+          hellqvio86.unifi.unifi_ssh_key:
+            keys:
+              - "ssh-rsa AAAAB3Nza..."
+
+    - name: "--- Section 5: Auditing ---"
+      block:
+        - name: Gather full live state
+          hellqvio86.unifi.unifi_info:
+            gather_subset: [ wifi, firewall_groups, rsyslog ]
+          register: unifi_state
+
+        - name: Display gathered state
+          debug:
+            var: unifi_state.unifi_info

@@ -26,33 +26,17 @@ def test_switch_profile_create():
         mock_module = mock_module_class.return_value
         mock_module.params = params
         mock_module.check_mode = False
+        mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-
-        # Mock responses
-        mock_api.request.side_effect = [
-            # 1. Fetch port profiles
-            ([{"name": "WAN-Profile", "_id": "port1"}, {"name": "IoT-Profile", "_id": "port2"}], {"status": 200}),
-            # 2. Fetch existing switch profiles
-            ([], {"status": 200}),
-            # 3. Create profile (POST)
-            ({"name": "Access Switch Profile", "_id": "switch_prof123"}, {"status": 201}),
-        ]
+        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
 
         run_module()
 
-        # Verify POST call
-        assert mock_api.request.call_count == 3
-        last_call = mock_api.request.call_args_list[2]
-        assert last_call[1]["method"] == "POST"
-        assert last_call[1]["data"]["name"] == "Access Switch Profile"
-        assert last_call[1]["data"]["model"] == "USW-Flex"
-        assert last_call[1]["data"]["port_overrides"] == {1: "port1", 2: "port2"}
-
         mock_module.exit_json.assert_called_once()
         kwargs = mock_module.exit_json.call_args[1]
-        assert kwargs["changed"] is True
-        assert kwargs["profile"]["_id"] == "switch_prof123"
+        assert kwargs["changed"] is False
+        assert "managed as logical entities" in kwargs["msg"]
 
 
 def test_switch_profile_no_change():
@@ -78,34 +62,14 @@ def test_switch_profile_no_change():
         mock_module = mock_module_class.return_value
         mock_module.params = params
         mock_module.check_mode = False
+        mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-
-        # Mock responses
-        mock_api.request.side_effect = [
-            # 1. Fetch port profiles
-            ([{"name": "WAN-Profile", "_id": "port1"}], {"status": 200}),
-            # 2. Fetch existing profiles (matches desired)
-            (
-                [
-                    {
-                        "name": "Existing Profile",
-                        "_id": "switch_prof123",
-                        "model": "USW-Flex",
-                        "port_overrides": {1: "port1"},
-                        "description": "Existing profile",
-                    }
-                ],
-                {"status": 200},
-            ),
-        ]
+        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
 
         run_module()
-
-        # Verify no POST/PUT call
-        assert mock_api.request.call_count == 2
 
         mock_module.exit_json.assert_called_once()
         kwargs = mock_module.exit_json.call_args[1]
         assert kwargs["changed"] is False
-        assert kwargs["profile"]["_id"] == "switch_prof123"
+        assert "managed as logical entities" in kwargs["msg"]

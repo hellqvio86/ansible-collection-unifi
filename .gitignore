@@ -38,9 +38,15 @@ ansible_collections/
 
 # Collection Build
 *.tar.gz
+releases/
 
 # Secrets / Local
 .env
 .login.password
 *.pem
 *.key
+
+# Logs & Test Output
+pytest.out
+test_output.txt
+

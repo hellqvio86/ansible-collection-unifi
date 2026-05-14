@@ -10,7 +10,7 @@ ANSIBLE_LINT := $(VENV)/bin/ansible-lint
 # Namespace and name for Ansible collection
 NAMESPACE := hellqvio86
 COLLECTION_NAME := unifi
-VERSION ?= 0.0.4
+VERSION ?= 0.0.5
 GALAXY_API_KEY ?=
 
 help:

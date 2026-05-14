@@ -1,6 +1,7 @@
 # UniFi Ansible Collection
 
 ![CI](https://github.com/hellqvio86/ansible-collection-unifi/actions/workflows/ci.yml/badge.svg)
+![Galaxy](https://img.shields.io/ansible/collection/v/hellqvio86/unifi)
 ![License](https://img.shields.io/github/license/hellqvio86/ansible-collection-unifi)
 
 > [!CAUTION]

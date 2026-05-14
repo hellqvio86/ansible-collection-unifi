@@ -90,27 +90,28 @@ ansible-galaxy collection install hellqvio86.unifi
       - "ssh-rsa AAAAB3Nza..."
 ```
 
-## Dumping Current State
+## Gathering Information
 
-You can use the internal `UnifiAPI` utility to dump your current UniFi configuration into Ansible-ready YAML. This is useful for bootstrapping your IaC from an existing controller.
+You can use the `unifi_info` module to gather comprehensive details about your UniFi infrastructure. This is ideal for auditing or bootstrapping your IaC.
 
-Example script (`dump_wifi.py`):
+```yaml
+- name: Gather all UniFi state
+  hellqvio86.unifi.unifi_info:
+    host: "192.168.1.1"
+    username: "admin"
+    password: "password"
+    gather_subset:
+      - wifi
+      - firewall_groups
+      - firewall_zones
+      - firewall_policies
+      - rsyslog
+  register: unifi_state
 
-```python
-import yaml
-from ansible.module_utils.basic import AnsibleModule
-from hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI
-
-# Mock a module for the API utility
-module = AnsibleModule(argument_spec={})
-api = UnifiAPI(module, host="192.168.1.1", username="admin", password="password")
-api.login()
-
-# Fetch and format
-res, _ = api.request("/proxy/network/api/s/default/rest/wlanconf")
-wlans = [{"name": w["name"], "enabled": w["enabled"]} for w in api.as_list(res)]
-
-print(yaml.dump({"unifi_controller_wifi_networks": wlans}))
+- name: Save state to file
+  copy:
+    content: "{{ unifi_state.unifi_info | to_nice_yaml }}"
+    dest: "./unifi_live_state.yml"
 ```
 
 ## License

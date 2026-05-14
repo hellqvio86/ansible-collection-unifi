@@ -64,20 +64,24 @@ jobs:
         run: |
           VERSION="${{ steps.current.outputs.version }}"
           TARBALL="releases/hellqvio86-unifi-${VERSION}.tar.gz"
+          NOTES=$(cat <<EOF
+          ## hellqvio86.unifi v${VERSION}
+
+          Collection built and ready for publication to Ansible Galaxy.
+
+          ### Install
+          \`\`\`bash
+          ansible-galaxy collection install hellqvio86.unifi==${VERSION}
+          \`\`\`
+
+          ### Changelog
+          _Update this section before publishing._
+          EOF
+          )
           gh release create "v${VERSION}" \
             --title "v${VERSION}" \
             --draft \
-            --notes "## hellqvio86.unifi v${VERSION}
-
-Collection built and ready for publication to Ansible Galaxy.
-
-### Install
-\`\`\`bash
-ansible-galaxy collection install hellqvio86.unifi==${VERSION}
-\`\`\`
-
-### Changelog
-_Update this section before publishing._" \
+            --notes "${NOTES}" \
             "${TARBALL}"
 
   # Runs when a GitHub release is published: uploads to Ansible Galaxy

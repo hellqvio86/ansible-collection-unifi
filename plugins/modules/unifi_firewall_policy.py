@@ -1,4 +1,6 @@
 #!/usr/bin/python
+# (c) 2026, hellqvio86 (@hellqvio86)
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 DOCUMENTATION = r"""
 ---
@@ -11,15 +13,15 @@ description:
 options:
     host:
         description: The host of the UniFi controller (e.g., 192.168.1.1).
-        required: true
+        required: false
         type: str
     username:
         description: UniFi controller username.
-        required: true
+        required: false
         type: str
     password:
         description: UniFi controller password.
-        required: true
+        required: false
         type: str
     site:
         description: UniFi site name (typically 'default').
@@ -36,7 +38,7 @@ options:
         type: str
     name:
         description: Name of the firewall policy.
-        required: true
+        required: false
         type: str
     action:
         description: Action to take.
@@ -122,9 +124,9 @@ def run_module():
         destination=dict(type="dict", default={}),
     )
     module_args = dict(
-        host=dict(type="str", required=True),
-        username=dict(type="str", required=True, no_log=True),
-        password=dict(type="str", required=True, no_log=True),
+        host=dict(type="str"),
+        username=dict(type="str", no_log=True),
+        password=dict(type="str", no_log=True),
         site=dict(type="str", default="default"),
         validate_certs=dict(type="bool", default=False),
         policies=dict(type="list", elements="dict", options=policy_spec),

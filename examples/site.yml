@@ -13,7 +13,7 @@
       validate_certs: false
 
   tasks:
-    - name: --- Section 1: Wireless Networks ---
+    - name: "--- Section 1: Wireless Networks ---"
       block:
         - name: Ensure Home WiFi is present
           hellqvio86.unifi.unifi_wlan:
@@ -21,7 +21,7 @@
             passphrase: "securepassword"
             state: present
 
-    - name: --- Section 2: Switching & Port Profiles ---
+    - name: "--- Section 2: Switching & Port Profiles ---"
       block:
         - name: Create IoT Port Profile
           hellqvio86.unifi.unifi_port_profile:
@@ -34,7 +34,7 @@
             switch_name: "Main-Switch"
             profile_name: "IoT Ports"
 
-    - name: --- Section 3: Firewall (Modern Policy Engine) ---
+    - name: "--- Section 3: Firewall (Modern Policy Engine) ---"
       block:
         - name: Ensure Admin Zone exists
           hellqvio86.unifi.unifi_firewall_zone:
@@ -51,7 +51,7 @@
               zone: "Admin"
             protocol: all
 
-    - name: --- Section 4: System Settings ---
+    - name: "--- Section 4: System Settings ---"
       block:
         - name: Configure Remote Syslog
           hellqvio86.unifi.unifi_rsyslog:
@@ -63,7 +63,7 @@
             keys:
               - "ssh-rsa AAAAB3Nza..."
 
-    - name: --- Section 5: Auditing ---
+    - name: "--- Section 5: Auditing ---"
       block:
         - name: Gather full live state
           hellqvio86.unifi.unifi_info:

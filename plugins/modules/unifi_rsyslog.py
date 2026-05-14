@@ -1,4 +1,6 @@
 #!/usr/bin/python
+# (c) 2026, hellqvio86 (@hellqvio86)
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 DOCUMENTATION = r"""
 ---
@@ -10,15 +12,15 @@ description:
 options:
     host:
         description: The host of the UniFi controller.
-        required: true
+        required: false
         type: str
     username:
         description: UniFi controller username.
-        required: true
+        required: false
         type: str
     password:
         description: UniFi controller password.
-        required: true
+        required: false
         type: str
     site:
         description: UniFi site name.
@@ -35,7 +37,7 @@ options:
     ip:
         description: IP address of the syslog server.
         type: str
-        required: true
+        required: false
     port:
         description: Port of the syslog server.
         type: int
@@ -57,18 +59,19 @@ author:
 """
 
 from ansible.module_utils.basic import AnsibleModule
+
 from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI
 
 
 def run_module():
     module_args = dict(
-        host=dict(type="str", required=True),
-        username=dict(type="str", required=True, no_log=True),
-        password=dict(type="str", required=True, no_log=True),
+        host=dict(type="str"),
+        username=dict(type="str", no_log=True),
+        password=dict(type="str", no_log=True),
         site=dict(type="str", default="default"),
         validate_certs=dict(type="bool", default=False),
         enabled=dict(type="bool", default=True),
-        ip=dict(type="str", required=True),
+        ip=dict(type="str", required=False),
         port=dict(type="int", default=10516),
         log_all_contents=dict(type="bool", default=True),
         debug=dict(type="bool", default=False),
@@ -91,7 +94,7 @@ def run_module():
     # Fetch current settings
     res, info = api.request(f"/proxy/network/api/s/{site}/get/setting")
     settings = api.as_list(res)
-    
+
     current = next((s for s in settings if isinstance(s, dict) and s.get("key") == "rsyslogd"), None)
 
     if not current:

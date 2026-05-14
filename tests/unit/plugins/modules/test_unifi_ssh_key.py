@@ -20,8 +20,10 @@ def test_ssh_key_present_no_change():
         mock_module = mock_module_class.return_value
         mock_module.params = params
         mock_module.check_mode = False
+        mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
+        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
 
         # Mock responses: user already has the key
         mock_api.request.side_effect = [({"sshKeys": ["ssh-rsa AAAA..."]}, {"status": 200})]
@@ -50,8 +52,10 @@ def test_ssh_key_present_with_change():
         mock_module = mock_module_class.return_value
         mock_module.params = params
         mock_module.check_mode = False
+        mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
+        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
 
         # Mock responses: user has old key, needs new key
         mock_api.request.side_effect = [

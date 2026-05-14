@@ -1,4 +1,6 @@
 #!/usr/bin/python
+# (c) 2026, hellqvio86 (@hellqvio86)
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 DOCUMENTATION = r"""
 ---
@@ -11,15 +13,15 @@ description:
 options:
     host:
         description: The host of the UniFi controller.
-        required: true
+        required: false
         type: str
     username:
         description: UniFi controller username.
-        required: true
+        required: false
         type: str
     password:
         description: UniFi controller password.
-        required: true
+        required: false
         type: str
     site:
         description: UniFi site name.
@@ -36,7 +38,7 @@ options:
         type: str
     name:
         description: Name of the firewall zone.
-        required: true
+        required: false
         type: str
     type:
         description: Type of the firewall zone.
@@ -53,7 +55,7 @@ author:
 EXAMPLES = r"""
 - name: Create LAN firewall zone
   hellqvio86.unifi.unifi_firewall_zone:
-    host: "192.168.60.1"
+    host: "192.168.1.1"
     username: "admin"
     password: "secret"
     site: "default"
@@ -65,14 +67,15 @@ EXAMPLES = r"""
 """
 
 from ansible.module_utils.basic import AnsibleModule
+
 from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI
 
 
 def run_module():
     module_args = dict(
-        host=dict(type="str", required=True),
-        username=dict(type="str", required=True, no_log=True),
-        password=dict(type="str", required=True, no_log=True),
+        host=dict(type="str"),
+        username=dict(type="str", no_log=True),
+        password=dict(type="str", no_log=True),
         site=dict(type="str", default="default"),
         validate_certs=dict(type="bool", default=False),
         state=dict(type="str", choices=["present", "absent"], default="present"),
@@ -117,7 +120,9 @@ def run_module():
             changed = True
             if not module.check_mode:
                 res, info = api.request(
-                    f"/proxy/network/v2/api/site/{site}/firewall/zone", method="POST", data=desired_payload
+                    f"/proxy/network/v2/api/site/{site}/firewall/zone",
+                    method="POST",
+                    data=desired_payload
                 )
                 res_list = api.as_list(res)
                 result_zone = res_list[0] if res_list else res
@@ -125,15 +130,15 @@ def run_module():
                     module.fail_json(msg="Failed to create firewall zone", info=info)
         else:
             # Normalize for comparison
-            if (existing.get("name") != desired_payload["name"] or 
-                existing.get("type") != desired_payload["type"] or 
-                existing.get("description", "") != desired_payload["description"]):
+            if (existing.get("name") != desired_payload["name"] or
+                    existing.get("type") != desired_payload["type"] or
+                    existing.get("description", "") != desired_payload["description"]):
                 changed = True
-                
+
             if changed and not module.check_mode:
                 res, info = api.request(
-                    f"/proxy/network/v2/api/site/{site}/firewall/zone/{existing['_id']}", 
-                    method="PUT", 
+                    f"/proxy/network/v2/api/site/{site}/firewall/zone/{existing['_id']}",
+                    method="PUT",
                     data=desired_payload
                 )
                 res_list = api.as_list(res)

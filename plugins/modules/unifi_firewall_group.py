@@ -1,4 +1,6 @@
 #!/usr/bin/python
+# (c) 2026, hellqvio86 (@hellqvio86)
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 DOCUMENTATION = r"""
 ---
@@ -11,15 +13,15 @@ description:
 options:
     host:
         description: The host of the UniFi controller.
-        required: true
+        required: false
         type: str
     username:
         description: UniFi controller username.
-        required: true
+        required: false
         type: str
     password:
         description: UniFi controller password.
-        required: true
+        required: false
         type: str
     site:
         description: UniFi site name.
@@ -36,7 +38,7 @@ options:
         type: str
     name:
         description: Name of the firewall group.
-        required: true
+        required: false
         type: str
     group_type:
         description: Type of the group.
@@ -47,7 +49,7 @@ options:
         description: List of members (IPs, networks, or ports).
         type: list
         elements: str
-        required: true
+        required: false
 author:
     - hellqvio86 (@hellqvio86)
 """
@@ -55,7 +57,7 @@ author:
 EXAMPLES = r"""
 - name: Ensure web ports group exists
   hellqvio86.unifi.unifi_firewall_group:
-    host: "192.168.60.1"
+    host: "192.168.1.1"
     username: "admin"
     password: "password"
     name: "Web Ports"
@@ -64,7 +66,7 @@ EXAMPLES = r"""
 
 - name: Ensure internal networks group exists
   hellqvio86.unifi.unifi_firewall_group:
-    host: "192.168.60.1"
+    host: "192.168.1.1"
     username: "admin"
     password: "password"
     name: "Internal Networks"
@@ -73,20 +75,21 @@ EXAMPLES = r"""
 """
 
 from ansible.module_utils.basic import AnsibleModule
+
 from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI
 
 
 def run_module():
     module_args = dict(
-        host=dict(type="str", required=True),
-        username=dict(type="str", required=True, no_log=True),
-        password=dict(type="str", required=True, no_log=True),
+        host=dict(type="str"),
+        username=dict(type="str", no_log=True),
+        password=dict(type="str", no_log=True),
         site=dict(type="str", default="default"),
         validate_certs=dict(type="bool", default=False),
         state=dict(type="str", choices=["present", "absent"], default="present"),
         name=dict(type="str", required=True),
         group_type=dict(type="str", choices=["address-group", "port-group"], default="address-group"),
-        group_members=dict(type="list", elements="str", required=True),
+        group_members=dict(type="list", elements="str", required=False),
     )
 
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
@@ -108,7 +111,7 @@ def run_module():
     # Fetch existing groups
     res, info = api.request(f"/proxy/network/api/s/{site}/rest/firewallgroup")
     groups = api.as_list(res)
-    
+
     existing = next((g for g in groups if g.get("name") == name), None)
 
     changed = False
@@ -141,8 +144,8 @@ def run_module():
                 changed = True
                 if not module.check_mode:
                     res, info = api.request(
-                        f"/proxy/network/api/s/{site}/rest/firewallgroup/{existing['_id']}", 
-                        method="PUT", 
+                        f"/proxy/network/api/s/{site}/rest/firewallgroup/{existing['_id']}",
+                        method="PUT",
                         data=desired_payload
                     )
                     res_list = api.as_list(res)

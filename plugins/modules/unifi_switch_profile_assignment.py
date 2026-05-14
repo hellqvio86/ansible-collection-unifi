@@ -1,4 +1,6 @@
 #!/usr/bin/python
+# (c) 2026, hellqvio86 (@hellqvio86)
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 DOCUMENTATION = r"""
 ---
@@ -9,9 +11,9 @@ description:
     - Assign or remove switch profiles from UniFi switches.
     - Supports single assignment mode and batch mode.
 options:
-    host: {type: str, required: true}
+    host: {type: str, required: false}
     username: {type: str, required: true}
-    password: {type: str, required: true}
+    password: {type: str, required: false}
     site: {type: str, default: default}
     validate_certs: {type: bool, default: false}
     state: {type: str, choices: [present, absent], default: present}
@@ -28,6 +30,7 @@ author:
 """
 
 from ansible.module_utils.basic import AnsibleModule
+
 from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI
 
 
@@ -70,9 +73,9 @@ def _fetch_devices(api, site):
 def run_module():
     module = AnsibleModule(
         argument_spec=dict(
-            host=dict(type="str", required=True),
-            username=dict(type="str", required=True, no_log=True),
-            password=dict(type="str", required=True, no_log=True),
+            host=dict(type="str"),
+            username=dict(type="str", no_log=True),
+            password=dict(type="str", no_log=True),
             site=dict(type="str", default="default"),
             validate_certs=dict(type="bool", default=False),
             state=dict(type="str", choices=["present", "absent"], default="present"),

@@ -1,4 +1,6 @@
 #!/usr/bin/python
+# (c) 2026, hellqvio86 (@hellqvio86)
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 DOCUMENTATION = r"""
 ---
@@ -51,7 +53,6 @@ options:
     passphrase:
         description: WPA passphrase for secured networks.
         type: str
-        no_log: true
 author:
     - hellqvio86 (@hellqvio86)
 """
@@ -59,7 +60,7 @@ author:
 EXAMPLES = r"""
 - name: Ensure guest SSID exists
   hellqvio86.unifi.unifi_wlan:
-    host: "192.168.60.1"
+    host: "192.168.1.1"
     username: "admin"
     password: "secret"
     site: "default"
@@ -86,9 +87,9 @@ from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import 
 
 def run_module():
     module_args = dict(
-        host=dict(type="str", required=True),
-        username=dict(type="str", required=True, no_log=True),
-        password=dict(type="str", required=True, no_log=True),
+        host=dict(type="str"),
+        username=dict(type="str", no_log=True),
+        password=dict(type="str", no_log=True),
         site=dict(type="str", default="default"),
         validate_certs=dict(type="bool", default=False),
         state=dict(type="str", choices=["present", "absent"], default="present"),

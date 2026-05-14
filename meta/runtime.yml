@@ -1,2 +1,28 @@
 ---
 requires_ansible: ">=2.15.0"
+plugin_routing:
+  modules:
+    unifi_wlan:
+      redirect: hellqvio86.unifi.unifi_wlan
+    unifi_firewall_policy:
+      redirect: hellqvio86.unifi.unifi_firewall_policy
+    unifi_firewall_zone:
+      redirect: hellqvio86.unifi.unifi_firewall_zone
+    unifi_firewall_group:
+      redirect: hellqvio86.unifi.unifi_firewall_group
+    unifi_rsyslog:
+      redirect: hellqvio86.unifi.unifi_rsyslog
+    unifi_ssh_key:
+      redirect: hellqvio86.unifi.unifi_ssh_key
+    unifi_ssl_config:
+      redirect: hellqvio86.unifi.unifi_ssl_config
+    unifi_user_certificate:
+      redirect: hellqvio86.unifi.unifi_user_certificate
+    unifi_port_profile:
+      redirect: hellqvio86.unifi.unifi_port_profile
+    unifi_switch_profile:
+      redirect: hellqvio86.unifi.unifi_switch_profile
+    unifi_switch_profile_assignment:
+      redirect: hellqvio86.unifi.unifi_switch_profile_assignment
+    unifi_info:
+      redirect: hellqvio86.unifi.unifi_info

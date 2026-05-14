@@ -1,4 +1,6 @@
 #!/usr/bin/python
+# (c) 2026, hellqvio86 (@hellqvio86)
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 DOCUMENTATION = r"""
 ---
@@ -10,13 +12,13 @@ description:
 options:
     host:
         type: str
-        required: true
+        required: false
     username:
         type: str
-        required: true
+        required: false
     password:
         type: str
-        required: true
+        required: false
     validate_certs:
         type: bool
         default: false
@@ -26,7 +28,7 @@ options:
         default: present
     name:
         type: str
-        required: true
+        required: false
     cert:
         type: str
     key:
@@ -39,15 +41,16 @@ author:
 """
 
 from ansible.module_utils.basic import AnsibleModule
+
 from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI
 
 
 def run_module():
     module = AnsibleModule(
         argument_spec=dict(
-            host=dict(type="str", required=True),
-            username=dict(type="str", required=True, no_log=True),
-            password=dict(type="str", required=True, no_log=True),
+            host=dict(type="str"),
+            username=dict(type="str", no_log=True),
+            password=dict(type="str", no_log=True),
             validate_certs=dict(type="bool", default=False),
             state=dict(type="str", choices=["present", "absent"], default="present"),
             name=dict(type="str", required=True),

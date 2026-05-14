@@ -33,8 +33,16 @@ An Ansible collection for managing UniFi Network (v8.x+) and UniFi OS (v3.x+) wi
 
 ## Installation
 
+Install via Ansible Galaxy:
 ```bash
 ansible-galaxy collection install hellqvio86.unifi
+```
+
+Or include it in your `requirements.yml`:
+```yaml
+collections:
+  - name: hellqvio86.unifi
+    version: 0.0.4
 ```
 
 ## Authentication (The Login Step)
@@ -132,7 +140,7 @@ This project uses a `Makefile` to handle local development, testing, and packagi
 **Publishing a new release:**
 To publish a release, you must provide your Ansible Galaxy API key:
 ```bash
-make publish GALAXY_API_KEY="your_api_key_here" [VERSION=0.0.3]
+make publish GALAXY_API_KEY="your_api_key_here" [VERSION=0.0.4]
 ```
 
 ## License

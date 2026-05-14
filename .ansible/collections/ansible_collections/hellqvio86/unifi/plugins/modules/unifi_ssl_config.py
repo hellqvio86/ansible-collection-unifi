@@ -93,7 +93,7 @@ def run_module():
 
     try:
         ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.set_missing_host_key_policy(paramiko.RejectPolicy())
 
         if key_path:
             ssh.connect(host, username=username, key_filename=key_path)

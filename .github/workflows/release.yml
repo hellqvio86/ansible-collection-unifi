@@ -1,0 +1,106 @@
+---
+name: Release
+
+on:
+  push:
+    branches: [main]
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  # Runs on push to main: creates a draft GitHub release if version changed
+  draft-release:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Get current version
+        id: current
+        run: |
+          VERSION=$(grep '^version:' galaxy.yml | awk '{print $2}')
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Get previous version
+        id: previous
+        run: |
+          git show HEAD~1:galaxy.yml 2>/dev/null | grep '^version:' | awk '{print $2}' \
+            | xargs -I{} echo "version={}" >> "$GITHUB_OUTPUT" \
+            || echo "version=none" >> "$GITHUB_OUTPUT"
+
+      - name: Check if version changed
+        id: changed
+        run: |
+          CURRENT="${{ steps.current.outputs.version }}"
+          PREVIOUS=$(git show HEAD~1:galaxy.yml 2>/dev/null | grep '^version:' | awk '{print $2}' || echo "none")
+          echo "current=${CURRENT}"
+          echo "previous=${PREVIOUS}"
+          if [ "${CURRENT}" != "${PREVIOUS}" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Python
+        if: steps.changed.outputs.changed == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Build collection artifact
+        if: steps.changed.outputs.changed == 'true'
+        run: make build
+
+      - name: Create draft GitHub release
+        if: steps.changed.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.current.outputs.version }}"
+          TARBALL="releases/hellqvio86-unifi-${VERSION}.tar.gz"
+          gh release create "v${VERSION}" \
+            --title "v${VERSION}" \
+            --draft \
+            --notes "## hellqvio86.unifi v${VERSION}
+
+Collection built and ready for publication to Ansible Galaxy.
+
+### Install
+\`\`\`bash
+ansible-galaxy collection install hellqvio86.unifi==${VERSION}
+\`\`\`
+
+### Changelog
+_Update this section before publishing._" \
+            "${TARBALL}"
+
+  # Runs when a GitHub release is published: uploads to Ansible Galaxy
+  publish-to-galaxy:
+    if: github.event_name == 'release' && github.event.action == 'published'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Build collection
+        run: make build
+
+      - name: Publish to Ansible Galaxy
+        env:
+          GALAXY_API_KEY: ${{ secrets.GALAXY_API_KEY }}
+        run: |
+          VERSION=$(grep '^version:' galaxy.yml | awk '{print $2}')
+          .venv/bin/ansible-galaxy collection publish \
+            "releases/hellqvio86-unifi-${VERSION}.tar.gz" \
+            --api-key "${GALAXY_API_KEY}"

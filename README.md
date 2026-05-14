@@ -20,15 +20,22 @@ An Ansible collection for managing UniFi Network (v8.x+) and UniFi OS (v3.x+) wi
 
 ## Included Modules
 
+### Network Management
+- `hellqvio86.unifi.unifi_wlan`: Manage WiFi networks and passphrases.
+- `hellqvio86.unifi.unifi_port_profile`: Manage switch port profiles (VLAN, PoE, speed).
+- `hellqvio86.unifi.unifi_switch_profile`: Manage logical switch profiles.
+- `hellqvio86.unifi.unifi_switch_profile_assignment`: Assign profiles to specific switches.
+
+### Firewall & Security
 - `hellqvio86.unifi.unifi_firewall_policy`: Manage modern firewall rules (v2 API).
 - `hellqvio86.unifi.unifi_firewall_zone`: Manage firewall zones (v2 API).
 - `hellqvio86.unifi.unifi_firewall_group`: Manage IP and Port groups (REST API).
-- `hellqvio86.unifi.unifi_wlan`: Manage WiFi networks and passwords.
-- `hellqvio86.unifi.unifi_port_profile`: Manage port profiles.
-- `hellqvio86.unifi.unifi_switch_profile`: Manage logical switch profiles.
-- `hellqvio86.unifi.unifi_switch_profile_assignment`: Assign profiles to switches.
-- `hellqvio86.unifi.unifi_ssh_key`: Manage system-level SSH keys.
-- `hellqvio86.unifi.unifi_ssl_config`: Deploy SSL certificates.
+
+### System & Settings
+- `hellqvio86.unifi.unifi_rsyslog`: Configure remote syslog (Activity Logging) settings.
+- `hellqvio86.unifi.unifi_ssh_key`: Manage system-level SSH keys for persistent access.
+- `hellqvio86.unifi.unifi_ssl_config`: Deploy SSL certificates via modulated SSH.
+- `hellqvio86.unifi.unifi_user_certificate`: Manage user-facing certificates via UniFi OS API.
 
 ## Requirements
 
@@ -44,48 +51,31 @@ ansible-galaxy collection install hellqvio86.unifi
 
 ## Example Usage
 
-### Managing Port Profiles
+### Managing WiFi Networks
 
 ```yaml
-- name: Create IoT port profile
-  hellqvio86.unifi.unifi_port_profile:
-    host: "{{ unifi_ip }}"
-    username: "{{ unifi_user }}"
-    password: "{{ unifi_password }}"
-    name: "IoT Ports"
-    native_network_name: "IoT"
-    tagged_network_names: ["Camera"]
-    poe_mode: "auto"
-    isolation: true
+- name: Ensure Home WiFi exists
+  hellqvio86.unifi.unifi_wlan:
+    host: "192.168.1.1"
+    username: "admin"
+    password: "password"
+    name: "HomeWiFi"
+    passphrase: "securepassword"
+    network: "Default"
+    bands: ["2g", "5g"]
+    state: present
 ```
 
-### Managing Switch Profiles
+### Managing Remote Syslog
 
 ```yaml
-- name: Create switch profile for access switches
-  hellqvio86.unifi.unifi_switch_profile:
-    host: "{{ unifi_ip }}"
-    username: "{{ unifi_user }}"
-    password: "{{ unifi_password }}"
-    name: "Access Switch Profile"
-    model: "USW-Flex"
-    port_profile_overrides:
-      1: "WAN-Profile"
-      2: "IoT Ports"
-      3: "IoT Ports"
-    description: "Standard access switch configuration"
-```
-
-### Assigning Switch Profiles
-
-```yaml
-- name: Assign profile to switch
-  hellqvio86.unifi.unifi_switch_profile_assignment:
-    host: "{{ unifi_ip }}"
-    username: "{{ unifi_user }}"
-    password: "{{ unifi_password }}"
-    switch_name: "Switch-01"
-    profile_name: "Access Switch Profile"
+- name: Configure activity logging
+  hellqvio86.unifi.unifi_rsyslog:
+    host: "192.168.1.1"
+    username: "admin"
+    password: "password"
+    ip: "192.168.1.50"
+    enabled: true
 ```
 
 ### Managing SSH Keys
@@ -93,9 +83,9 @@ ansible-galaxy collection install hellqvio86.unifi
 ```yaml
 - name: Ensure admin keys are present
   hellqvio86.unifi.unifi_ssh_key:
-    host: "{{ unifi_ip }}"
-    username: "{{ unifi_user }}"
-    password: "{{ unifi_password }}"
+    host: "192.168.1.1"
+    username: "admin"
+    password: "password"
     keys:
       - "ssh-rsa AAAAB3Nza..."
 ```

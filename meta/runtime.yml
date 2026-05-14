@@ -26,3 +26,4 @@ plugin_routing:
       redirect: hellqvio86.unifi.unifi_switch_profile_assignment
     unifi_info:
       redirect: hellqvio86.unifi.unifi_info
+...

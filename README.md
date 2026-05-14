@@ -90,6 +90,29 @@ ansible-galaxy collection install hellqvio86.unifi
       - "ssh-rsa AAAAB3Nza..."
 ```
 
+## Dumping Current State
+
+You can use the internal `UnifiAPI` utility to dump your current UniFi configuration into Ansible-ready YAML. This is useful for bootstrapping your IaC from an existing controller.
+
+Example script (`dump_wifi.py`):
+
+```python
+import yaml
+from ansible.module_utils.basic import AnsibleModule
+from hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI
+
+# Mock a module for the API utility
+module = AnsibleModule(argument_spec={})
+api = UnifiAPI(module, host="192.168.1.1", username="admin", password="password")
+api.login()
+
+# Fetch and format
+res, _ = api.request("/proxy/network/api/s/default/rest/wlanconf")
+wlans = [{"name": w["name"], "enabled": w["enabled"]} for w in api.as_list(res)]
+
+print(yaml.dump({"unifi_controller_wifi_networks": wlans}))
+```
+
 ## License
 
 [MIT](LICENSE.md)

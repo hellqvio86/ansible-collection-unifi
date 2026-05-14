@@ -11,13 +11,6 @@
 
 An Ansible collection for managing UniFi Network (v8.x+) and UniFi OS (v3.x+) with a focus on modern API-driven infrastructure.
 
-## Features
-
-- **Zone-Based Firewall Management**: Uses the modern Policy Engine (v2 API) for fine-grained traffic control.
-- **Persistent SSH Keys**: Registers public keys in the UniFi OS system configuration so they persist across reboots and provisions.
-- **Automated SSL Deployment**: Simplifies the deployment of Let's Encrypt or other custom wildcard certificates.
-- **Centralized Authentication**: Shared API utility handles JWT and CSRF token complexity automatically.
-
 ## Included Modules
 
 ### Network Management
@@ -36,12 +29,7 @@ An Ansible collection for managing UniFi Network (v8.x+) and UniFi OS (v3.x+) wi
 - `hellqvio86.unifi.unifi_ssh_key`: Manage system-level SSH keys for persistent access.
 - `hellqvio86.unifi.unifi_ssl_config`: Deploy SSL certificates via modulated SSH.
 - `hellqvio86.unifi.unifi_user_certificate`: Manage user-facing certificates via UniFi OS API.
-
-## Requirements
-
-- Python >= 3.10
-- `PyJWT` (for token handling)
-- `paramiko` (for SSH-modulated tasks)
+- `hellqvio86.unifi.unifi_info`: Gather comprehensive infrastructure state.
 
 ## Installation
 
@@ -49,70 +37,53 @@ An Ansible collection for managing UniFi Network (v8.x+) and UniFi OS (v3.x+) wi
 ansible-galaxy collection install hellqvio86.unifi
 ```
 
-## Example Usage
+## Example Usage (The Clean Way)
 
-### Managing WiFi Networks
-
-```yaml
-- name: Ensure Home WiFi exists
-  hellqvio86.unifi.unifi_wlan:
-    host: "192.168.1.1"
-    username: "admin"
-    password: "password"
-    name: "HomeWiFi"
-    passphrase: "securepassword"
-    network: "Default"
-    bands: ["2g", "5g"]
-    state: present
-```
-
-### Managing Remote Syslog
+To avoid cluttering your tasks with credentials, use `module_defaults`. This acts as your **"Login Step"**, applying the host and credentials to all modules in the collection automatically.
 
 ```yaml
-- name: Configure activity logging
-  hellqvio86.unifi.unifi_rsyslog:
-    host: "192.168.1.1"
-    username: "admin"
-    password: "password"
-    ip: "192.168.1.50"
-    enabled: true
+- name: Manage UniFi Infrastructure
+  hosts: localhost
+  connection: local
+  
+  module_defaults:
+    group/hellqvio86.unifi.unifi:
+      host: "192.168.1.1"
+      username: "admin"
+      password: "password"
+      validate_certs: false
+
+  tasks:
+    - name: Ensure Home WiFi exists
+      hellqvio86.unifi.unifi_wlan:
+        name: "HomeWiFi"
+        passphrase: "securepassword"
+        state: present
+
+    - name: Configure activity logging
+      hellqvio86.unifi.unifi_rsyslog:
+        ip: "192.168.1.50"
+        enabled: true
+
+    - name: Ensure admin SSH keys are present
+      hellqvio86.unifi.unifi_ssh_key:
+        keys:
+          - "ssh-rsa AAAAB3Nza..."
+
+    - name: Gather all live state
+      hellqvio86.unifi.unifi_info:
+        gather_subset: [ wifi, firewall_groups, rsyslog ]
+      register: unifi_state
 ```
 
-### Managing SSH Keys
+## Environment Variables
 
-```yaml
-- name: Ensure admin keys are present
-  hellqvio86.unifi.unifi_ssh_key:
-    host: "192.168.1.1"
-    username: "admin"
-    password: "password"
-    keys:
-      - "ssh-rsa AAAAB3Nza..."
-```
+Alternatively, you can skip credentials in your playbooks entirely by setting these environment variables:
 
-## Gathering Information
-
-You can use the `unifi_info` module to gather comprehensive details about your UniFi infrastructure. This is ideal for auditing or bootstrapping your IaC.
-
-```yaml
-- name: Gather all UniFi state
-  hellqvio86.unifi.unifi_info:
-    host: "192.168.1.1"
-    username: "admin"
-    password: "password"
-    gather_subset:
-      - wifi
-      - firewall_groups
-      - firewall_zones
-      - firewall_policies
-      - rsyslog
-  register: unifi_state
-
-- name: Save state to file
-  copy:
-    content: "{{ unifi_state.unifi_info | to_nice_yaml }}"
-    dest: "./unifi_live_state.yml"
-```
+* `UNIFI_HOST`
+* `UNIFI_USERNAME`
+* `UNIFI_PASSWORD`
+* `UNIFI_VALIDATE_CERTS`
 
 ## License
 

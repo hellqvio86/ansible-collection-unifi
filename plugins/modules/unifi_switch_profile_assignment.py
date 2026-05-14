@@ -1,4 +1,6 @@
 #!/usr/bin/python
+# (c) 2026, hellqvio86 (@hellqvio86)
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 DOCUMENTATION = r"""
 ---
@@ -9,9 +11,9 @@ description:
     - Assign or remove switch profiles from UniFi switches.
     - Supports single assignment mode and batch mode.
 options:
-    host: {type: str, required: true}
+    host: {type: str, required: false}
     username: {type: str, required: true}
-    password: {type: str, required: true}
+    password: {type: str, required: false}
     site: {type: str, default: default}
     validate_certs: {type: bool, default: false}
     state: {type: str, choices: [present, absent], default: present}
@@ -28,19 +30,8 @@ author:
 """
 
 from ansible.module_utils.basic import AnsibleModule
+
 from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI
-
-
-def _as_data_list(payload):
-    if payload is None:
-        return []
-    if isinstance(payload, dict):
-        if isinstance(payload.get("data"), list):
-            return payload["data"]
-        return []
-    if isinstance(payload, list):
-        return payload
-    return []
 
 
 def _normalize_desired(module):
@@ -65,26 +56,26 @@ def _normalize_desired(module):
 def _fetch_switch_profiles(api, site):
     res, info = api.request(f"/proxy/network/api/s/{site}/rest/switchprofile")
     if info.get("status") == 200:
-        return _as_data_list(res), True
+        return api.as_list(res), True
     return [], False
 
 
 def _fetch_devices(api, site):
     res, info = api.request(f"/proxy/network/api/s/{site}/rest/device")
     if info.get("status") == 200:
-        return _as_data_list(res)
+        return api.as_list(res)
     res, info = api.request(f"/proxy/network/api/s/{site}/stat/device")
     if info.get("status") == 200:
-        return _as_data_list(res)
+        return api.as_list(res)
     return []
 
 
 def run_module():
     module = AnsibleModule(
         argument_spec=dict(
-            host=dict(type="str", required=True),
-            username=dict(type="str", required=True, no_log=True),
-            password=dict(type="str", required=True, no_log=True),
+            host=dict(type="str"),
+            username=dict(type="str", no_log=True),
+            password=dict(type="str", no_log=True),
             site=dict(type="str", default="default"),
             validate_certs=dict(type="bool", default=False),
             state=dict(type="str", choices=["present", "absent"], default="present"),
@@ -114,14 +105,14 @@ def run_module():
             msg="Switch profile API unsupported on this controller; assignments skipped.",
         )
 
-    profile_map = {p["name"]: p["_id"] for p in switch_profiles if "name" in p and "_id" in p}
+    profile_map = {p["name"]: p["_id"] for p in switch_profiles if isinstance(p, dict) and "name" in p and "_id" in p}
     devices = _fetch_devices(api, site)
     if not devices:
         module.fail_json(msg="Failed to fetch devices from rest/device and stat/device endpoints")
 
     changed = False
     results = []
-    switches = [d for d in devices if d.get("type") == "usw"]
+    switches = [d for d in devices if isinstance(d, dict) and d.get("type") == "usw"]
 
     for item in desired_items:
         profile_name = item.get("profile_name")
@@ -155,26 +146,30 @@ def run_module():
             if current_profile_id != profile_id:
                 item_changed = True
                 if not module.check_mode:
-                    result, info = api.request(
+                    res, info = api.request(
                         f"/proxy/network/api/s/{site}/rest/device/{switch_id}",
                         method="PUT",
                         data={"switch_profile_id": profile_id},
                     )
-                    if not result:
+                    res_list = api.as_list(res)
+                    result_dev = res_list[0] if res_list else res
+                    if not result_dev:
                         module.fail_json(msg="Failed to assign switch profile", info=info, assignment=item)
-                    target = result
+                    target = result_dev
         else:
             if current_profile_id is not None:
                 item_changed = True
                 if not module.check_mode:
-                    result, info = api.request(
+                    res, info = api.request(
                         f"/proxy/network/api/s/{site}/rest/device/{switch_id}",
                         method="PUT",
                         data={"switch_profile_id": None},
                     )
-                    if not result:
+                    res_list = api.as_list(res)
+                    result_dev = res_list[0] if res_list else res
+                    if not result_dev:
                         module.fail_json(msg="Failed to remove switch profile assignment", info=info, assignment=item)
-                    target = result
+                    target = result_dev
 
         changed = changed or item_changed
         results.append({"assignment": item, "changed": item_changed, "switch": target})

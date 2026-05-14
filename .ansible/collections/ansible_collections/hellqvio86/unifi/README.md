@@ -11,24 +11,25 @@
 
 An Ansible collection for managing UniFi Network (v8.x+) and UniFi OS (v3.x+) with a focus on modern API-driven infrastructure.
 
-## Features
-
-- **Zone-Based Firewall Management**: Uses the modern Policy Engine (v2 API) for fine-grained traffic control.
-- **Persistent SSH Keys**: Registers public keys in the UniFi OS system configuration so they persist across reboots and provisions.
-- **Automated SSL Deployment**: Simplifies the deployment of Let's Encrypt or other custom wildcard certificates.
-- **Centralized Authentication**: Shared API utility handles JWT and CSRF token complexity automatically.
-
 ## Included Modules
 
-- `hellqvio86.unifi.unifi_firewall_policy`: Manage modern firewall rules.
-- `hellqvio86.unifi.unifi_ssh_key`: Manage system-level SSH keys.
-- `hellqvio86.unifi.unifi_ssl_config`: Deploy SSL certificates via modulated SSH transport.
+### Network Management
+- `hellqvio86.unifi.unifi_wlan`: Manage WiFi networks and passphrases.
+- `hellqvio86.unifi.unifi_port_profile`: Manage switch port profiles (VLAN, PoE, speed).
+- `hellqvio86.unifi.unifi_switch_profile`: Manage logical switch profiles.
+- `hellqvio86.unifi.unifi_switch_profile_assignment`: Assign profiles to specific switches.
 
-## Requirements
+### Firewall & Security
+- `hellqvio86.unifi.unifi_firewall_policy`: Manage modern firewall rules (v2 API).
+- `hellqvio86.unifi.unifi_firewall_zone`: Manage firewall zones (v2 API).
+- `hellqvio86.unifi.unifi_firewall_group`: Manage IP and Port groups (REST API).
 
-- Python >= 3.10
-- `PyJWT` (for token handling)
-- `paramiko` (for SSH-modulated tasks)
+### System & Settings
+- `hellqvio86.unifi.unifi_rsyslog`: Configure remote syslog (Activity Logging) settings.
+- `hellqvio86.unifi.unifi_ssh_key`: Manage system-level SSH keys for persistent access.
+- `hellqvio86.unifi.unifi_ssl_config`: Deploy SSL certificates via modulated SSH.
+- `hellqvio86.unifi.unifi_user_certificate`: Manage user-facing certificates via UniFi OS API.
+- `hellqvio86.unifi.unifi_info`: Gather comprehensive infrastructure state.
 
 ## Installation
 
@@ -36,35 +37,86 @@ An Ansible collection for managing UniFi Network (v8.x+) and UniFi OS (v3.x+) wi
 ansible-galaxy collection install hellqvio86.unifi
 ```
 
-## Example Usage
+## Authentication (The Login Step)
 
-### Managing Firewall Rules
+To avoid cluttering your tasks, use `module_defaults` to define your credentials once. This acts as your **"Login Step"**.
 
 ```yaml
-- name: Allow DNS to Local Server
+- name: Manage UniFi
+  hosts: localhost
+  module_defaults:
+    group/hellqvio86.unifi.unifi:
+      host: "192.168.1.1"
+      username: "admin"
+      password: "password"
+```
+
+## Usage: WiFi & Networks
+
+```yaml
+- name: Ensure Home WiFi exists
+  hellqvio86.unifi.unifi_wlan:
+    name: "HomeWiFi"
+    passphrase: "securepassword"
+    state: present
+```
+
+## Usage: Switching
+
+```yaml
+- name: Create IoT port profile
+  hellqvio86.unifi.unifi_port_profile:
+    name: "IoT Ports"
+    native_network_name: "IoT"
+    tagged_network_names: ["Camera"]
+
+- name: Assign profile to switch
+  hellqvio86.unifi.unifi_switch_profile_assignment:
+    switch_name: "Main-Switch"
+    profile_name: "IoT Ports"
+```
+
+## Usage: Firewall (Modern Policy Engine)
+
+```yaml
+- name: Create Internal Zone
+  hellqvio86.unifi.unifi_firewall_zone:
+    name: "Internal"
+    networks: ["Default", "IoT"]
+
+- name: Block IoT to Gateway
   hellqvio86.unifi.unifi_firewall_policy:
-    host: "{{ unifi_ip }}"
-    username: "{{ unifi_user }}"
-    password: "{{ unifi_password }}"
-    name: "Allow DNS"
-    action: "ALLOW"
-    protocol: "tcp_udp"
-    destination:
-      ips: ["192.168.1.10"]
-      port: "53"
+    name: "Block IoT to Gateway"
+    action: BLOCK
+    source: { zone: "Internal" }
+    destination: { zone: "External" }
 ```
 
-### Managing SSH Keys
+## Usage: System & Security
 
 ```yaml
-- name: Ensure admin keys are present
+- name: Configure activity logging
+  hellqvio86.unifi.unifi_rsyslog:
+    ip: "192.168.1.50"
+    enabled: true
+
+- name: Ensure admin SSH keys are present
   hellqvio86.unifi.unifi_ssh_key:
-    host: "{{ unifi_ip }}"
-    username: "{{ unifi_user }}"
-    password: "{{ unifi_password }}"
-    keys:
-      - "ssh-rsa AAAAB3Nza..."
+    keys: ["ssh-rsa AAAAB3Nza..."]
 ```
+
+## Usage: Information Gathering
+
+```yaml
+- name: Gather all live state
+  hellqvio86.unifi.unifi_info:
+    gather_subset: [ wifi, firewall_groups ]
+  register: unifi_state
+```
+
+## Environment Variables
+
+You can also skip credentials entirely by setting `UNIFI_HOST`, `UNIFI_USERNAME`, and `UNIFI_PASSWORD`.
 
 ## License
 

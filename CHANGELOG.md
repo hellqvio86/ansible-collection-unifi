@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.3
+
+- Added `unifi_wlan` for WiFi network management.
+- Added `unifi_firewall_group` for IP and Port group management.
+- Added `unifi_firewall_zone` (v2 API) for network segmentation.
+- Refactored `UnifiAPI` utility for improved robustness and consistent response handling.
+- Unified response parsing across all modules using `as_list()` helper.
+
 ## 0.0.2
 
 - Added switch profile management (`unifi_switch_profile`)

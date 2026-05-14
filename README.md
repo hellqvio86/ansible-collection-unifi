@@ -1,7 +1,7 @@
 # UniFi Ansible Collection
 
 ![CI](https://github.com/hellqvio86/ansible-collection-unifi/actions/workflows/ci.yml/badge.svg)
-![License](https://img.shields.io/github/license/hellqvio86/ansible-collection-unifi)
+![Galaxy](https://img.shields.io/ansible/collection/v/hellqvio86/unifi)
 
 > [!CAUTION]
 > **Alpha Status**: This collection is currently in early alpha. APIs and module arguments are subject to breaking changes. Use with caution in production environments.
@@ -11,90 +11,136 @@
 
 An Ansible collection for managing UniFi Network (v8.x+) and UniFi OS (v3.x+) with a focus on modern API-driven infrastructure.
 
-## Features
-
-- **Zone-Based Firewall Management**: Uses the modern Policy Engine (v2 API) for fine-grained traffic control.
-- **Persistent SSH Keys**: Registers public keys in the UniFi OS system configuration so they persist across reboots and provisions.
-- **Automated SSL Deployment**: Simplifies the deployment of Let's Encrypt or other custom wildcard certificates.
-- **Centralized Authentication**: Shared API utility handles JWT and CSRF token complexity automatically.
-
 ## Included Modules
 
-- `hellqvio86.unifi.unifi_firewall_policy`: Manage modern firewall rules.
-- `hellqvio86.unifi.unifi_port_profile`: Manage port profiles (VLAN, PoE, speed settings).
-- `hellqvio86.unifi.unifi_switch_profile`: Manage switch profiles (port configurations for switches).
-- `hellqvio86.unifi.unifi_switch_profile_assignment`: Assign switch profiles to switches.
-- `hellqvio86.unifi.unifi_ssh_key`: Manage system-level SSH keys.
-- `hellqvio86.unifi.unifi_ssl_config`: Deploy SSL certificates via modulated SSH transport.
+### Network Management
+- `hellqvio86.unifi.unifi_wlan`: Manage WiFi networks and passphrases.
+- `hellqvio86.unifi.unifi_port_profile`: Manage switch port profiles (VLAN, PoE, speed).
+- `hellqvio86.unifi.unifi_switch_profile`: Manage logical switch profiles.
+- `hellqvio86.unifi.unifi_switch_profile_assignment`: Assign profiles to specific switches.
 
-## Requirements
+### Firewall & Security
+- `hellqvio86.unifi.unifi_firewall_policy`: Manage modern firewall rules (v2 API).
+- `hellqvio86.unifi.unifi_firewall_zone`: Manage firewall zones (v2 API).
+- `hellqvio86.unifi.unifi_firewall_group`: Manage IP and Port groups (REST API).
 
-- Python >= 3.10
-- `PyJWT` (for token handling)
-- `paramiko` (for SSH-modulated tasks)
+### System & Settings
+- `hellqvio86.unifi.unifi_rsyslog`: Configure remote syslog (Activity Logging) settings.
+- `hellqvio86.unifi.unifi_ssh_key`: Manage system-level SSH keys for persistent access.
+- `hellqvio86.unifi.unifi_ssl_config`: Deploy SSL certificates via modulated SSH.
+- `hellqvio86.unifi.unifi_user_certificate`: Manage user-facing certificates via UniFi OS API.
+- `hellqvio86.unifi.unifi_info`: Gather comprehensive infrastructure state.
 
 ## Installation
 
+Install via Ansible Galaxy:
 ```bash
 ansible-galaxy collection install hellqvio86.unifi
 ```
 
-## Example Usage
+Or include it in your `requirements.yml`:
+```yaml
+collections:
+  - name: hellqvio86.unifi
+    version: 0.0.4
+```
 
-### Managing Port Profiles
+## Authentication (The Login Step)
+
+To avoid cluttering your tasks, use `module_defaults` to define your credentials once. This acts as your **"Login Step"**.
+
+```yaml
+- name: Manage UniFi
+  hosts: localhost
+  module_defaults:
+    group/hellqvio86.unifi.unifi:
+      host: "192.168.1.1"
+      username: "admin"
+      password: "password"
+```
+
+## Usage: WiFi & Networks
+
+```yaml
+- name: Ensure Home WiFi exists
+  hellqvio86.unifi.unifi_wlan:
+    name: "HomeWiFi"
+    passphrase: "securepassword"
+    state: present
+```
+
+## Usage: Switching
 
 ```yaml
 - name: Create IoT port profile
   hellqvio86.unifi.unifi_port_profile:
-    host: "{{ unifi_ip }}"
-    username: "{{ unifi_user }}"
-    password: "{{ unifi_password }}"
     name: "IoT Ports"
     native_network_name: "IoT"
     tagged_network_names: ["Camera"]
-    poe_mode: "auto"
-    isolation: true
-```
 
-### Managing Switch Profiles
-
-```yaml
-- name: Create switch profile for access switches
-  hellqvio86.unifi.unifi_switch_profile:
-    host: "{{ unifi_ip }}"
-    username: "{{ unifi_user }}"
-    password: "{{ unifi_password }}"
-    name: "Access Switch Profile"
-    model: "USW-Flex"
-    port_profile_overrides:
-      1: "WAN-Profile"
-      2: "IoT Ports"
-      3: "IoT Ports"
-    description: "Standard access switch configuration"
-```
-
-### Assigning Switch Profiles
-
-```yaml
 - name: Assign profile to switch
   hellqvio86.unifi.unifi_switch_profile_assignment:
-    host: "{{ unifi_ip }}"
-    username: "{{ unifi_user }}"
-    password: "{{ unifi_password }}"
-    switch_name: "Switch-01"
-    profile_name: "Access Switch Profile"
+    switch_name: "Main-Switch"
+    profile_name: "IoT Ports"
 ```
 
-### Managing SSH Keys
+## Usage: Firewall (Modern Policy Engine)
 
 ```yaml
-- name: Ensure admin keys are present
+- name: Create Internal Zone
+  hellqvio86.unifi.unifi_firewall_zone:
+    name: "Internal"
+    networks: ["Default", "IoT"]
+
+- name: Block IoT to Gateway
+  hellqvio86.unifi.unifi_firewall_policy:
+    name: "Block IoT to Gateway"
+    action: BLOCK
+    source: { zone: "Internal" }
+    destination: { zone: "External" }
+```
+
+## Usage: System & Security
+
+```yaml
+- name: Configure activity logging
+  hellqvio86.unifi.unifi_rsyslog:
+    ip: "192.168.1.50"
+    enabled: true
+
+- name: Ensure admin SSH keys are present
   hellqvio86.unifi.unifi_ssh_key:
-    host: "{{ unifi_ip }}"
-    username: "{{ unifi_user }}"
-    password: "{{ unifi_password }}"
-    keys:
-      - "ssh-rsa AAAAB3Nza..."
+    keys: ["ssh-rsa AAAAB3Nza..."]
+```
+
+## Usage: Information Gathering
+
+```yaml
+- name: Gather all live state
+  hellqvio86.unifi.unifi_info:
+    gather_subset: [ wifi, firewall_groups ]
+  register: unifi_state
+```
+
+## Environment Variables
+
+You can also skip credentials entirely by setting `UNIFI_HOST`, `UNIFI_USERNAME`, and `UNIFI_PASSWORD`.
+
+## Development & Building
+
+This project uses a `Makefile` to handle local development, testing, and packaging for Ansible Galaxy. Here are the available commands:
+
+- `make venv`: Create a virtual environment and install dependencies.
+- `make test`: Run unit tests using `pytest`.
+- `make lint`: Run `ruff` and `ansible-lint` to check code quality.
+- `make format`: Auto-format code using `ruff`.
+- `make build`: Build the Ansible collection tarball (`.tar.gz`) for release.
+- `make publish`: Build and publish the collection to Ansible Galaxy.
+
+**Publishing a new release:**
+To publish a release, you must provide your Ansible Galaxy API key:
+```bash
+make publish GALAXY_API_KEY="your_api_key_here" [VERSION=0.0.4]
 ```
 
 ## License

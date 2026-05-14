@@ -25,6 +25,7 @@ def test_ssl_config_no_change():
         mock_module = mock_module_class.return_value
         mock_module.params = params
         mock_module.check_mode = False
+        mock_module.fail_json.side_effect = Exception("fail_json")
 
         # Configure Mock SSH and SFTP
         mock_ssh = mock_paramiko.SSHClient.return_value
@@ -69,6 +70,7 @@ def test_ssl_config_with_change():
         mock_module = mock_module_class.return_value
         mock_module.params = params
         mock_module.check_mode = False
+        mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_ssh = mock_paramiko.SSHClient.return_value
         mock_sftp = mock_ssh.open_sftp.return_value

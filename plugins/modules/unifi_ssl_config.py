@@ -1,4 +1,6 @@
 #!/usr/bin/python
+# (c) 2026, hellqvio86 (@hellqvio86)
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 
 DOCUMENTATION = r"""
@@ -14,11 +16,11 @@ description:
 options:
     host:
         description: The IP or hostname of the UDM.
-        required: true
+        required: false
         type: str
     ssh_username:
         description: SSH username (typically root).
-        required: true
+        required: false
         type: str
     ssh_password:
         description: SSH password.
@@ -28,11 +30,11 @@ options:
         type: str
     cert_content:
         description: Content of the certificate (PEM).
-        required: true
+        required: false
         type: str
     key_content:
         description: Content of the private key (PEM).
-        required: true
+        required: false
         type: str
     cert_path:
         description: Target path for the certificate.
@@ -62,12 +64,12 @@ except ImportError:
 
 def run_module():
     module_args = dict(
-        host=dict(type="str", required=True),
-        ssh_username=dict(type="str", required=True),
+        host=dict(type="str"),
+        ssh_username=dict(type="str"),
         ssh_password=dict(type="str", no_log=True),
         ssh_key=dict(type="str"),
-        cert_content=dict(type="str", required=True, no_log=True),
-        key_content=dict(type="str", required=True, no_log=True),
+        cert_content=dict(type="str", required=False, no_log=True),
+        key_content=dict(type="str", required=False, no_log=True),
         cert_path=dict(type="str", default="/data/unifi-core/config/unifi-core.crt"),
         key_path=dict(type="str", default="/data/unifi-core/config/unifi-core.key"),
         restart_service=dict(type="bool", default=True),

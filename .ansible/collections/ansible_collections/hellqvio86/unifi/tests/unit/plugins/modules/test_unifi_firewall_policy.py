@@ -20,6 +20,7 @@ def test_firewall_policy_create():
         "logging": False,
         "source": {"zone": "Internal"},
         "destination": {"zone": "Internal"},
+        "policies": None,
     }
 
     with (
@@ -32,17 +33,21 @@ def test_firewall_policy_create():
         mock_module = mock_module_class.return_value
         mock_module.params = params
         mock_module.check_mode = False
+        mock_module.fail_json.side_effect = Exception("fail_json")
 
         # Configure Mock API
         mock_api = mock_api_class.return_value
+        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
 
-        # Mock Zones
+        # Mock Zones, Networks, and Policies
         mock_api.request.side_effect = [
             # First call: Get zones
             ([{"name": "Internal", "_id": "zone123"}], {"status": 200}),
-            # Second call: Get existing policies
+            # Second call: Get networks
             ([], {"status": 200}),
-            # Third call: Create policy (POST)
+            # Third call: Get existing policies
+            ([], {"status": 200}),
+            # Fourth call: Create policy (POST)
             ({"name": "Test Policy", "_id": "new123"}, {"status": 201}),
         ]
 
@@ -53,12 +58,10 @@ def test_firewall_policy_create():
         mock_api.login.assert_called_once()
 
         # Verify POST was called
-        # The third call to request should be the POST
-        # request(path, method='POST', data=...)
-        # Note: request is called 3 times total in this scenario
-        assert mock_api.request.call_count == 3
+        # Note: request is called 4 times total in this scenario
+        assert mock_api.request.call_count == 4
 
-        last_call_args = mock_api.request.call_args_list[2]
+        last_call_args = mock_api.request.call_args_list[3]
         assert last_call_args[1]["method"] == "POST"
         assert last_call_args[1]["data"]["name"] == "Test Policy"
 
@@ -85,6 +88,7 @@ def test_firewall_policy_absent():
         "logging": False,
         "source": {"zone": "Internal"},
         "destination": {"zone": "Internal"},
+        "policies": None,
     }
 
     with (
@@ -96,13 +100,17 @@ def test_firewall_policy_absent():
         mock_module = mock_module_class.return_value
         mock_module.params = params
         mock_module.check_mode = False
+        mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
+        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
 
         # Mock responses
         mock_api.request.side_effect = [
             # Get zones
             ([{"name": "Internal", "_id": "zone123"}], {"status": 200}),
+            # Get networks
+            ([], {"status": 200}),
             # Get existing policies (find the one to delete)
             (
                 [
@@ -121,9 +129,9 @@ def test_firewall_policy_absent():
 
         run_module()
 
-        assert mock_api.request.call_count == 3
-        last_call_args = mock_api.request.call_args_list[2]
+        assert mock_api.request.call_count == 4
+        last_call_args = mock_api.request.call_args_list[3]
         assert last_call_args[1]["method"] == "DELETE"
         assert "old123" in last_call_args[0][0]
 
-        mock_module.exit_json.assert_called_once_with(changed=True, policy=None)
+        mock_module.exit_json.assert_called_once_with(changed=True, policies=[None], policy=None)

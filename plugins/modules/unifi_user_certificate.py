@@ -1,4 +1,6 @@
 #!/usr/bin/python
+# (c) 2026, hellqvio86 (@hellqvio86)
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 DOCUMENTATION = r"""
 ---
@@ -10,13 +12,13 @@ description:
 options:
     host:
         type: str
-        required: true
+        required: false
     username:
         type: str
-        required: true
+        required: false
     password:
         type: str
-        required: true
+        required: false
     validate_certs:
         type: bool
         default: false
@@ -26,7 +28,7 @@ options:
         default: present
     name:
         type: str
-        required: true
+        required: false
     cert:
         type: str
     key:
@@ -39,25 +41,16 @@ author:
 """
 
 from ansible.module_utils.basic import AnsibleModule
+
 from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI
-
-
-def _as_list(payload):
-    if payload is None:
-        return []
-    if isinstance(payload, list):
-        return payload
-    if isinstance(payload, dict) and isinstance(payload.get("data"), list):
-        return payload["data"]
-    return []
 
 
 def run_module():
     module = AnsibleModule(
         argument_spec=dict(
-            host=dict(type="str", required=True),
-            username=dict(type="str", required=True, no_log=True),
-            password=dict(type="str", required=True, no_log=True),
+            host=dict(type="str"),
+            username=dict(type="str", no_log=True),
+            password=dict(type="str", no_log=True),
             validate_certs=dict(type="bool", default=False),
             state=dict(type="str", choices=["present", "absent"], default="present"),
             name=dict(type="str", required=True),
@@ -81,7 +74,7 @@ def run_module():
     api.login()
 
     existing_res, info = api.request("/api/userCertificates")
-    existing_list = _as_list(existing_res)
+    existing_list = api.as_list(existing_res)
     existing = next((c for c in existing_list if c.get("name") == name), None)
 
     changed = False
@@ -92,7 +85,9 @@ def run_module():
             changed = True
             if not module.check_mode:
                 payload = {"name": name, "cert": cert, "key": key}
-                result, info = api.request("/api/userCertificates", method="POST", data=payload)
+                res, info = api.request("/api/userCertificates", method="POST", data=payload)
+                res_list = api.as_list(res)
+                result = res_list[0] if res_list else res
                 if not result:
                     module.fail_json(msg="Failed to upload user certificate", info=info)
                 # Optionally activate uploaded cert for UniFi OS Web UI.

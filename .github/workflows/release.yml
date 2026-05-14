@@ -6,14 +6,26 @@ on:
     branches: [main]
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        default: 'draft'
+        type: choice
+        options:
+          - draft
+          - publish
 
 permissions:
   contents: write
 
 jobs:
-  # Runs on push to main: creates a draft GitHub release if version changed
+  # Creates a draft GitHub release when version changes (auto on push, or manual)
   draft-release:
-    if: github.event_name == 'push'
+    if: >
+      (github.event_name == 'push') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'draft')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,21 +38,14 @@ jobs:
           VERSION=$(grep '^version:' galaxy.yml | awk '{print $2}')
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
-      - name: Get previous version
-        id: previous
-        run: |
-          git show HEAD~1:galaxy.yml 2>/dev/null | grep '^version:' | awk '{print $2}' \
-            | xargs -I{} echo "version={}" >> "$GITHUB_OUTPUT" \
-            || echo "version=none" >> "$GITHUB_OUTPUT"
-
       - name: Check if version changed
         id: changed
         run: |
+          IS_MANUAL="${{ github.event_name == 'workflow_dispatch' }}"
           CURRENT="${{ steps.current.outputs.version }}"
           PREVIOUS=$(git show HEAD~1:galaxy.yml 2>/dev/null | grep '^version:' | awk '{print $2}' || echo "none")
-          echo "current=${CURRENT}"
-          echo "previous=${PREVIOUS}"
-          if [ "${CURRENT}" != "${PREVIOUS}" ]; then
+          echo "current=${CURRENT}, previous=${PREVIOUS}, manual=${IS_MANUAL}"
+          if [ "${IS_MANUAL}" = "true" ] || [ "${CURRENT}" != "${PREVIOUS}" ]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
           else
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -84,9 +89,11 @@ jobs:
             --notes "${NOTES}" \
             "${TARBALL}"
 
-  # Runs when a GitHub release is published: uploads to Ansible Galaxy
+  # Publishes to Ansible Galaxy — triggered by publishing a GitHub release, or manually
   publish-to-galaxy:
-    if: github.event_name == 'release' && github.event.action == 'published'
+    if: >
+      (github.event_name == 'release' && github.event.action == 'published') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'publish')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

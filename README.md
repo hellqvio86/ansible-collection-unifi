@@ -37,7 +37,7 @@ An Ansible collection for managing UniFi Network (v8.x+) and UniFi OS (v3.x+) wi
 ansible-galaxy collection install hellqvio86.unifi
 ```
 
-## Example Usage (The Clean Way)
+## Example Usage
 
 To avoid cluttering your tasks with credentials, use `module_defaults`. This acts as your **"Login Step"**, applying the host and credentials to all modules in the collection automatically.
 
@@ -54,13 +54,54 @@ To avoid cluttering your tasks with credentials, use `module_defaults`. This act
       validate_certs: false
 
   tasks:
+    # --- Network Management ---
+
     - name: Ensure Home WiFi exists
       hellqvio86.unifi.unifi_wlan:
         name: "HomeWiFi"
         passphrase: "securepassword"
+        network: "Default"
         state: present
 
-    - name: Configure activity logging
+    - name: Create IoT port profile
+      hellqvio86.unifi.unifi_port_profile:
+        name: "IoT Ports"
+        native_network_name: "IoT"
+        tagged_network_names: ["Camera", "Sensors"]
+        autoneg: true
+
+    - name: Assign profile to access switch
+      hellqvio86.unifi.unifi_switch_profile_assignment:
+        switch_name: "USW-Lite-16-PoE"
+        profile_name: "Standard Access Profile"
+
+    # --- Firewall & Security (Modern Policy Engine) ---
+
+    - name: Create Internal Zone
+      hellqvio86.unifi.unifi_firewall_zone:
+        name: "Internal"
+        networks: ["Default", "IoT"]
+
+    - name: Create Blocklist Group
+      hellqvio86.unifi.unifi_firewall_group:
+        name: "Malicious IPs"
+        type: address_group
+        members: ["1.2.3.4", "5.6.7.8"]
+
+    - name: Block IoT to Gateway
+      hellqvio86.unifi.unifi_firewall_policy:
+        name: "Block IoT to Gateway"
+        action: BLOCK
+        source:
+          zone: "Internal"
+          ips: ["192.168.20.0/24"]
+        destination:
+          zone: "External"
+        protocol: all
+
+    # --- System & Settings ---
+
+    - name: Configure activity logging (Syslog)
       hellqvio86.unifi.unifi_rsyslog:
         ip: "192.168.1.50"
         enabled: true
@@ -70,9 +111,21 @@ To avoid cluttering your tasks with credentials, use `module_defaults`. This act
         keys:
           - "ssh-rsa AAAAB3Nza..."
 
+    - name: Deploy Wildcard SSL
+      hellqvio86.unifi.unifi_ssl_config:
+        cert_path: "/path/to/fullchain.pem"
+        key_path: "/path/to/privkey.pem"
+
+    - name: Update Web UI Certificate
+      hellqvio86.unifi.unifi_user_certificate:
+        certificate: "{{ lookup('file', 'cert.pem') }}"
+        private_key: "{{ lookup('file', 'key.pem') }}"
+
+    # --- Information Gathering ---
+
     - name: Gather all live state
       hellqvio86.unifi.unifi_info:
-        gather_subset: [ wifi, firewall_groups, rsyslog ]
+        gather_subset: [ wifi, firewall_groups, firewall_policies ]
       register: unifi_state
 ```
 

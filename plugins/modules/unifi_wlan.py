@@ -84,19 +84,6 @@ from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI
 
 
-def _as_data_list(payload):
-    if payload is None:
-        return []
-    if isinstance(payload, dict):
-        if isinstance(payload.get("data"), list):
-            return payload["data"]
-        # If it's a dict but no data list, maybe it's the item itself or an empty response
-        return []
-    if isinstance(payload, list):
-        return payload
-    return []
-
-
 def run_module():
     module_args = dict(
         host=dict(type="str", required=True),
@@ -127,7 +114,7 @@ def run_module():
 
     # Fetch existing WLAN configs
     wlans_res, info = api.request(f"/proxy/network/api/s/{site}/rest/wlanconf")
-    wlans = _as_data_list(wlans_res)
+    wlans = api.as_list(wlans_res)
     if wlans_res is None:
         module.fail_json(msg="Failed to fetch WLAN configurations", info=info)
 
@@ -140,7 +127,7 @@ def run_module():
     if module.params["network_name"]:
         # Resolve network name to ID if possible
         networks_res, info = api.request(f"/proxy/network/api/s/{site}/rest/networkconf")
-        networks = _as_data_list(networks_res)
+        networks = api.as_list(networks_res)
         network = next((n for n in networks if isinstance(n, dict) and n.get("name") == module.params["network_name"]), None)
         if network:
             desired_payload["networkconf_id"] = network["_id"]
@@ -162,7 +149,8 @@ def run_module():
                 res, info = api.request(
                     f"/proxy/network/api/s/{site}/rest/wlanconf", method="POST", data=desired_payload
                 )
-                result_wlan = _as_data_list(res)[0] if _as_data_list(res) else res
+                res_list = api.as_list(res)
+                result_wlan = res_list[0] if res_list else res
                 if not result_wlan:
                     module.fail_json(msg="Failed to create WLAN configuration", info=info)
         else:
@@ -175,7 +163,8 @@ def run_module():
                 res, info = api.request(
                     f"/proxy/network/api/s/{site}/rest/wlanconf/{existing['_id']}", method="PUT", data=desired_payload
                 )
-                result_wlan = _as_data_list(res)[0] if _as_data_list(res) else res
+                res_list = api.as_list(res)
+                result_wlan = res_list[0] if res_list else res
                 if not result_wlan:
                     module.fail_json(msg="Failed to update WLAN configuration", info=info)
 

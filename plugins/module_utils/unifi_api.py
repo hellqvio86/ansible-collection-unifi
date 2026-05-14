@@ -21,11 +21,16 @@ class UnifiAPI:
         self.session_cookie = None
         self.csrf_token = None
         self.base_url = f"https://{host}"
+        
+        # Ensure the module has the validate_certs parameter set as expected by fetch_url
+        if hasattr(self.module, 'params'):
+            self.module.params['validate_certs'] = self.validate_certs
 
     def login(self):
         login_url = f"{self.base_url}/api/auth/login"
         login_payload = json.dumps({"username": self.username, "password": self.password})
 
+        # fetch_url extracts validate_certs from module.params
         response, info = fetch_url(
             self.module,
             login_url,
@@ -61,7 +66,6 @@ class UnifiAPI:
             token_val = token_cookie[0].split("TOKEN=")[1].split(";")[0]
             try:
                 # We don't verify the signature here as we just need the payload for CSRF
-                # jwt.decode with verify=False or manual base64 decode
                 payload_b64 = token_val.split(".")[1]
                 padding = "=" * (4 - len(payload_b64) % 4)
                 payload = json.loads(base64.b64decode(payload_b64 + padding).decode("utf-8"))
@@ -86,3 +90,15 @@ class UnifiAPI:
             return json.loads(res_data) if res_data else {}, info
         except ValueError:
             return res_data, info
+
+    def as_list(self, payload):
+        """Helper to extract a list from UniFi API responses which often wrap data in a 'data' key."""
+        if payload is None:
+            return []
+        if isinstance(payload, dict):
+            if isinstance(payload.get("data"), list):
+                return payload["data"]
+            return []
+        if isinstance(payload, list):
+            return payload
+        return []

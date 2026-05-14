@@ -1,6 +1,5 @@
 #!/usr/bin/python
 
-
 DOCUMENTATION = r"""
 ---
 module: unifi_firewall_policy
@@ -156,24 +155,23 @@ def run_module():
     zones_res, info = api.request(f"/proxy/network/v2/api/site/{site}/firewall/zone")
     if zones_res is None:
         module.fail_json(msg="Failed to fetch zones", info=info)
-    zones = zones_res.get("data", []) if isinstance(zones_res, dict) and "data" in zones_res else zones_res
+    zones = api.as_list(zones_res)
 
-    zone_map = {z["name"]: z["_id"] for z in zones}
+    zone_map = {z["name"]: z["_id"] for z in zones if isinstance(z, dict)}
 
     # 3. Resolve network names to IDs for NETWORK matching.
     networks_res, info = api.request(f"/proxy/network/api/s/{site}/rest/networkconf")
     if networks_res is None:
         module.fail_json(msg="Failed to fetch networks", info=info)
-    networks = networks_res.get("data", []) if isinstance(networks_res, dict) and "data" in networks_res else networks_res
+    networks = api.as_list(networks_res)
 
-    network_map = {n["name"]: n["_id"] for n in networks}
+    network_map = {n["name"]: n["_id"] for n in networks if isinstance(n, dict)}
 
-    # 4. Fetch existing policies once. The old role loop caused one login and
-    # one policy fetch per rule, which quickly trips UniFi API rate limits.
+    # 4. Fetch existing policies once.
     policies_res, info = api.request(f"/proxy/network/v2/api/site/{site}/firewall-policies")
     if policies_res is None:
         module.fail_json(msg="Failed to fetch policies", info=info)
-    policies = policies_res.get("data", []) if isinstance(policies_res, dict) and "data" in policies_res else policies_res
+    policies = api.as_list(policies_res)
 
     changed = False
     results = []
@@ -200,7 +198,7 @@ def run_module():
         results.append(result_policy)
 
         if not module.check_mode and result_policy:
-            policies = [p for p in policies if p.get("_id") != result_policy.get("_id")]
+            policies = [p for p in policies if isinstance(p, dict) and p.get("_id") != result_policy.get("_id")]
             policies.append(result_policy)
 
     module.exit_json(changed=changed, policies=results, policy=results[0] if len(results) == 1 else None)
@@ -229,6 +227,8 @@ def apply_policy(module, api, site, zone_map, network_map, policies, desired):
 
     existing = None
     for policy in policies:
+        if not isinstance(policy, dict):
+            continue
         if (
             policy.get("name") == desired["name"]
             and policy.get("source", {}).get("zone_id") == src_zone_id
@@ -304,10 +304,8 @@ def apply_policy(module, api, site, zone_map, network_map, policies, desired):
             )
             if not result_policy_res:
                 module.fail_json(msg="Failed to create policy", name=desired["name"], info=info)
-            if isinstance(result_policy_res, dict) and "data" in result_policy_res:
-                result_policy = result_policy_res["data"][0] if result_policy_res["data"] else {}
-            else:
-                result_policy = result_policy_res
+            res_list = api.as_list(result_policy_res)
+            result_policy = res_list[0] if res_list else result_policy_res
             return True, result_policy
 
         changed = policy_needs_update(existing, desired_payload)
@@ -319,11 +317,8 @@ def apply_policy(module, api, site, zone_map, network_map, policies, desired):
             )
             if not result_policy_res:
                 module.fail_json(msg="Failed to update policy", name=desired["name"], info=info)
-            if isinstance(result_policy_res, dict) and "data" in result_policy_res:
-                result_policy = result_policy_res["data"][0] if result_policy_res["data"] else {}
-            else:
-                result_policy = result_policy_res
-            module.warn(f"Updated policy '{desired['name']}'")
+            res_list = api.as_list(result_policy_res)
+            result_policy = res_list[0] if res_list else result_policy_res
             return True, result_policy
         return changed, existing
 
@@ -356,15 +351,12 @@ def policy_needs_update(existing, desired_payload):
         existing_side = existing.get(side, {})
         desired_side = desired_payload.get(side, {})
 
-        # Compare matching_target
         if existing_side.get("matching_target") != desired_side.get("matching_target"):
             return True
 
-        # Compare port_matching_type
         if existing_side.get("port_matching_type") != desired_side.get("port_matching_type"):
             return True
 
-        # Compare port value
         if existing_side.get("port", "") != desired_side.get("port", ""):
             return True
 

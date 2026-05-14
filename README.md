@@ -20,12 +20,15 @@ An Ansible collection for managing UniFi Network (v8.x+) and UniFi OS (v3.x+) wi
 
 ## Included Modules
 
-- `hellqvio86.unifi.unifi_firewall_policy`: Manage modern firewall rules.
-- `hellqvio86.unifi.unifi_port_profile`: Manage port profiles (VLAN, PoE, speed settings).
-- `hellqvio86.unifi.unifi_switch_profile`: Manage switch profiles (port configurations for switches).
-- `hellqvio86.unifi.unifi_switch_profile_assignment`: Assign switch profiles to switches.
+- `hellqvio86.unifi.unifi_firewall_policy`: Manage modern firewall rules (v2 API).
+- `hellqvio86.unifi.unifi_firewall_zone`: Manage firewall zones (v2 API).
+- `hellqvio86.unifi.unifi_firewall_group`: Manage IP and Port groups (REST API).
+- `hellqvio86.unifi.unifi_wlan`: Manage WiFi networks and passwords.
+- `hellqvio86.unifi.unifi_port_profile`: Manage port profiles.
+- `hellqvio86.unifi.unifi_switch_profile`: Manage logical switch profiles.
+- `hellqvio86.unifi.unifi_switch_profile_assignment`: Assign profiles to switches.
 - `hellqvio86.unifi.unifi_ssh_key`: Manage system-level SSH keys.
-- `hellqvio86.unifi.unifi_ssl_config`: Deploy SSL certificates via modulated SSH transport.
+- `hellqvio86.unifi.unifi_ssl_config`: Deploy SSL certificates.
 
 ## Requirements
 

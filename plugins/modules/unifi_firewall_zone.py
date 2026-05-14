@@ -3,12 +3,11 @@
 DOCUMENTATION = r"""
 ---
 module: unifi_firewall_zone
-short_description: Manage UniFi firewall zones (firewall groups)
+short_description: Manage UniFi v8.3+ Firewall Zones (Policy Engine)
 version_added: "0.0.1"
 description:
-    - Create, update, or delete UniFi firewall zones (firewall groups).
-    - Firewall zones are used to group interfaces and apply firewall rules between zones.
-    - Following Ubiquiti best practices, create zones for each VLAN to enable proper network segmentation.
+    - Create, update, or delete firewall zones in a UniFi controller using the modern Policy Engine.
+    - This module targets the v2 API introduced in UniFi Network 8.x.
 options:
     host:
         description: The host of the UniFi controller.
@@ -42,7 +41,7 @@ options:
     type:
         description: Type of the firewall zone.
         choices: [ lan, wan, guest, iot, custom ]
-        default: lan
+        default: custom
         type: str
     description:
         description: Description of the firewall zone.
@@ -59,33 +58,13 @@ EXAMPLES = r"""
     password: "secret"
     site: "default"
     validate_certs: false
-    name: "LAN"
+    name: "Internal"
     type: lan
-    description: "Local Area Network zone"
+    description: "Main LAN zone"
     state: present
-
-- name: Create IoT firewall zone for VLAN isolation
-  hellqvio86.unifi.unifi_firewall_zone:
-    host: "192.168.60.1"
-    username: "admin"
-    password: "secret"
-    site: "default"
-    validate_certs: false
-    name: "IoT"
-    type: iot
-    description: "IoT devices VLAN zone"
-    state: present
-"""
-
-RETURN = r"""
-zone:
-    description: The created or updated firewall zone object.
-    type: dict
-    returned: when state is present
 """
 
 from ansible.module_utils.basic import AnsibleModule
-
 from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI
 
 
@@ -98,7 +77,7 @@ def run_module():
         validate_certs=dict(type="bool", default=False),
         state=dict(type="str", choices=["present", "absent"], default="present"),
         name=dict(type="str", required=True),
-        type=dict(type="str", choices=["lan", "wan", "guest", "iot", "custom"], default="lan"),
+        type=dict(type="str", choices=["lan", "wan", "guest", "iot", "custom"], default="custom"),
         description=dict(type="str"),
     )
 
@@ -115,17 +94,20 @@ def run_module():
 
     site = module.params["site"]
 
-    # Fetch existing firewall zones
-    zones, info = api.request(f"/proxy/network/api/s/{site}/rest/firewallgroup")
-    if zones is None:
+    # Fetch existing firewall zones via v2 API
+    res, info = api.request(f"/proxy/network/v2/api/site/{site}/firewall/zone")
+    zones = api.as_list(res)
+    if res is None:
         module.fail_json(msg="Failed to fetch firewall zones", info=info)
 
     existing = next((z for z in zones if z.get("name") == module.params["name"]), None)
 
     # Build payload
-    desired_payload = {"name": module.params["name"], "type": module.params["type"]}
-    if module.params["description"]:
-        desired_payload["description"] = module.params["description"]
+    desired_payload = {
+        "name": module.params["name"],
+        "type": module.params["type"].upper(),
+        "description": module.params["description"] or ""
+    }
 
     changed = False
     result_zone = existing
@@ -134,21 +116,28 @@ def run_module():
         if not existing:
             changed = True
             if not module.check_mode:
-                result_zone, info = api.request(
-                    f"/proxy/network/api/s/{site}/rest/firewallgroup", method="POST", data=desired_payload
+                res, info = api.request(
+                    f"/proxy/network/v2/api/site/{site}/firewall/zone", method="POST", data=desired_payload
                 )
+                res_list = api.as_list(res)
+                result_zone = res_list[0] if res_list else res
                 if not result_zone:
                     module.fail_json(msg="Failed to create firewall zone", info=info)
         else:
-            for key, value in desired_payload.items():
-                if existing.get(key) != value:
-                    changed = True
-                    break
-
+            # Normalize for comparison
+            if (existing.get("name") != desired_payload["name"] or 
+                existing.get("type") != desired_payload["type"] or 
+                existing.get("description", "") != desired_payload["description"]):
+                changed = True
+                
             if changed and not module.check_mode:
-                result_zone, info = api.request(
-                    f"/proxy/network/api/s/{site}/rest/firewallgroup/{existing['_id']}", method="PUT", data=desired_payload
+                res, info = api.request(
+                    f"/proxy/network/v2/api/site/{site}/firewall/zone/{existing['_id']}", 
+                    method="PUT", 
+                    data=desired_payload
                 )
+                res_list = api.as_list(res)
+                result_zone = res_list[0] if res_list else res
                 if not result_zone:
                     module.fail_json(msg="Failed to update firewall zone", info=info)
 
@@ -157,7 +146,7 @@ def run_module():
             changed = True
             if not module.check_mode:
                 _, info = api.request(
-                    f"/proxy/network/api/s/{site}/rest/firewallgroup/{existing['_id']}", method="DELETE"
+                    f"/proxy/network/v2/api/site/{site}/firewall/zone/{existing['_id']}", method="DELETE"
                 )
                 if info["status"] not in [200, 204]:
                     module.fail_json(msg="Failed to delete firewall zone", info=info)

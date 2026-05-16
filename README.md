@@ -54,7 +54,7 @@ To avoid cluttering your tasks, use `module_defaults` to define your credentials
   hosts: localhost
   module_defaults:
     group/hellqvio86.unifi.unifi:
-      host: "192.168.1.1"
+      host: "192.0.2.1"
       username: "admin"
       password: "password"
 ```
@@ -105,7 +105,7 @@ To avoid cluttering your tasks, use `module_defaults` to define your credentials
 ```yaml
 - name: Configure activity logging
   hellqvio86.unifi.unifi_rsyslog:
-    ip: "192.168.1.50"
+    ip: "192.0.2.50"
     enabled: true
 
 - name: Ensure admin SSH keys are present

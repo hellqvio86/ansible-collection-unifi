@@ -5,7 +5,7 @@ from ansible_collections.hellqvio86.unifi.plugins.modules.unifi_ssh_key import r
 
 def test_ssh_key_present_no_change():
     params = {
-        "host": "192.168.1.1",
+        "host": "192.0.2.1",
         "username": "admin",
         "password": "password",
         "validate_certs": False,
@@ -37,7 +37,7 @@ def test_ssh_key_present_no_change():
 
 def test_ssh_key_present_with_change():
     params = {
-        "host": "192.168.1.1",
+        "host": "192.0.2.1",
         "username": "admin",
         "password": "password",
         "validate_certs": False,

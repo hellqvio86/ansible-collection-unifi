@@ -5,7 +5,7 @@ from ansible_collections.hellqvio86.unifi.plugins.modules.unifi_port_profile imp
 
 def test_port_profile_create():
     params = {
-        "host": "192.168.1.1",
+        "host": "192.0.2.1",
         "username": "admin",
         "password": "password",
         "site": "default",
@@ -60,7 +60,7 @@ def test_port_profile_create():
 
 def test_port_profile_no_change():
     params = {
-        "host": "192.168.1.1",
+        "host": "192.0.2.1",
         "username": "admin",
         "password": "password",
         "site": "default",

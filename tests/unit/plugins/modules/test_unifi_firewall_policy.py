@@ -6,7 +6,7 @@ from ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_policy 
 def test_firewall_policy_create():
     # 1. Setup Mock Module Params
     params = {
-        "host": "192.168.1.1",
+        "host": "192.0.2.1",
         "username": "admin",
         "password": "password",
         "site": "default",
@@ -74,7 +74,7 @@ def test_firewall_policy_create():
 
 def test_firewall_policy_absent():
     params = {
-        "host": "192.168.1.1",
+        "host": "192.0.2.1",
         "username": "admin",
         "password": "password",
         "site": "default",

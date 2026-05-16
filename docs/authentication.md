@@ -9,7 +9,7 @@ The most direct way is to provide credentials to each task. This is useful for o
 ```yaml
 - name: Manage WiFi
   hellqvio86.unifi.unifi_wlan:
-    host: "192.168.1.1"
+    host: "192.0.2.1"
     username: "admin"
     password: "password"
     name: "MySSID"
@@ -24,7 +24,7 @@ To avoid repetition, you can define credentials once at the play or block level 
   hosts: localhost
   module_defaults:
     group/hellqvio86.unifi.unifi:
-      host: "192.168.1.1"
+      host: "192.0.2.1"
       username: "admin"
       password: "password"
   tasks:

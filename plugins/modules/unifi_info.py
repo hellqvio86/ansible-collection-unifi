@@ -17,11 +17,13 @@ options:
         description: List of subsets to gather.
         type: list
         elements: str
-        choices: [ wifi, firewall_groups, firewall_zones, firewall_policies, rsyslog, port_profiles, devices ]
+        choices: [ wifi, firewall_groups, firewall_zones, firewall_policies, rsyslog, port_profiles, devices, dhcp_reservations ]
         default: [ wifi, firewall_groups, firewall_zones, firewall_policies, rsyslog ]
 author:
     - hellqvio86 (@hellqvio86)
 """
+
+import ipaddress
 
 from ansible.module_utils.basic import AnsibleModule
 
@@ -35,10 +37,12 @@ def run_module():
         password=dict(type="str", no_log=True),
         site=dict(type="str", default="default"),
         validate_certs=dict(type="bool", default=False),
+        unifi_session_cookie=dict(type="str", no_log=True, required=False),
+        unifi_csrf_token=dict(type="str", no_log=True, required=False),
         gather_subset=dict(
             type="list",
             elements="str",
-            choices=["wifi", "firewall_groups", "firewall_zones", "firewall_policies", "rsyslog", "port_profiles", "devices"],
+            choices=["wifi", "firewall_groups", "firewall_zones", "firewall_policies", "rsyslog", "port_profiles", "devices", "dhcp_reservations"],
             default=["wifi", "firewall_groups", "firewall_zones", "firewall_policies", "rsyslog"],
         ),
     )
@@ -51,6 +55,8 @@ def run_module():
         module.params.get("username"),
         module.params.get("password"),
         module.params.get("validate_certs"),
+        module.params.get("unifi_session_cookie"),
+        module.params.get("unifi_csrf_token"),
     )
     api.login()
 
@@ -61,6 +67,15 @@ def run_module():
     # Helper for mapping IDs to Names
     networks_res, _ = api.request(f"/proxy/network/api/s/{site}/rest/networkconf")
     network_map = {n["_id"]: n["name"] for n in api.as_list(networks_res) if isinstance(n, dict)}
+
+    # Build subnet -> name mapping for clients without network_id
+    subnet_map = {}
+    for n in api.as_list(networks_res):
+        if isinstance(n, dict) and n.get("ip_subnet"):
+            try:
+                subnet_map[ipaddress.ip_network(n["ip_subnet"], strict=False)] = n["name"]
+            except ValueError:
+                pass
 
     if "wifi" in subset:
         res, _ = api.request(f"/proxy/network/api/s/{site}/rest/wlanconf")
@@ -154,6 +169,35 @@ def run_module():
     if "devices" in subset:
         res, _ = api.request(f"/proxy/network/api/s/{site}/rest/device")
         results["devices"] = api.as_list(res)
+
+    if "dhcp_reservations" in subset:
+        res, _ = api.request(f"/proxy/network/api/s/{site}/stat/alluser")
+        results["dhcp_reservations"] = []
+        for c in api.as_list(res):
+            if not isinstance(c, dict):
+                continue
+            if c.get("use_fixedip"):
+                network_id = c.get("network_id")
+                network = network_map.get(network_id, network_id) if network_id else None
+
+                if not network:
+                    fixed_ip = c.get("fixed_ip")
+                    if fixed_ip:
+                        try:
+                            ip_addr = ipaddress.ip_address(fixed_ip)
+                            for subnet, net_name in subnet_map.items():
+                                if ip_addr in subnet:
+                                    network = net_name
+                                    break
+                        except ValueError:
+                            pass
+
+                results["dhcp_reservations"].append({
+                    "mac": c.get("mac"),
+                    "name": c.get("name"),
+                    "fixed_ip": c.get("fixed_ip"),
+                    "network": network,
+                })
 
     module.exit_json(changed=False, unifi_info=results)
 

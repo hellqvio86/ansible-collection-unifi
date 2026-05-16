@@ -32,7 +32,7 @@ This module targets the modern Policy Engine (v2 API) introduced in UniFi Networ
     action: BLOCK
     source:
       zone: "Internal"
-      ips: ["192.168.20.0/24"]
+      ips: ["203.0.113.0/24"]
     destination:
       zone: "External"
     protocol: all

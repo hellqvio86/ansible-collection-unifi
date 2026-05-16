@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.0.6
+
+### New Features
+- **Session Reuse**: All modules now accept `unifi_session_cookie` and `unifi_csrf_token` parameters to reuse an existing authentication session, avoiding UniFi rate limits (HTTP 429) when running loops over many items.
+- **Role Login Task**: Added `login.yml` that authenticates once and shares the session across all subsequent module calls in the playbook.
+- **`unifi_info` Subnet Fallback**: DHCP reservations without an explicit `network_id` are now resolved by matching `fixed_ip` against network subnets.
+
+### Improvements
+- **Modules**: Added `unifi_session_cookie`/`unifi_csrf_token` params to all 11 API-based modules.
+
 ## 0.0.5
 
 ### New Modules

@@ -70,6 +70,8 @@ def run_module():
         password=dict(type="str", no_log=True),
         site=dict(type="str", default="default"),
         validate_certs=dict(type="bool", default=False),
+        unifi_session_cookie=dict(type="str", no_log=True, required=False),
+        unifi_csrf_token=dict(type="str", no_log=True, required=False),
         enabled=dict(type="bool", default=True),
         ip=dict(type="str", required=False),
         port=dict(type="int", default=10516),
@@ -86,6 +88,8 @@ def run_module():
         module.params["username"],
         module.params["password"],
         module.params["validate_certs"],
+        module.params.get("unifi_session_cookie"),
+        module.params.get("unifi_csrf_token"),
     )
     api.login()
 

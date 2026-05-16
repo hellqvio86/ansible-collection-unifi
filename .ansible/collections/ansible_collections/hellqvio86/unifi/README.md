@@ -1,7 +1,7 @@
 # UniFi Ansible Collection
 
 ![CI](https://github.com/hellqvio86/ansible-collection-unifi/actions/workflows/ci.yml/badge.svg)
-![License](https://img.shields.io/github/license/hellqvio86/ansible-collection-unifi)
+![Galaxy](https://img.shields.io/ansible/collection/v/hellqvio86/unifi)
 
 > [!CAUTION]
 > **Alpha Status**: This collection is currently in early alpha. APIs and module arguments are subject to breaking changes. Use with caution in production environments.
@@ -33,8 +33,16 @@ An Ansible collection for managing UniFi Network (v8.x+) and UniFi OS (v3.x+) wi
 
 ## Installation
 
+Install via Ansible Galaxy:
 ```bash
 ansible-galaxy collection install hellqvio86.unifi
+```
+
+Or include it in your `requirements.yml`:
+```yaml
+collections:
+  - name: hellqvio86.unifi
+    version: 0.0.5
 ```
 
 ## Authentication (The Login Step)
@@ -117,6 +125,23 @@ To avoid cluttering your tasks, use `module_defaults` to define your credentials
 ## Environment Variables
 
 You can also skip credentials entirely by setting `UNIFI_HOST`, `UNIFI_USERNAME`, and `UNIFI_PASSWORD`.
+
+## Development & Building
+
+This project uses a `Makefile` to handle local development, testing, and packaging for Ansible Galaxy. Here are the available commands:
+
+- `make venv`: Create a virtual environment and install dependencies.
+- `make test`: Run unit tests using `pytest`.
+- `make lint`: Run `ruff` and `ansible-lint` to check code quality.
+- `make format`: Auto-format code using `ruff`.
+- `make build`: Build the Ansible collection tarball (`.tar.gz`) for release.
+- `make publish`: Build and publish the collection to Ansible Galaxy.
+
+**Publishing a new release:**
+To publish a release, you must provide your Ansible Galaxy API key:
+```bash
+make publish GALAXY_API_KEY="your_api_key_here" [VERSION=0.0.4]
+```
 
 ## License
 

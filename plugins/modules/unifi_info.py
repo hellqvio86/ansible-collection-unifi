@@ -17,7 +17,7 @@ options:
         description: List of subsets to gather.
         type: list
         elements: str
-        choices: [ wifi, firewall_groups, firewall_zones, firewall_policies, rsyslog, port_profiles, devices, dhcp_reservations ]
+        choices: [ wifi, firewall_groups, firewall_zones, firewall_policies, rsyslog, port_profiles, devices, dhcp_reservations, networks ]
         default: [ wifi, firewall_groups, firewall_zones, firewall_policies, rsyslog ]
 author:
     - hellqvio86 (@hellqvio86)
@@ -42,7 +42,7 @@ def run_module():
         gather_subset=dict(
             type="list",
             elements="str",
-            choices=["wifi", "firewall_groups", "firewall_zones", "firewall_policies", "rsyslog", "port_profiles", "devices", "dhcp_reservations"],
+            choices=["wifi", "firewall_groups", "firewall_zones", "firewall_policies", "rsyslog", "port_profiles", "devices", "dhcp_reservations", "networks"],
             default=["wifi", "firewall_groups", "firewall_zones", "firewall_policies", "rsyslog"],
         ),
     )
@@ -198,6 +198,28 @@ def run_module():
                     "fixed_ip": c.get("fixed_ip"),
                     "network": network,
                 })
+
+    if "networks" in subset:
+        results["networks"] = []
+        for n in api.as_list(networks_res):
+            if not isinstance(n, dict):
+                continue
+            results["networks"].append({
+                "name": n.get("name"),
+                "purpose": n.get("purpose"),
+                "enabled": n.get("enabled"),
+                "vlan_enabled": n.get("vlan_enabled"),
+                "vlan": n.get("vlan"),
+                "subnet": n.get("ip_subnet"),
+                "dhcpd_enabled": n.get("dhcpd_enabled"),
+                "dhcpd_start": n.get("dhcpd_start"),
+                "dhcpd_stop": n.get("dhcpd_stop"),
+                "dhcpd_leasetime": n.get("dhcpd_leasetime"),
+                "dhcpd_dns_1": n.get("dhcpd_dns_1"),
+                "dhcpd_dns_2": n.get("dhcpd_dns_2"),
+                "dhcpd_gateway": n.get("dhcpd_gateway"),
+                "dhcpd_domain_name": n.get("dhcpd_domain_name"),
+            })
 
     module.exit_json(changed=False, unifi_info=results)
 

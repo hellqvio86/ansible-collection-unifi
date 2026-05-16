@@ -51,6 +51,24 @@
               zone: "Admin"
             protocol: all
 
+    - name: "--- Section 3b: DHCP ---"
+      block:
+        - name: Configure DHCP server on a network
+          hellqvio86.unifi.unifi_dhcp_server:
+            network: "Default"
+            enabled: true
+            dhcp_start: "192.168.1.100"
+            dhcp_stop: "192.168.1.200"
+            lease_time: 86400
+            dns_1: "192.168.1.1"
+            dns_2: "8.8.8.8"
+
+        - name: Ensure fixed IP reservations
+          hellqvio86.unifi.unifi_dhcp_reservation:
+            mac: "aa:bb:cc:dd:ee:ff"
+            fixed_ip: "192.168.1.50"
+            name: "Printer"
+
     - name: "--- Section 4: System Settings ---"
       block:
         - name: Configure Remote Syslog

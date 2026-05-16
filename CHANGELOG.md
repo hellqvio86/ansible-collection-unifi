@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.7
+
+### New Modules
+- `unifi_dhcp_server`: Configure DHCP server settings (range, lease time, DNS, gateway) per network.
+
+### Improvements
+- **`unifi_info`**: Added `networks` gather subset that exports DHCP configuration (enabled, range, lease, DNS, gateway, domain) per network.
+
 ## 0.0.6
 
 ### New Features

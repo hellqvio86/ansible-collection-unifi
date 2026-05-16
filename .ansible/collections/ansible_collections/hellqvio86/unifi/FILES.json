@@ -15,13 +15,6 @@
    "format": 1
   },
   {
-   "name": "docs/authentication.md",
-   "ftype": "file",
-   "chksum_type": "sha256",
-   "chksum_sha256": "4a65650fad25b769e3343ecc831e649b5e4419a103e28fedb79430e93a867a07",
-   "format": 1
-  },
-  {
    "name": "docs/usage.md",
    "ftype": "file",
    "chksum_type": "sha256",
@@ -43,24 +36,10 @@
    "format": 1
   },
   {
-   "name": "docs/modules/unifi_firewall_policy.md",
-   "ftype": "file",
-   "chksum_type": "sha256",
-   "chksum_sha256": "bf79e1a476191b523c5da4c5e36cd3811d6db036b25bf8491c26e0cde9a8c1a5",
-   "format": 1
-  },
-  {
    "name": "docs/modules/unifi_info.md",
    "ftype": "file",
    "chksum_type": "sha256",
    "chksum_sha256": "6a66e5fd769215ab6ab3d7ce11f3f2214f564db0ce9d8895022a57eb84824261",
-   "format": 1
-  },
-  {
-   "name": "docs/modules/unifi_rsyslog.md",
-   "ftype": "file",
-   "chksum_type": "sha256",
-   "chksum_sha256": "2e86d287875a237f3b3c9e062ac39a016750c5425f8734ea81974c922f20d9f5",
    "format": 1
   },
   {
@@ -123,7 +102,35 @@
    "name": "docs/modules/unifi_dhcp_reservation.md",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "0e935aca7e87e82c9cd7d2a9701500950353dee2720012086ac8cd27147d3797",
+   "chksum_sha256": "ec0dd5ededa2c552463afd4deb96af79e4c2acef2e5636635141af65b2cc8750",
+   "format": 1
+  },
+  {
+   "name": "docs/modules/unifi_firewall_policy.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "a29dff79ae57d3ba9353fd2b5027c56ddf03a4b6d0b64f6f792c5999b358cdde",
+   "format": 1
+  },
+  {
+   "name": "docs/modules/unifi_rsyslog.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "3d298471165b81cdcd525c3a32f64283b95c46115930f3159c9dc61e92fb0e1f",
+   "format": 1
+  },
+  {
+   "name": "docs/modules/unifi_dhcp_server.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "7e0f0e12be619930d89ae29cb6cc97de6827b9d6c485e3c396fa9ad90be23e3c",
+   "format": 1
+  },
+  {
+   "name": "docs/authentication.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "a0a07ed9c9105c896d5337c3e5f37cdd80af3798e3568752b097c2cc3c3f3e17",
    "format": 1
   },
   {
@@ -137,7 +144,7 @@
    "name": "meta/runtime.yml",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "bf02743bdd30cd89b41a63430598cab446ec4ed3cd4d06fc593fdf8d3aa66f8e",
+   "chksum_sha256": "4869ba0dc93de99afcdf55f82485c8f9e8d1191edc8c34e51ba0336f1772ca7e",
    "format": 1
   },
   {
@@ -162,31 +169,38 @@
    "format": 1
   },
   {
+   "name": "plugins/modules/unifi_ssl_config.py",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "95b7811d68478b03e0197e4cf9d7ea3c608a9de42144dc7935a3944eee0fbf1a",
+   "format": 1
+  },
+  {
+   "name": "plugins/modules/unifi_dhcp_reservation.py",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "d2b0c366abcdeedb90818cf364dce54f025703c2f618078964e4866b307c549f",
+   "format": 1
+  },
+  {
    "name": "plugins/modules/unifi_firewall_group.py",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "3c12f0a04bf2f1c83a369460531274a23767e331748349c3841ce890d59bb91a",
+   "chksum_sha256": "c7f85df3a02189f31a38cbb221868c8f677fab63a1ad92c6cb3336c066a4638c",
    "format": 1
   },
   {
    "name": "plugins/modules/unifi_firewall_policy.py",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "998e0753c8d94ae900d3df21894b9b3655654abc2ac8e3821ce6b5e3dc0bb629",
+   "chksum_sha256": "1fed76979886392508b41faeacc7a23314e669d18c08b0ffaf29ef52cda70f48",
    "format": 1
   },
   {
    "name": "plugins/modules/unifi_firewall_zone.py",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "c3f496975e928a06727f2caedcc71c6e50d2890ab2f70169b247f7e09eb17b15",
-   "format": 1
-  },
-  {
-   "name": "plugins/modules/unifi_info.py",
-   "ftype": "file",
-   "chksum_type": "sha256",
-   "chksum_sha256": "93a122d17c6644b439982d4a2961e618657dc0f1ea01e47de7fb359ad131d25e",
+   "chksum_sha256": "d436b6b23ca13f8981556f40456906683aabcebf659b05c04eec99e98eb9c5d2",
    "format": 1
   },
   {
@@ -211,17 +225,17 @@
    "format": 1
   },
   {
-   "name": "plugins/modules/unifi_switch_profile_assignment.py",
-   "ftype": "file",
-   "chksum_type": "sha256",
-   "chksum_sha256": "4c692b347adb0e2a4a585c1544de37599bf3b8630672a582730353e92fb83e5e",
-   "format": 1
-  },
-  {
    "name": "plugins/modules/unifi_switch_profile.py",
    "ftype": "file",
    "chksum_type": "sha256",
    "chksum_sha256": "fd7c7f618cd41c6ea9259d0b413b96d292347c8ba3e61e9e48a57b9b5cee7c0e",
+   "format": 1
+  },
+  {
+   "name": "plugins/modules/unifi_switch_profile_assignment.py",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "4c692b347adb0e2a4a585c1544de37599bf3b8630672a582730353e92fb83e5e",
    "format": 1
   },
   {
@@ -235,21 +249,21 @@
    "name": "plugins/modules/unifi_wlan.py",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "2bab9435095c59ed7eaa036738ba4fc98ffa61b0802e4e5bf056e44e7418f629",
+   "chksum_sha256": "fbff5e3f921869b925df1d0738beb256fa4a81e64dfa76b17a312453b25ea01d",
    "format": 1
   },
   {
-   "name": "plugins/modules/unifi_ssl_config.py",
+   "name": "plugins/modules/unifi_info.py",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "95b7811d68478b03e0197e4cf9d7ea3c608a9de42144dc7935a3944eee0fbf1a",
+   "chksum_sha256": "0498a342b88b0e2ca50c65b5751075d06a6ea732f0db0a084c4a04618c1d6c4e",
    "format": 1
   },
   {
-   "name": "plugins/modules/unifi_dhcp_reservation.py",
+   "name": "plugins/modules/unifi_dhcp_server.py",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "e23066cb580d684d85814a7b26e0f9355d1e78060426c1aafdf19d559000a6aa",
+   "chksum_sha256": "448ae4f40bfbb00783f0022f76b6b039a290ebc3f4386231595d64e8a8b16b1c",
    "format": 1
   },
   {
@@ -305,21 +319,7 @@
    "name": "examples/site.yml",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "499660a43c97f2f09bda0962505e35a25fde47603166526709f5a5670e014758",
-   "format": 1
-  },
-  {
-   "name": "CHANGELOG.md",
-   "ftype": "file",
-   "chksum_type": "sha256",
-   "chksum_sha256": "a7fee087edbac7f65f27ea8850f893829bcc4d0c7f1086f072889ef646a8d7ec",
-   "format": 1
-  },
-  {
-   "name": "README.md",
-   "ftype": "file",
-   "chksum_type": "sha256",
-   "chksum_sha256": "a78bf8523e6646793e5b3cb3587019568f70fcccad6713ecfde6e08391aca5b3",
+   "chksum_sha256": "231e8b547f9ddbae3192c95223a67cf2ba1c8d051abb2db02cac3269bf75d259",
    "format": 1
   },
   {
@@ -341,6 +341,20 @@
    "ftype": "dir",
    "chksum_type": null,
    "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "CHANGELOG.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "61b378aea6475087bd2703351c102d0ca4e98f1acd22cfd0b2bfe6cafdc702c4",
+   "format": 1
+  },
+  {
+   "name": "README.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "9526b59e85c9087fc5245394b6683d51fb8b33fe2e50a76ea8c9e57b5c421fca",
    "format": 1
   }
  ],

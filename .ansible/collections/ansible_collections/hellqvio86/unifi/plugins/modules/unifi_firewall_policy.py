@@ -12,7 +12,7 @@ description:
     - This module targets the v2 API introduced in UniFi Network 8.x.
 options:
     host:
-        description: The host of the UniFi controller (e.g., 192.168.1.1).
+        description: The host of the UniFi controller (e.g., 192.0.2.1).
         required: false
         type: str
     username:

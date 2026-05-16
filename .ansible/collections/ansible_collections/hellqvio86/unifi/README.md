@@ -1,7 +1,9 @@
 # UniFi Ansible Collection
 
-![CI](https://github.com/hellqvio86/ansible-collection-unifi/actions/workflows/ci.yml/badge.svg)
-![Galaxy](https://img.shields.io/ansible/collection/v/hellqvio86/unifi)
+[![CI](https://github.com/hellqvio86/ansible-collection-unifi/actions/workflows/ci.yml/badge.svg)](https://github.com/hellqvio86/ansible-collection-unifi/actions/workflows/ci.yml)
+[![Tests](https://github.com/hellqvio86/ansible-collection-unifi/actions/workflows/ci.yml/badge.svg?job=test)](https://github.com/hellqvio86/ansible-collection-unifi/actions/workflows/ci.yml)
+[![Ansible Galaxy](https://img.shields.io/ansible/collection/v/hellqvio86/unifi?logo=ansible&logoColor=black&label=Ansible%20Galaxy)](https://galaxy.ansible.com/hellqvio86/unifi)
+[![Ansible Galaxy Downloads](https://img.shields.io/ansible/role/d/hellqvio86/unifi?logo=ansible&logoColor=black)](https://galaxy.ansible.com/hellqvio86/unifi)
 
 > [!CAUTION]
 > **Alpha Status**: This collection is currently in early alpha. APIs and module arguments are subject to breaking changes. Use with caution in production environments.
@@ -54,7 +56,7 @@ To avoid cluttering your tasks, use `module_defaults` to define your credentials
   hosts: localhost
   module_defaults:
     group/hellqvio86.unifi.unifi:
-      host: "192.168.1.1"
+      host: "192.0.2.1"
       username: "admin"
       password: "password"
 ```
@@ -105,7 +107,7 @@ To avoid cluttering your tasks, use `module_defaults` to define your credentials
 ```yaml
 - name: Configure activity logging
   hellqvio86.unifi.unifi_rsyslog:
-    ip: "192.168.1.50"
+    ip: "192.0.2.50"
     enabled: true
 
 - name: Ensure admin SSH keys are present

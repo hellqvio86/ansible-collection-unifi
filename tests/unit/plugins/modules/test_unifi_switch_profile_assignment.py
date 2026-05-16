@@ -5,7 +5,7 @@ from ansible_collections.hellqvio86.unifi.plugins.modules.unifi_switch_profile_a
 
 def test_switch_profile_assignment():
     params = {
-        "host": "192.168.1.1",
+        "host": "192.0.2.1",
         "username": "admin",
         "password": "password",
         "site": "default",
@@ -44,7 +44,7 @@ def test_switch_profile_assignment():
                         "type": "usw",
                         "_id": "device123",
                         "mac": "00:11:22:33:44:55",
-                        "ip": "192.168.1.10",
+                        "ip": "192.0.2.10",
                     }
                 ],
                 {"status": 200},
@@ -77,7 +77,7 @@ def test_switch_profile_assignment():
 
 def test_switch_profile_assignment_no_change():
     params = {
-        "host": "192.168.1.1",
+        "host": "192.0.2.1",
         "username": "admin",
         "password": "password",
         "site": "default",
@@ -134,7 +134,7 @@ def test_switch_profile_assignment_no_change():
 
 def test_switch_profile_assignment_remove():
     params = {
-        "host": "192.168.1.1",
+        "host": "192.0.2.1",
         "username": "admin",
         "password": "password",
         "site": "default",
@@ -142,7 +142,7 @@ def test_switch_profile_assignment_remove():
         "state": "absent",
         "switch_name": None,
         "switch_mac": None,
-        "switch_ip": "192.168.1.10",
+        "switch_ip": "192.0.2.10",
         "profile_name": "Access Switch Profile",
     }
 
@@ -171,7 +171,7 @@ def test_switch_profile_assignment_remove():
                         "name": "Switch-01",
                         "type": "usw",
                         "_id": "device123",
-                        "ip": "192.168.1.10",
+                        "ip": "192.0.2.10",
                         "switch_profile_id": "switch_prof123",
                     }
                 ],

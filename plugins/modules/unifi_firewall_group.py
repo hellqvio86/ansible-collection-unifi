@@ -57,7 +57,7 @@ author:
 EXAMPLES = r"""
 - name: Ensure web ports group exists
   hellqvio86.unifi.unifi_firewall_group:
-    host: "192.168.1.1"
+    host: "192.0.2.1"
     username: "admin"
     password: "password"
     name: "Web Ports"
@@ -66,12 +66,12 @@ EXAMPLES = r"""
 
 - name: Ensure internal networks group exists
   hellqvio86.unifi.unifi_firewall_group:
-    host: "192.168.1.1"
+    host: "192.0.2.1"
     username: "admin"
     password: "password"
     name: "Internal Networks"
     group_type: "address-group"
-    group_members: ["192.168.1.0/24", "192.168.2.0/24"]
+    group_members: ["192.0.2.0/24", "198.51.100.0/24"]
 """
 
 from ansible.module_utils.basic import AnsibleModule
@@ -86,6 +86,8 @@ def run_module():
         password=dict(type="str", no_log=True),
         site=dict(type="str", default="default"),
         validate_certs=dict(type="bool", default=False),
+        unifi_session_cookie=dict(type="str", no_log=True, required=False),
+        unifi_csrf_token=dict(type="str", no_log=True, required=False),
         state=dict(type="str", choices=["present", "absent"], default="present"),
         name=dict(type="str", required=True),
         group_type=dict(type="str", choices=["address-group", "port-group"], default="address-group"),
@@ -100,6 +102,8 @@ def run_module():
         module.params["username"],
         module.params["password"],
         module.params["validate_certs"],
+        module.params.get("unifi_session_cookie"),
+        module.params.get("unifi_csrf_token"),
     )
     api.login()
 

@@ -78,6 +78,8 @@ def run_module():
             password=dict(type="str", no_log=True),
             site=dict(type="str", default="default"),
             validate_certs=dict(type="bool", default=False),
+            unifi_session_cookie=dict(type="str", no_log=True, required=False),
+            unifi_csrf_token=dict(type="str", no_log=True, required=False),
             state=dict(type="str", choices=["present", "absent"], default="present"),
             switch_name=dict(type="str"),
             switch_mac=dict(type="str"),
@@ -90,7 +92,9 @@ def run_module():
 
     desired_items = _normalize_desired(module)
     api = UnifiAPI(
-        module, module.params["host"], module.params["username"], module.params["password"], module.params["validate_certs"]
+        module, module.params["host"], module.params["username"], module.params["password"], module.params["validate_certs"],
+        module.params.get("unifi_session_cookie"),
+        module.params.get("unifi_csrf_token"),
     )
     api.login()
     site = module.params["site"]

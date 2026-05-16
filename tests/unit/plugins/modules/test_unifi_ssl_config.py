@@ -5,7 +5,7 @@ from ansible_collections.hellqvio86.unifi.plugins.modules.unifi_ssl_config impor
 
 def test_ssl_config_no_change():
     params = {
-        "host": "192.168.1.1",
+        "host": "192.0.2.1",
         "ssh_username": "root",
         "ssh_password": "password",
         "ssh_key": None,
@@ -50,7 +50,7 @@ def test_ssl_config_no_change():
 
 def test_ssl_config_with_change():
     params = {
-        "host": "192.168.1.1",
+        "host": "192.0.2.1",
         "ssh_username": "root",
         "ssh_password": "password",
         "ssh_key": None,

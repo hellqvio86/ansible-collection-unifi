@@ -7,7 +7,7 @@ from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import 
 
 def test_unifi_api_login_success():
     module = MagicMock()
-    host = "192.168.1.1"
+    host = "192.0.2.1"
     username = "admin"
     password = "password"
 

@@ -129,6 +129,8 @@ def run_module():
         password=dict(type="str", no_log=True),
         site=dict(type="str", default="default"),
         validate_certs=dict(type="bool", default=False),
+        unifi_session_cookie=dict(type="str", no_log=True, required=False),
+        unifi_csrf_token=dict(type="str", no_log=True, required=False),
         policies=dict(type="list", elements="dict", options=policy_spec),
         state=dict(type="str", choices=["present", "absent"], default="present"),
         name=dict(type="str"),
@@ -150,7 +152,11 @@ def run_module():
     validate_certs = module.params["validate_certs"]
 
     # 1. Initialize API and Login
-    api = UnifiAPI(module, host, username, password, validate_certs)
+    api = UnifiAPI(
+        module, host, username, password, validate_certs,
+        module.params.get("unifi_session_cookie"),
+        module.params.get("unifi_csrf_token"),
+    )
     api.login()
 
     # 2. Resolve zones once for the full batch.

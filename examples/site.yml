@@ -7,7 +7,7 @@
   # The "Login Step": Define credentials once for all modules
   module_defaults:
     group/hellqvio86.unifi.unifi:
-      host: "192.168.1.1"
+      host: "192.0.2.1"
       username: "admin"
       password: "password"
       validate_certs: false
@@ -55,7 +55,7 @@
       block:
         - name: Configure Remote Syslog
           hellqvio86.unifi.unifi_rsyslog:
-            ip: "192.168.1.50"
+            ip: "192.0.2.50"
             enabled: true
 
         - name: Ensure SSH Keys are persistent
@@ -73,3 +73,4 @@
         - name: Display gathered state
           debug:
             var: unifi_state.unifi_info
+...

@@ -2,7 +2,7 @@
  "collection_info": {
   "namespace": "hellqvio86",
   "name": "unifi",
-  "version": "0.0.3",
+  "version": "0.0.5",
   "authors": [
    "Olof Hellqvist (@hellqvio86)"
   ],
@@ -16,7 +16,7 @@
   "license": [
    "MIT"
   ],
-  "license_file": "LICENSE.md",
+  "license_file": null,
   "dependencies": {},
   "repository": "https://github.com/hellqvio86/ansible-collection-unifi",
   "documentation": "https://github.com/hellqvio86/ansible-collection-unifi",
@@ -27,7 +27,7 @@
   "name": "FILES.json",
   "ftype": "file",
   "chksum_type": "sha256",
-  "chksum_sha256": "742d588ffb09f0bfce5ab51a40109fbe6c888b4a22c4c14c232e69707c8acbc4",
+  "chksum_sha256": "65e7c586eeb38e1476c8d740879e23f56c1917d1e72a18051ceffffd11b055cf",
   "format": 1
  },
  "format": 1

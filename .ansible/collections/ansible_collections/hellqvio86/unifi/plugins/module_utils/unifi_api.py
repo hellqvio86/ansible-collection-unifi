@@ -23,6 +23,8 @@ class UnifiAPI:
         username: str | None = None,
         password: str | None = None,
         validate_certs: bool | None = None,
+        session_cookie: str | None = None,
+        csrf_token: str | None = None,
     ) -> None:
         self.module = module
 
@@ -38,8 +40,8 @@ class UnifiAPI:
             env_val = os.environ.get("UNIFI_VALIDATE_CERTS", "false").lower()
             self.validate_certs = env_val in ["true", "1", "yes", "on"]
 
-        self.session_cookie = None
-        self.csrf_token = None
+        self.session_cookie = session_cookie
+        self.csrf_token = csrf_token
 
         if not self.host:
             self.module.fail_json(msg="UniFi host not provided. Set 'host' parameter or 'UNIFI_HOST' environment variable.")
@@ -51,6 +53,8 @@ class UnifiAPI:
             self.module.params['validate_certs'] = self.validate_certs
 
     def login(self) -> bool:
+        if self.session_cookie and self.csrf_token:
+            return True
         if not self.username or not self.password:
             self.module.fail_json(msg="UniFi credentials not provided. Set 'username'/'password' or 'UNIFI_USERNAME'/'UNIFI_PASSWORD' environment variables.")
 

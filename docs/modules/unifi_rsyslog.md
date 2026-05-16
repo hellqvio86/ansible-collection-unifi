@@ -20,6 +20,6 @@ This module configures the Remote Syslog (Activity Logging) settings for the con
 ```yaml
 - name: Configure activity logging
   hellqvio86.unifi.unifi_rsyslog:
-    ip: "192.168.1.50"
+    ip: "192.0.2.50"
     enabled: true
 ```

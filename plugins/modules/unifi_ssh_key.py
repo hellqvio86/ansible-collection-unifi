@@ -52,7 +52,10 @@ def run_module():
         host=dict(type="str"),
         username=dict(type="str", no_log=True),
         password=dict(type="str", no_log=True),
+        site=dict(type="str", default="default"),
         validate_certs=dict(type="bool", default=False),
+        unifi_session_cookie=dict(type="str", no_log=True, required=False),
+        unifi_csrf_token=dict(type="str", no_log=True, required=False),
         keys=dict(type="list", elements="str", required=False),
         state=dict(type="str", choices=["present"], default="present"),
     )
@@ -66,7 +69,11 @@ def run_module():
     desired_keys = module.params["keys"]
 
     # 1. Initialize API and Login
-    api = UnifiAPI(module, host, username, password, validate_certs)
+    api = UnifiAPI(
+        module, host, username, password, validate_certs,
+        module.params.get("unifi_session_cookie"),
+        module.params.get("unifi_csrf_token"),
+    )
     api.login()
 
     # 2. Get current user settings (contains sshKeys)

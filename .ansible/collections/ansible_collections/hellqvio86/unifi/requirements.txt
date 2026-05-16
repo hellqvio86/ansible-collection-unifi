@@ -1,3 +1,0 @@
-PyJWT>=2.0.0
-cryptography>=3.4.0
-paramiko>=2.7.0

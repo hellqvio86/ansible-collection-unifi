@@ -51,7 +51,10 @@ def run_module():
             host=dict(type="str"),
             username=dict(type="str", no_log=True),
             password=dict(type="str", no_log=True),
+            site=dict(type="str", default="default"),
             validate_certs=dict(type="bool", default=False),
+            unifi_session_cookie=dict(type="str", no_log=True, required=False),
+            unifi_csrf_token=dict(type="str", no_log=True, required=False),
             state=dict(type="str", choices=["present", "absent"], default="present"),
             name=dict(type="str", required=True),
             cert=dict(type="str", no_log=True),
@@ -70,7 +73,11 @@ def run_module():
     if state == "present" and (not cert or not key):
         module.fail_json(msg="'cert' and 'key' are required when state=present")
 
-    api = UnifiAPI(module, module.params["host"], module.params["username"], module.params["password"], module.params["validate_certs"])
+    api = UnifiAPI(
+        module, module.params["host"], module.params["username"], module.params["password"], module.params["validate_certs"],
+        module.params.get("unifi_session_cookie"),
+        module.params.get("unifi_csrf_token"),
+    )
     api.login()
 
     existing_res, info = api.request("/api/userCertificates")

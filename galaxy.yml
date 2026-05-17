@@ -34,3 +34,4 @@ build_ignore:
   - ".ansible"
   - "test_output.txt"
   - "agents.md"
+  - "unifi_dump_all.yml"

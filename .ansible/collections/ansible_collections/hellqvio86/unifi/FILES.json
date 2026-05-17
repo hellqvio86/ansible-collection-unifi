@@ -134,6 +134,13 @@
    "format": 1
   },
   {
+   "name": "docs/modules/unifi_port_forward.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "6f33d9f92603d152e588fb920c006f411fa4c406ac6672344264dca155f5af6a",
+   "format": 1
+  },
+  {
    "name": "docs/authentication.md",
    "ftype": "file",
    "chksum_type": "sha256",
@@ -270,7 +277,7 @@
    "name": "plugins/modules/unifi_info.py",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "6f8348e25cc4840502199ca2a85a54a9d36c90b5ed5b7aa4680894b893de02f2",
+   "chksum_sha256": "fc7d2bbdc1f956baa0212b23adb27ae92b7e316fdd28f66d3e0b92bc0b8a9f64",
    "format": 1
   },
   {
@@ -278,6 +285,13 @@
    "ftype": "file",
    "chksum_type": "sha256",
    "chksum_sha256": "6d2b3175bfe94057151dacb95e0ad9db49c8a6951d777c953ecf86d78d6866e5",
+   "format": 1
+  },
+  {
+   "name": "plugins/modules/unifi_port_forward.py",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "83cc32ef1ee0bcd4639ea166eaa4bde1b9fcbbc4e6c227bf40d946ac880962a4",
    "format": 1
   },
   {
@@ -368,7 +382,7 @@
    "name": "CHANGELOG.md",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "f683dcbb5bcc193ff74ecfecb392cc720e9642f69ed30deb02cf38a8a4cf9375",
+   "chksum_sha256": "81371407cd28a90fb08f47905d6c418c224f21ff40d2893da72cf6bd4c82132a",
    "format": 1
   }
  ],

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.9
+
+### New Modules
+- `unifi_port_forward`: Manage port forwarding rules.
+
+### Improvements
+- **`unifi_info`**: Added `port_forward` gather subset that exports port forwarding rules.
+
 ## 0.0.8
 
 ### New Modules

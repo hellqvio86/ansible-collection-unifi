@@ -1,14 +1,20 @@
 # Changelog
 
+## 0.0.8
+
+### New Modules
+- `unifi_system_settings`: Configure system-wide NTP servers, timezone, and management settings (LED, SSH).
+
+### Improvements
+- **`unifi_info`**: Added `system_settings` gather subset that exports NTP, timezone, and management (LED, SSH) settings.
+
 ## 0.0.7
 
 ### New Modules
 - `unifi_dhcp_server`: Configure DHCP server settings (range, lease time, DNS, gateway) per network.
-- `unifi_system_settings`: Configure system-wide NTP servers, timezone, and management settings (LED, SSH).
 
 ### Improvements
 - **`unifi_info`**: Added `networks` gather subset that exports DHCP configuration (enabled, range, lease, DNS, gateway, domain) per network.
-- **`unifi_info`**: Added `system_settings` gather subset that exports NTP, timezone, and management (LED, SSH) settings.
 
 ## 0.0.6
 

@@ -29,14 +29,16 @@ def test_dhcp_reservation_create():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             # 1. Fetch all clients
             (
-                [
-                    {"_id": "client1", "mac": "02:1a:2b:3c:4d:01", "name": "Old Name", "use_fixedip": False}
-                ],
+                [{"_id": "client1", "mac": "02:1a:2b:3c:4d:01", "name": "Old Name", "use_fixedip": False}],
                 {"status": 200},
             ),
             # 2. Fetch networks
@@ -47,7 +49,14 @@ def test_dhcp_reservation_create():
             # 3. Update client (PUT)
             (
                 [
-                    {"_id": "client1", "mac": "02:1a:2b:3c:4d:01", "name": "Example Device", "fixed_ip": "198.51.100.71", "use_fixedip": True, "network_id": "net_default"}
+                    {
+                        "_id": "client1",
+                        "mac": "02:1a:2b:3c:4d:01",
+                        "name": "Example Device",
+                        "fixed_ip": "198.51.100.71",
+                        "use_fixedip": True,
+                        "network_id": "net_default",
+                    }
                 ],
                 {"status": 200},
             ),
@@ -95,13 +104,24 @@ def test_dhcp_reservation_no_change():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             # 1. Fetch all clients (already has correct reservation)
             (
                 [
-                    {"_id": "client1", "mac": "02:1a:2b:3c:4d:01", "name": "Example Device", "use_fixedip": True, "fixed_ip": "198.51.100.71", "network_id": "net_default"}
+                    {
+                        "_id": "client1",
+                        "mac": "02:1a:2b:3c:4d:01",
+                        "name": "Example Device",
+                        "use_fixedip": True,
+                        "fixed_ip": "198.51.100.71",
+                        "network_id": "net_default",
+                    }
                 ],
                 {"status": 200},
             ),
@@ -146,21 +166,29 @@ def test_dhcp_reservation_absent():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             # 1. Fetch all clients (has reservation)
             (
                 [
-                    {"_id": "client1", "mac": "02:1a:2b:3c:4d:01", "name": "Example Device", "use_fixedip": True, "fixed_ip": "198.51.100.71"}
+                    {
+                        "_id": "client1",
+                        "mac": "02:1a:2b:3c:4d:01",
+                        "name": "Example Device",
+                        "use_fixedip": True,
+                        "fixed_ip": "198.51.100.71",
+                    }
                 ],
                 {"status": 200},
             ),
             # 2. Remove reservation (PUT)
             (
-                [
-                    {"_id": "client1", "mac": "02:1a:2b:3c:4d:01", "name": "Example Device", "use_fixedip": False}
-                ],
+                [{"_id": "client1", "mac": "02:1a:2b:3c:4d:01", "name": "Example Device", "use_fixedip": False}],
                 {"status": 200},
             ),
         ]
@@ -203,14 +231,16 @@ def test_dhcp_reservation_absent_noop():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             # 1. Fetch all clients (no reservation)
             (
-                [
-                    {"_id": "client1", "mac": "02:1a:2b:3c:4d:01", "name": "Example Device", "use_fixedip": False}
-                ],
+                [{"_id": "client1", "mac": "02:1a:2b:3c:4d:01", "name": "Example Device", "use_fixedip": False}],
                 {"status": 200},
             ),
         ]
@@ -249,7 +279,11 @@ def test_dhcp_reservation_client_not_found():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             # 1. Fetch all clients (empty)
@@ -257,6 +291,7 @@ def test_dhcp_reservation_client_not_found():
         ]
 
         import pytest
+
         with pytest.raises(Exception, match="fail_json"):
             run_module()
 
@@ -291,14 +326,16 @@ def test_dhcp_reservation_check_mode():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             # 1. Fetch all clients
             (
-                [
-                    {"_id": "client1", "mac": "02:1a:2b:3c:4d:01", "name": "Old Name", "use_fixedip": False}
-                ],
+                [{"_id": "client1", "mac": "02:1a:2b:3c:4d:01", "name": "Old Name", "use_fixedip": False}],
                 {"status": 200},
             ),
             # 2. Fetch networks

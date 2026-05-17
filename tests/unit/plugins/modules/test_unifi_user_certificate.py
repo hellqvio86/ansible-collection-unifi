@@ -18,7 +18,9 @@ def test_cert_create():
     }
 
     with (
-        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_user_certificate.AnsibleModule") as mock_module_class,
+        patch(
+            "ansible_collections.hellqvio86.unifi.plugins.modules.unifi_user_certificate.AnsibleModule"
+        ) as mock_module_class,
         patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_user_certificate.UnifiAPI") as mock_api_class,
     ):
         mock_module = mock_module_class.return_value
@@ -27,7 +29,11 @@ def test_cert_create():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             ([], {"status": 200}),
@@ -65,7 +71,9 @@ def test_cert_no_change():
     }
 
     with (
-        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_user_certificate.AnsibleModule") as mock_module_class,
+        patch(
+            "ansible_collections.hellqvio86.unifi.plugins.modules.unifi_user_certificate.AnsibleModule"
+        ) as mock_module_class,
         patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_user_certificate.UnifiAPI") as mock_api_class,
     ):
         mock_module = mock_module_class.return_value
@@ -74,7 +82,11 @@ def test_cert_no_change():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             ([{"id": "cert1", "name": "mycert", "active": True}], {"status": 200}),
@@ -103,7 +115,9 @@ def test_cert_activate_existing():
     }
 
     with (
-        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_user_certificate.AnsibleModule") as mock_module_class,
+        patch(
+            "ansible_collections.hellqvio86.unifi.plugins.modules.unifi_user_certificate.AnsibleModule"
+        ) as mock_module_class,
         patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_user_certificate.UnifiAPI") as mock_api_class,
     ):
         mock_module = mock_module_class.return_value
@@ -112,7 +126,11 @@ def test_cert_activate_existing():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             ([{"id": "cert1", "name": "mycert", "active": False}], {"status": 200}),
@@ -146,7 +164,9 @@ def test_cert_absent():
     }
 
     with (
-        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_user_certificate.AnsibleModule") as mock_module_class,
+        patch(
+            "ansible_collections.hellqvio86.unifi.plugins.modules.unifi_user_certificate.AnsibleModule"
+        ) as mock_module_class,
         patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_user_certificate.UnifiAPI") as mock_api_class,
     ):
         mock_module = mock_module_class.return_value
@@ -155,7 +175,11 @@ def test_cert_absent():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             ([{"id": "cert1", "name": "mycert"}], {"status": 200}),
@@ -188,7 +212,9 @@ def test_cert_absent_noop():
     }
 
     with (
-        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_user_certificate.AnsibleModule") as mock_module_class,
+        patch(
+            "ansible_collections.hellqvio86.unifi.plugins.modules.unifi_user_certificate.AnsibleModule"
+        ) as mock_module_class,
         patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_user_certificate.UnifiAPI") as mock_api_class,
     ):
         mock_module = mock_module_class.return_value
@@ -197,7 +223,11 @@ def test_cert_absent_noop():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             ([], {"status": 200}),
@@ -226,7 +256,9 @@ def test_cert_missing_params():
     }
 
     with (
-        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_user_certificate.AnsibleModule") as mock_module_class,
+        patch(
+            "ansible_collections.hellqvio86.unifi.plugins.modules.unifi_user_certificate.AnsibleModule"
+        ) as mock_module_class,
         patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_user_certificate.UnifiAPI") as _,
     ):
         mock_module = mock_module_class.return_value
@@ -235,6 +267,7 @@ def test_cert_missing_params():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         import pytest
+
         with pytest.raises(Exception, match="fail_json"):
             run_module()
 
@@ -258,7 +291,9 @@ def test_cert_check_mode():
     }
 
     with (
-        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_user_certificate.AnsibleModule") as mock_module_class,
+        patch(
+            "ansible_collections.hellqvio86.unifi.plugins.modules.unifi_user_certificate.AnsibleModule"
+        ) as mock_module_class,
         patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_user_certificate.UnifiAPI") as mock_api_class,
     ):
         mock_module = mock_module_class.return_value
@@ -267,7 +302,11 @@ def test_cert_check_mode():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             ([], {"status": 200}),

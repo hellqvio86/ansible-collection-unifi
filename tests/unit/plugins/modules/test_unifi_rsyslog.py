@@ -28,11 +28,18 @@ def test_rsyslog_create():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             ([{"_id": "rsys1", "key": "rsyslogd", "enabled": False, "ip": "", "port": 10516}], {"status": 200}),
-            ([{"_id": "rsys1", "key": "rsyslogd", "enabled": True, "ip": "192.168.1.50", "port": 10516}], {"status": 200}),
+            (
+                [{"_id": "rsys1", "key": "rsyslogd", "enabled": True, "ip": "192.168.1.50", "port": 10516}],
+                {"status": 200},
+            ),
         ]
 
         run_module()
@@ -73,10 +80,30 @@ def test_rsyslog_no_change():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
-            ([{"_id": "rsys1", "key": "rsyslogd", "enabled": True, "ip": "192.168.1.50", "port": 10516, "log_all_contents": True, "debug": False, "netconsole_enabled": False, "this_controller": False, "this_controller_encrypted_only": False}], {"status": 200}),
+            (
+                [
+                    {
+                        "_id": "rsys1",
+                        "key": "rsyslogd",
+                        "enabled": True,
+                        "ip": "192.168.1.50",
+                        "port": 10516,
+                        "log_all_contents": True,
+                        "debug": False,
+                        "netconsole_enabled": False,
+                        "this_controller": False,
+                        "this_controller_encrypted_only": False,
+                    }
+                ],
+                {"status": 200},
+            ),
         ]
 
         run_module()
@@ -112,11 +139,43 @@ def test_rsyslog_update():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
-            ([{"_id": "rsys1", "key": "rsyslogd", "enabled": True, "ip": "192.168.1.50", "port": 10516, "log_all_contents": True, "debug": False, "netconsole_enabled": False}], {"status": 200}),
-            ([{"_id": "rsys1", "key": "rsyslogd", "enabled": True, "ip": "192.168.1.100", "port": 514, "log_all_contents": False, "debug": False, "netconsole_enabled": False}], {"status": 200}),
+            (
+                [
+                    {
+                        "_id": "rsys1",
+                        "key": "rsyslogd",
+                        "enabled": True,
+                        "ip": "192.168.1.50",
+                        "port": 10516,
+                        "log_all_contents": True,
+                        "debug": False,
+                        "netconsole_enabled": False,
+                    }
+                ],
+                {"status": 200},
+            ),
+            (
+                [
+                    {
+                        "_id": "rsys1",
+                        "key": "rsyslogd",
+                        "enabled": True,
+                        "ip": "192.168.1.100",
+                        "port": 514,
+                        "log_all_contents": False,
+                        "debug": False,
+                        "netconsole_enabled": False,
+                    }
+                ],
+                {"status": 200},
+            ),
         ]
 
         run_module()
@@ -156,13 +215,18 @@ def test_rsyslog_setting_not_found():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             ([{"_id": "ntp1", "key": "ntp"}], {"status": 200}),
         ]
 
         import pytest
+
         with pytest.raises(Exception, match="fail_json"):
             run_module()
 
@@ -196,7 +260,11 @@ def test_rsyslog_check_mode():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             ([{"_id": "rsys1", "key": "rsyslogd", "enabled": False, "ip": "", "port": 10516}], {"status": 200}),

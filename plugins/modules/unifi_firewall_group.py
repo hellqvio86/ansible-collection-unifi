@@ -141,7 +141,9 @@ def run_module():
         else:
             # Check if group type matches (usually cannot change type after creation without recreate)
             if existing.get("group_type") != group_type:
-                module.fail_json(msg=f"Group '{name}' already exists with different type '{existing.get('group_type')}'")
+                module.fail_json(
+                    msg=f"Group '{name}' already exists with different type '{existing.get('group_type')}'"
+                )
 
             # Check if members match
             if sorted(existing.get("group_members", [])) != sorted(group_members or []):
@@ -150,7 +152,7 @@ def run_module():
                     res, info = api.request(
                         f"/proxy/network/api/s/{site}/rest/firewallgroup/{existing['_id']}",
                         method="PUT",
-                        data=desired_payload
+                        data=desired_payload,
                     )
                     res_list = api.as_list(res)
                     result_group = res_list[0] if res_list else res

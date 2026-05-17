@@ -155,9 +155,7 @@ def run_module():
         if existing:
             changed = True
             if not module.check_mode:
-                _, info = api.request(
-                    f"/proxy/network/api/s/{site}/rest/portconf/{existing['_id']}", method="DELETE"
-                )
+                _, info = api.request(f"/proxy/network/api/s/{site}/rest/portconf/{existing['_id']}", method="DELETE")
                 if info["status"] not in [200, 204]:
                     module.fail_json(msg="Failed to delete port profile", info=info)
             result_profile = None

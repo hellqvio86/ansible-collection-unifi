@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.0.10
+
+### Bug Fixes
+- **`unifi_firewall_group`**: Fixed `TypeError` crash when `group_members` is `None` (state=absent).
+- **`unifi_ssl_config`**: Fixed `AttributeError` crash when `cert_content` or `key_content` is `None`.
+- **`unifi_switch_profile`**: Replaced no-op stub with full CRUD implementation (create, update, delete switch profiles).
+
+### Improvements
+- **`unifi_info`**: Added unit test coverage for `system_settings` and `port_forward` subsets.
+- **Test Coverage**: Added 6 new test files covering previously untested modules: `unifi_wlan`, `unifi_info`, `unifi_rsyslog`, `unifi_firewall_zone`, `unifi_firewall_group`, `unifi_user_certificate`.
+- **Docs**: Fixed inaccurate `required: true` annotations for `host`/`username`/`password` in `unifi_wlan` and `unifi_switch_profile_assignment`.
+
 ## 0.0.9
 
 ### New Modules

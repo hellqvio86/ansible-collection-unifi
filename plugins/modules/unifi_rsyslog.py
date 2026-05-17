@@ -113,7 +113,7 @@ def run_module():
         "debug": module.params["debug"],
         "netconsole_enabled": module.params["netconsole_enabled"],
         "this_controller": False,
-        "this_controller_encrypted_only": False
+        "this_controller_encrypted_only": False,
     }
 
     changed = False
@@ -125,9 +125,7 @@ def run_module():
     if changed:
         if not module.check_mode:
             res, info = api.request(
-                f"/proxy/network/api/s/{site}/set/setting/rsyslogd/{current['_id']}",
-                method="PUT",
-                data=desired_payload
+                f"/proxy/network/api/s/{site}/set/setting/rsyslogd/{current['_id']}", method="PUT", data=desired_payload
             )
             if not res:
                 module.fail_json(msg="Failed to update rsyslogd settings", info=info)

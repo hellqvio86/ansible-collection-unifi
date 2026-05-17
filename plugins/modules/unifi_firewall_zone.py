@@ -113,7 +113,7 @@ def run_module():
     desired_payload = {
         "name": module.params["name"],
         "type": module.params["type"].upper(),
-        "description": module.params["description"] or ""
+        "description": module.params["description"] or "",
     }
 
     changed = False
@@ -124,9 +124,7 @@ def run_module():
             changed = True
             if not module.check_mode:
                 res, info = api.request(
-                    f"/proxy/network/v2/api/site/{site}/firewall/zone",
-                    method="POST",
-                    data=desired_payload
+                    f"/proxy/network/v2/api/site/{site}/firewall/zone", method="POST", data=desired_payload
                 )
                 res_list = api.as_list(res)
                 result_zone = res_list[0] if res_list else res
@@ -134,16 +132,18 @@ def run_module():
                     module.fail_json(msg="Failed to create firewall zone", info=info)
         else:
             # Normalize for comparison
-            if (existing.get("name") != desired_payload["name"] or
-                    existing.get("type") != desired_payload["type"] or
-                    existing.get("description", "") != desired_payload["description"]):
+            if (
+                existing.get("name") != desired_payload["name"]
+                or existing.get("type") != desired_payload["type"]
+                or existing.get("description", "") != desired_payload["description"]
+            ):
                 changed = True
 
             if changed and not module.check_mode:
                 res, info = api.request(
                     f"/proxy/network/v2/api/site/{site}/firewall/zone/{existing['_id']}",
                     method="PUT",
-                    data=desired_payload
+                    data=desired_payload,
                 )
                 res_list = api.as_list(res)
                 result_zone = res_list[0] if res_list else res

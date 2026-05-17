@@ -23,11 +23,28 @@ def test_info_wifi_subset_default():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             ([{"_id": "net1", "name": "Default"}], {"status": 200}),
-            ([{"_id": "wlan1", "name": "Home", "enabled": True, "security": "wpapsk", "x_passphrase": "secret", "networkconf_id": "net1", "wlan_bands": "5g"}], {"status": 200}),
+            (
+                [
+                    {
+                        "_id": "wlan1",
+                        "name": "Home",
+                        "enabled": True,
+                        "security": "wpapsk",
+                        "x_passphrase": "secret",
+                        "networkconf_id": "net1",
+                        "wlan_bands": "5g",
+                    }
+                ],
+                {"status": 200},
+            ),
         ]
 
         run_module()
@@ -62,7 +79,11 @@ def test_info_networks():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             ([{"_id": "net1", "name": "Default", "purpose": "corporate", "enabled": True}], {"status": 200}),
@@ -100,11 +121,26 @@ def test_info_dhcp_reservations():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             ([{"_id": "net1", "name": "Default"}], {"status": 200}),
-            ([{"mac": "aa:bb:cc:dd:ee:ff", "name": "Printer", "use_fixedip": True, "fixed_ip": "192.168.1.50", "network_id": "net1"}], {"status": 200}),
+            (
+                [
+                    {
+                        "mac": "aa:bb:cc:dd:ee:ff",
+                        "name": "Printer",
+                        "use_fixedip": True,
+                        "fixed_ip": "192.168.1.50",
+                        "network_id": "net1",
+                    }
+                ],
+                {"status": 200},
+            ),
         ]
 
         run_module()
@@ -139,11 +175,21 @@ def test_info_system_settings():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             ([{"_id": "net1", "name": "Default"}], {"status": 200}),
-            ([{"_id": "s1", "key": "ntp", "ntp_server_1": "0.pool.ntp.org", "timezone": "UTC"}, {"_id": "s2", "key": "mgmt", "led_enabled": True, "x_ssh_auth_password_enabled": False}], {"status": 200}),
+            (
+                [
+                    {"_id": "s1", "key": "ntp", "ntp_server_1": "0.pool.ntp.org", "timezone": "UTC"},
+                    {"_id": "s2", "key": "mgmt", "led_enabled": True, "x_ssh_auth_password_enabled": False},
+                ],
+                {"status": 200},
+            ),
         ]
 
         run_module()
@@ -177,11 +223,30 @@ def test_info_port_forward():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             ([{"_id": "net1", "name": "Default"}], {"status": 200}),
-            ([{"name": "SSH", "enabled": True, "proto": "tcp", "dst_port": "2222", "fwd_port": "22", "fwd_ip": "192.168.1.10", "fwd_network_id": "net1", "src": "", "log": False}], {"status": 200}),
+            (
+                [
+                    {
+                        "name": "SSH",
+                        "enabled": True,
+                        "proto": "tcp",
+                        "dst_port": "2222",
+                        "fwd_port": "22",
+                        "fwd_ip": "192.168.1.10",
+                        "fwd_network_id": "net1",
+                        "src": "",
+                        "log": False,
+                    }
+                ],
+                {"status": 200},
+            ),
         ]
 
         run_module()
@@ -216,7 +281,11 @@ def test_info_empty_subset():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             ([], {"status": 200}),

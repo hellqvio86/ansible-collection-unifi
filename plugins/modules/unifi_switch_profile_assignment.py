@@ -92,7 +92,11 @@ def run_module():
 
     desired_items = _normalize_desired(module)
     api = UnifiAPI(
-        module, module.params["host"], module.params["username"], module.params["password"], module.params["validate_certs"],
+        module,
+        module.params["host"],
+        module.params["username"],
+        module.params["password"],
+        module.params["validate_certs"],
         module.params.get("unifi_session_cookie"),
         module.params.get("unifi_csrf_token"),
     )

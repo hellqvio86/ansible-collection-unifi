@@ -32,11 +32,26 @@ def test_system_settings_ntp_create():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             ([{"_id": "ntp1", "key": "ntp", "ntp_server_1": "", "ntp_server_2": "", "timezone": ""}], {"status": 200}),
-            ([{"_id": "ntp1", "key": "ntp", "ntp_server_1": "0.pool.ntp.org", "ntp_server_2": "1.pool.ntp.org", "timezone": "Europe/Stockholm"}], {"status": 200}),
+            (
+                [
+                    {
+                        "_id": "ntp1",
+                        "key": "ntp",
+                        "ntp_server_1": "0.pool.ntp.org",
+                        "ntp_server_2": "1.pool.ntp.org",
+                        "timezone": "Europe/Stockholm",
+                    }
+                ],
+                {"status": 200},
+            ),
         ]
 
         run_module()
@@ -78,10 +93,17 @@ def test_system_settings_ntp_no_change():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
-            ([{"_id": "ntp1", "key": "ntp", "ntp_server_1": "0.pool.ntp.org", "timezone": "Europe/Stockholm"}], {"status": 200}),
+            (
+                [{"_id": "ntp1", "key": "ntp", "ntp_server_1": "0.pool.ntp.org", "timezone": "Europe/Stockholm"}],
+                {"status": 200},
+            ),
         ]
 
         run_module()
@@ -117,7 +139,11 @@ def test_system_settings_mgmt_disable_led():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             ([{"_id": "mgmt1", "key": "mgmt", "led_enabled": True}], {"status": 200}),
@@ -160,11 +186,21 @@ def test_system_settings_mgmt_ssh():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
-            ([{"_id": "mgmt1", "key": "mgmt", "x_ssh_auth_password_enabled": True, "x_ssh_bind_wildcard": False}], {"status": 200}),
-            ([{"_id": "mgmt1", "key": "mgmt", "x_ssh_auth_password_enabled": False, "x_ssh_bind_wildcard": True}], {"status": 200}),
+            (
+                [{"_id": "mgmt1", "key": "mgmt", "x_ssh_auth_password_enabled": True, "x_ssh_bind_wildcard": False}],
+                {"status": 200},
+            ),
+            (
+                [{"_id": "mgmt1", "key": "mgmt", "x_ssh_auth_password_enabled": False, "x_ssh_bind_wildcard": True}],
+                {"status": 200},
+            ),
         ]
 
         run_module()
@@ -206,11 +242,24 @@ def test_system_settings_both():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
-            ([{"_id": "ntp1", "key": "ntp", "ntp_server_1": "", "timezone": ""}, {"_id": "mgmt1", "key": "mgmt", "led_enabled": True}], {"status": 200}),
-            ([{"_id": "ntp1", "key": "ntp", "ntp_server_1": "0.pool.ntp.org", "timezone": "Europe/Stockholm"}], {"status": 200}),
+            (
+                [
+                    {"_id": "ntp1", "key": "ntp", "ntp_server_1": "", "timezone": ""},
+                    {"_id": "mgmt1", "key": "mgmt", "led_enabled": True},
+                ],
+                {"status": 200},
+            ),
+            (
+                [{"_id": "ntp1", "key": "ntp", "ntp_server_1": "0.pool.ntp.org", "timezone": "Europe/Stockholm"}],
+                {"status": 200},
+            ),
             ([{"_id": "mgmt1", "key": "mgmt", "led_enabled": False}], {"status": 200}),
         ]
 
@@ -250,7 +299,11 @@ def test_system_settings_check_mode():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             ([{"_id": "ntp1", "key": "ntp", "ntp_server_1": "", "timezone": ""}], {"status": 200}),
@@ -290,13 +343,18 @@ def test_system_settings_ntp_not_found():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             ([{"_id": "mgmt1", "key": "mgmt", "led_enabled": True}], {"status": 200}),
         ]
 
         import pytest
+
         with pytest.raises(Exception, match="fail_json"):
             run_module()
 

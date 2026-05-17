@@ -17,7 +17,9 @@ def test_firewall_group_create():
     }
 
     with (
-        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_group.AnsibleModule") as mock_module_class,
+        patch(
+            "ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_group.AnsibleModule"
+        ) as mock_module_class,
         patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_group.UnifiAPI") as mock_api_class,
     ):
         mock_module = mock_module_class.return_value
@@ -26,11 +28,18 @@ def test_firewall_group_create():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             ([], {"status": 200}),
-            ([{"_id": "grp1", "name": "Web Ports", "group_type": "port-group", "group_members": ["80", "443"]}], {"status": 201}),
+            (
+                [{"_id": "grp1", "name": "Web Ports", "group_type": "port-group", "group_members": ["80", "443"]}],
+                {"status": 201},
+            ),
         ]
 
         run_module()
@@ -59,7 +68,9 @@ def test_firewall_group_no_change():
     }
 
     with (
-        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_group.AnsibleModule") as mock_module_class,
+        patch(
+            "ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_group.AnsibleModule"
+        ) as mock_module_class,
         patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_group.UnifiAPI") as mock_api_class,
     ):
         mock_module = mock_module_class.return_value
@@ -68,10 +79,17 @@ def test_firewall_group_no_change():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
-            ([{"_id": "grp1", "name": "Web Ports", "group_type": "port-group", "group_members": ["80", "443"]}], {"status": 200}),
+            (
+                [{"_id": "grp1", "name": "Web Ports", "group_type": "port-group", "group_members": ["80", "443"]}],
+                {"status": 200},
+            ),
         ]
 
         run_module()
@@ -96,7 +114,9 @@ def test_firewall_group_update():
     }
 
     with (
-        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_group.AnsibleModule") as mock_module_class,
+        patch(
+            "ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_group.AnsibleModule"
+        ) as mock_module_class,
         patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_group.UnifiAPI") as mock_api_class,
     ):
         mock_module = mock_module_class.return_value
@@ -105,11 +125,28 @@ def test_firewall_group_update():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
-            ([{"_id": "grp1", "name": "Web Ports", "group_type": "port-group", "group_members": ["80", "443"]}], {"status": 200}),
-            ([{"_id": "grp1", "name": "Web Ports", "group_type": "port-group", "group_members": ["80", "443", "8080"]}], {"status": 200}),
+            (
+                [{"_id": "grp1", "name": "Web Ports", "group_type": "port-group", "group_members": ["80", "443"]}],
+                {"status": 200},
+            ),
+            (
+                [
+                    {
+                        "_id": "grp1",
+                        "name": "Web Ports",
+                        "group_type": "port-group",
+                        "group_members": ["80", "443", "8080"],
+                    }
+                ],
+                {"status": 200},
+            ),
         ]
 
         run_module()
@@ -138,7 +175,9 @@ def test_firewall_group_absent():
     }
 
     with (
-        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_group.AnsibleModule") as mock_module_class,
+        patch(
+            "ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_group.AnsibleModule"
+        ) as mock_module_class,
         patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_group.UnifiAPI") as mock_api_class,
     ):
         mock_module = mock_module_class.return_value
@@ -147,7 +186,11 @@ def test_firewall_group_absent():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             ([{"_id": "grp1", "name": "Web Ports"}], {"status": 200}),
@@ -179,7 +222,9 @@ def test_firewall_group_absent_noop():
     }
 
     with (
-        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_group.AnsibleModule") as mock_module_class,
+        patch(
+            "ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_group.AnsibleModule"
+        ) as mock_module_class,
         patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_group.UnifiAPI") as mock_api_class,
     ):
         mock_module = mock_module_class.return_value
@@ -188,7 +233,11 @@ def test_firewall_group_absent_noop():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             ([], {"status": 200}),
@@ -216,7 +265,9 @@ def test_firewall_group_type_mismatch():
     }
 
     with (
-        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_group.AnsibleModule") as mock_module_class,
+        patch(
+            "ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_group.AnsibleModule"
+        ) as mock_module_class,
         patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_group.UnifiAPI") as mock_api_class,
     ):
         mock_module = mock_module_class.return_value
@@ -225,13 +276,18 @@ def test_firewall_group_type_mismatch():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             ([{"_id": "grp1", "name": "Web Ports", "group_type": "port-group"}], {"status": 200}),
         ]
 
         import pytest
+
         with pytest.raises(Exception, match="fail_json"):
             run_module()
 
@@ -254,7 +310,9 @@ def test_firewall_group_check_mode():
     }
 
     with (
-        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_group.AnsibleModule") as mock_module_class,
+        patch(
+            "ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_group.AnsibleModule"
+        ) as mock_module_class,
         patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_group.UnifiAPI") as mock_api_class,
     ):
         mock_module = mock_module_class.return_value
@@ -263,7 +321,11 @@ def test_firewall_group_check_mode():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             ([], {"status": 200}),

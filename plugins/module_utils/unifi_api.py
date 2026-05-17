@@ -44,19 +44,23 @@ class UnifiAPI:
         self.csrf_token = csrf_token
 
         if not self.host:
-            self.module.fail_json(msg="UniFi host not provided. Set 'host' parameter or 'UNIFI_HOST' environment variable.")
+            self.module.fail_json(
+                msg="UniFi host not provided. Set 'host' parameter or 'UNIFI_HOST' environment variable."
+            )
 
         self.base_url = f"https://{self.host}"
 
         # Ensure the module has the validate_certs parameter set as expected by fetch_url
-        if hasattr(self.module, 'params'):
-            self.module.params['validate_certs'] = self.validate_certs
+        if hasattr(self.module, "params"):
+            self.module.params["validate_certs"] = self.validate_certs
 
     def login(self) -> bool:
         if self.session_cookie and self.csrf_token:
             return True
         if not self.username or not self.password:
-            self.module.fail_json(msg="UniFi credentials not provided. Set 'username'/'password' or 'UNIFI_USERNAME'/'UNIFI_PASSWORD' environment variables.")
+            self.module.fail_json(
+                msg="UniFi credentials not provided. Set 'username'/'password' or 'UNIFI_USERNAME'/'UNIFI_PASSWORD' environment variables."
+            )
 
         login_url = f"{self.base_url}/api/auth/login"
         login_payload = json.dumps({"username": self.username, "password": self.password})

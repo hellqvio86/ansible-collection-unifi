@@ -28,7 +28,11 @@ def test_wlan_create():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             ([], {"status": 200}),
@@ -72,10 +76,25 @@ def test_wlan_no_change():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
-            ([{"_id": "wlan1", "name": "Guest WLAN", "enabled": True, "security": "wpapsk", "x_passphrase": "secret123"}], {"status": 200}),
+            (
+                [
+                    {
+                        "_id": "wlan1",
+                        "name": "Guest WLAN",
+                        "enabled": True,
+                        "security": "wpapsk",
+                        "x_passphrase": "secret123",
+                    }
+                ],
+                {"status": 200},
+            ),
         ]
 
         run_module()
@@ -111,12 +130,38 @@ def test_wlan_update():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
-            ([{"_id": "wlan1", "name": "Guest WLAN", "enabled": True, "security": "wpapsk", "x_passphrase": "secret123"}], {"status": 200}),
+            (
+                [
+                    {
+                        "_id": "wlan1",
+                        "name": "Guest WLAN",
+                        "enabled": True,
+                        "security": "wpapsk",
+                        "x_passphrase": "secret123",
+                    }
+                ],
+                {"status": 200},
+            ),
             ([{"_id": "net1", "name": "Default"}], {"status": 200}),
-            ([{"_id": "wlan1", "name": "Guest WLAN", "enabled": True, "security": "wpa2", "x_passphrase": "newsecret"}], {"status": 200}),
+            (
+                [
+                    {
+                        "_id": "wlan1",
+                        "name": "Guest WLAN",
+                        "enabled": True,
+                        "security": "wpa2",
+                        "x_passphrase": "newsecret",
+                    }
+                ],
+                {"status": 200},
+            ),
         ]
 
         run_module()
@@ -156,7 +201,11 @@ def test_wlan_absent():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             ([{"_id": "wlan1", "name": "Guest WLAN"}], {"status": 200}),
@@ -199,7 +248,11 @@ def test_wlan_absent_noop():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             ([], {"status": 200}),
@@ -238,7 +291,11 @@ def test_wlan_check_mode():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             ([], {"status": 200}),
@@ -277,7 +334,11 @@ def test_wlan_network_not_found():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             ([{"_id": "wlan1", "name": "Other WLAN"}], {"status": 200}),
@@ -285,6 +346,7 @@ def test_wlan_network_not_found():
         ]
 
         import pytest
+
         with pytest.raises(Exception, match="fail_json"):
             run_module()
 

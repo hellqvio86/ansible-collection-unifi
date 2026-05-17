@@ -136,7 +136,6 @@ from ansible.module_utils.basic import AnsibleModule
 
 from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI
 
-
 NTP_FIELD_MAP = {
     "server_1": "ntp_server_1",
     "server_2": "ntp_server_2",

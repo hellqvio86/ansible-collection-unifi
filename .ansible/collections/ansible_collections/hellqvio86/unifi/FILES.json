@@ -127,6 +127,13 @@
    "format": 1
   },
   {
+   "name": "docs/modules/unifi_system_settings.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "2e418945a0b659b5fd667eea9d001bfb1eaef13594c52d5a7e8c7cd043e56b14",
+   "format": 1
+  },
+  {
    "name": "docs/authentication.md",
    "ftype": "file",
    "chksum_type": "sha256",
@@ -253,17 +260,24 @@
    "format": 1
   },
   {
-   "name": "plugins/modules/unifi_info.py",
-   "ftype": "file",
-   "chksum_type": "sha256",
-   "chksum_sha256": "0498a342b88b0e2ca50c65b5751075d06a6ea732f0db0a084c4a04618c1d6c4e",
-   "format": 1
-  },
-  {
    "name": "plugins/modules/unifi_dhcp_server.py",
    "ftype": "file",
    "chksum_type": "sha256",
    "chksum_sha256": "448ae4f40bfbb00783f0022f76b6b039a290ebc3f4386231595d64e8a8b16b1c",
+   "format": 1
+  },
+  {
+   "name": "plugins/modules/unifi_info.py",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "6f8348e25cc4840502199ca2a85a54a9d36c90b5ed5b7aa4680894b893de02f2",
+   "format": 1
+  },
+  {
+   "name": "plugins/modules/unifi_system_settings.py",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "6d2b3175bfe94057151dacb95e0ad9db49c8a6951d777c953ecf86d78d6866e5",
    "format": 1
   },
   {
@@ -319,7 +333,7 @@
    "name": "examples/site.yml",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "231e8b547f9ddbae3192c95223a67cf2ba1c8d051abb2db02cac3269bf75d259",
+   "chksum_sha256": "a0825c18f457a24d928758002d4e20e1b70674f91575ff723b5db1ec26d34e8b",
    "format": 1
   },
   {
@@ -344,17 +358,17 @@
    "format": 1
   },
   {
-   "name": "CHANGELOG.md",
-   "ftype": "file",
-   "chksum_type": "sha256",
-   "chksum_sha256": "61b378aea6475087bd2703351c102d0ca4e98f1acd22cfd0b2bfe6cafdc702c4",
-   "format": 1
-  },
-  {
    "name": "README.md",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "9526b59e85c9087fc5245394b6683d51fb8b33fe2e50a76ea8c9e57b5c421fca",
+   "chksum_sha256": "96d1d780edefd62859a56226805d243618b5d057fff9d928f496c192c0766e11",
+   "format": 1
+  },
+  {
+   "name": "CHANGELOG.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "f683dcbb5bcc193ff74ecfecb392cc720e9642f69ed30deb02cf38a8a4cf9375",
    "format": 1
   }
  ],

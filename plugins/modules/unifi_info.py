@@ -17,7 +17,7 @@ options:
         description: List of subsets to gather.
         type: list
         elements: str
-        choices: [ wifi, firewall_groups, firewall_zones, firewall_policies, rsyslog, port_profiles, devices, dhcp_reservations, networks ]
+        choices: [ wifi, firewall_groups, firewall_zones, firewall_policies, rsyslog, port_profiles, devices, dhcp_reservations, networks, system_settings ]
         default: [ wifi, firewall_groups, firewall_zones, firewall_policies, rsyslog ]
 author:
     - hellqvio86 (@hellqvio86)
@@ -42,7 +42,7 @@ def run_module():
         gather_subset=dict(
             type="list",
             elements="str",
-            choices=["wifi", "firewall_groups", "firewall_zones", "firewall_policies", "rsyslog", "port_profiles", "devices", "dhcp_reservations", "networks"],
+            choices=["wifi", "firewall_groups", "firewall_zones", "firewall_policies", "rsyslog", "port_profiles", "devices", "dhcp_reservations", "networks", "system_settings"],
             default=["wifi", "firewall_groups", "firewall_zones", "firewall_policies", "rsyslog"],
         ),
     )
@@ -220,6 +220,27 @@ def run_module():
                 "dhcpd_gateway": n.get("dhcpd_gateway"),
                 "dhcpd_domain_name": n.get("dhcpd_domain_name"),
             })
+
+    if "system_settings" in subset:
+        res, _ = api.request(f"/proxy/network/api/s/{site}/get/setting")
+        all_settings = api.as_list(res)
+        ntp = next((s for s in all_settings if isinstance(s, dict) and s.get("key") == "ntp"), None)
+        mgmt = next((s for s in all_settings if isinstance(s, dict) and s.get("key") == "mgmt"), None)
+        results["system_settings"] = {}
+        if ntp:
+            results["system_settings"]["ntp"] = {
+                "server_1": ntp.get("ntp_server_1"),
+                "server_2": ntp.get("ntp_server_2"),
+                "server_3": ntp.get("ntp_server_3"),
+                "server_4": ntp.get("ntp_server_4"),
+                "timezone": ntp.get("timezone"),
+            }
+        if mgmt:
+            results["system_settings"]["mgmt"] = {
+                "led_enabled": mgmt.get("led_enabled"),
+                "ssh_password_enabled": mgmt.get("x_ssh_auth_password_enabled"),
+                "ssh_bind_wildcard": mgmt.get("x_ssh_bind_wildcard"),
+            }
 
     module.exit_json(changed=False, unifi_info=results)
 

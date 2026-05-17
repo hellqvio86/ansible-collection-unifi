@@ -12,7 +12,7 @@ description:
     - Supports single assignment mode and batch mode.
 options:
     host: {type: str, required: false}
-    username: {type: str, required: true}
+    username: {type: str, required: false}
     password: {type: str, required: false}
     site: {type: str, default: default}
     validate_certs: {type: bool, default: false}

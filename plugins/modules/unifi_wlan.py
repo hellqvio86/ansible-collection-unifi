@@ -13,15 +13,15 @@ description:
 options:
     host:
         description: The host of the UniFi controller.
-        required: true
+        required: false
         type: str
     username:
         description: UniFi controller username.
-        required: true
+        required: false
         type: str
     password:
         description: UniFi controller password.
-        required: true
+        required: false
         type: str
     site:
         description: UniFi site name.

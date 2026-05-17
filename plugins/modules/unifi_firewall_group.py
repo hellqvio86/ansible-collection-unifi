@@ -144,7 +144,7 @@ def run_module():
                 module.fail_json(msg=f"Group '{name}' already exists with different type '{existing.get('group_type')}'")
 
             # Check if members match
-            if sorted(existing.get("group_members", [])) != sorted(group_members):
+            if sorted(existing.get("group_members", [])) != sorted(group_members or []):
                 changed = True
                 if not module.check_mode:
                     res, info = api.request(

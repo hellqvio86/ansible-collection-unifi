@@ -1,9 +1,9 @@
 from unittest.mock import patch
 
-from ansible_collections.hellqvio86.unifi.plugins.modules.unifi_switch_profile import run_module
+from ansible_collections.hellqvio86.unifi.plugins.modules.unifi_wlan import run_module
 
 
-def test_switch_profile_create():
+def test_wlan_create():
     params = {
         "host": "192.0.2.1",
         "username": "admin",
@@ -11,15 +11,16 @@ def test_switch_profile_create():
         "site": "default",
         "validate_certs": False,
         "state": "present",
-        "name": "Access Switch Profile",
-        "model": "USW-Flex",
-        "port_profile_overrides": {"1": "WAN-Profile", "2": "IoT-Profile"},
-        "description": "Standard access switch",
+        "name": "Guest WLAN",
+        "enabled": True,
+        "network_name": None,
+        "security": "wpapsk",
+        "passphrase": "secret123",
     }
 
     with (
-        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_switch_profile.AnsibleModule") as mock_module_class,
-        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_switch_profile.UnifiAPI") as mock_api_class,
+        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_wlan.AnsibleModule") as mock_module_class,
+        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_wlan.UnifiAPI") as mock_api_class,
     ):
         mock_module = mock_module_class.return_value
         mock_module.params = params
@@ -31,7 +32,7 @@ def test_switch_profile_create():
 
         mock_api.request.side_effect = [
             ([], {"status": 200}),
-            ([{"_id": "prof1", "name": "Access Switch Profile", "model": "USW-Flex"}], {"status": 201}),
+            ([{"_id": "wlan1", "name": "Guest WLAN", "enabled": True, "security": "wpapsk"}], {"status": 201}),
         ]
 
         run_module()
@@ -39,15 +40,14 @@ def test_switch_profile_create():
         assert mock_api.request.call_count == 2
         post_call = mock_api.request.call_args_list[1]
         assert post_call[1]["method"] == "POST"
-        assert post_call[1]["data"]["name"] == "Access Switch Profile"
-        assert post_call[1]["data"]["model"] == "USW-Flex"
+        assert post_call[1]["data"]["name"] == "Guest WLAN"
 
         mock_module.exit_json.assert_called_once()
         kwargs = mock_module.exit_json.call_args[1]
         assert kwargs["changed"] is True
 
 
-def test_switch_profile_no_change():
+def test_wlan_no_change():
     params = {
         "host": "192.0.2.1",
         "username": "admin",
@@ -55,15 +55,16 @@ def test_switch_profile_no_change():
         "site": "default",
         "validate_certs": False,
         "state": "present",
-        "name": "Existing Profile",
-        "model": "USW-Flex",
-        "port_profile_overrides": {"1": "WAN-Profile"},
-        "description": "Existing profile",
+        "name": "Guest WLAN",
+        "enabled": True,
+        "network_name": None,
+        "security": "wpapsk",
+        "passphrase": "secret123",
     }
 
     with (
-        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_switch_profile.AnsibleModule") as mock_module_class,
-        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_switch_profile.UnifiAPI") as mock_api_class,
+        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_wlan.AnsibleModule") as mock_module_class,
+        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_wlan.UnifiAPI") as mock_api_class,
     ):
         mock_module = mock_module_class.return_value
         mock_module.params = params
@@ -74,7 +75,7 @@ def test_switch_profile_no_change():
         mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
 
         mock_api.request.side_effect = [
-            ([{"_id": "prof1", "name": "Existing Profile", "model": "USW-Flex", "description": "Existing profile", "port_profile_overrides": {"1": "WAN-Profile"}}], {"status": 200}),
+            ([{"_id": "wlan1", "name": "Guest WLAN", "enabled": True, "security": "wpapsk", "x_passphrase": "secret123"}], {"status": 200}),
         ]
 
         run_module()
@@ -85,7 +86,7 @@ def test_switch_profile_no_change():
         assert kwargs["changed"] is False
 
 
-def test_switch_profile_update():
+def test_wlan_update():
     params = {
         "host": "192.0.2.1",
         "username": "admin",
@@ -93,15 +94,16 @@ def test_switch_profile_update():
         "site": "default",
         "validate_certs": False,
         "state": "present",
-        "name": "Existing Profile",
-        "model": "USW-Pro",
-        "port_profile_overrides": {"1": "WAN-Profile", "2": "IoT-Profile"},
-        "description": "Updated description",
+        "name": "Guest WLAN",
+        "enabled": True,
+        "network_name": "Default",
+        "security": "wpa2",
+        "passphrase": "newsecret",
     }
 
     with (
-        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_switch_profile.AnsibleModule") as mock_module_class,
-        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_switch_profile.UnifiAPI") as mock_api_class,
+        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_wlan.AnsibleModule") as mock_module_class,
+        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_wlan.UnifiAPI") as mock_api_class,
     ):
         mock_module = mock_module_class.return_value
         mock_module.params = params
@@ -112,23 +114,24 @@ def test_switch_profile_update():
         mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
 
         mock_api.request.side_effect = [
-            ([{"_id": "prof1", "name": "Existing Profile", "model": "USW-Flex", "description": "Old description", "port_profile_overrides": {"1": "WAN-Profile"}}], {"status": 200}),
-            ([{"_id": "prof1", "name": "Existing Profile", "model": "USW-Pro"}], {"status": 200}),
+            ([{"_id": "wlan1", "name": "Guest WLAN", "enabled": True, "security": "wpapsk", "x_passphrase": "secret123"}], {"status": 200}),
+            ([{"_id": "net1", "name": "Default"}], {"status": 200}),
+            ([{"_id": "wlan1", "name": "Guest WLAN", "enabled": True, "security": "wpa2", "x_passphrase": "newsecret"}], {"status": 200}),
         ]
 
         run_module()
 
-        assert mock_api.request.call_count == 2
-        put_call = mock_api.request.call_args_list[1]
+        assert mock_api.request.call_count == 3
+        put_call = mock_api.request.call_args_list[2]
         assert put_call[1]["method"] == "PUT"
-        assert put_call[1]["data"]["model"] == "USW-Pro"
+        assert put_call[1]["data"]["security"] == "wpa2"
 
         mock_module.exit_json.assert_called_once()
         kwargs = mock_module.exit_json.call_args[1]
         assert kwargs["changed"] is True
 
 
-def test_switch_profile_absent():
+def test_wlan_absent():
     params = {
         "host": "192.0.2.1",
         "username": "admin",
@@ -136,12 +139,16 @@ def test_switch_profile_absent():
         "site": "default",
         "validate_certs": False,
         "state": "absent",
-        "name": "Existing Profile",
+        "name": "Guest WLAN",
+        "enabled": None,
+        "network_name": None,
+        "security": None,
+        "passphrase": None,
     }
 
     with (
-        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_switch_profile.AnsibleModule") as mock_module_class,
-        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_switch_profile.UnifiAPI") as mock_api_class,
+        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_wlan.AnsibleModule") as mock_module_class,
+        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_wlan.UnifiAPI") as mock_api_class,
     ):
         mock_module = mock_module_class.return_value
         mock_module.params = params
@@ -152,7 +159,7 @@ def test_switch_profile_absent():
         mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
 
         mock_api.request.side_effect = [
-            ([{"_id": "prof1", "name": "Existing Profile"}], {"status": 200}),
+            ([{"_id": "wlan1", "name": "Guest WLAN"}], {"status": 200}),
             ({}, {"status": 204}),
         ]
 
@@ -167,7 +174,7 @@ def test_switch_profile_absent():
         assert kwargs["changed"] is True
 
 
-def test_switch_profile_absent_noop():
+def test_wlan_absent_noop():
     params = {
         "host": "192.0.2.1",
         "username": "admin",
@@ -176,11 +183,15 @@ def test_switch_profile_absent_noop():
         "validate_certs": False,
         "state": "absent",
         "name": "NonExistent",
+        "enabled": None,
+        "network_name": None,
+        "security": None,
+        "passphrase": None,
     }
 
     with (
-        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_switch_profile.AnsibleModule") as mock_module_class,
-        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_switch_profile.UnifiAPI") as mock_api_class,
+        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_wlan.AnsibleModule") as mock_module_class,
+        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_wlan.UnifiAPI") as mock_api_class,
     ):
         mock_module = mock_module_class.return_value
         mock_module.params = params
@@ -202,7 +213,7 @@ def test_switch_profile_absent_noop():
         assert kwargs["changed"] is False
 
 
-def test_switch_profile_check_mode_create():
+def test_wlan_check_mode():
     params = {
         "host": "192.0.2.1",
         "username": "admin",
@@ -210,13 +221,16 @@ def test_switch_profile_check_mode_create():
         "site": "default",
         "validate_certs": False,
         "state": "present",
-        "name": "New Profile",
-        "model": "USW-Flex",
+        "name": "Guest WLAN",
+        "enabled": True,
+        "network_name": None,
+        "security": "wpapsk",
+        "passphrase": "secret123",
     }
 
     with (
-        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_switch_profile.AnsibleModule") as mock_module_class,
-        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_switch_profile.UnifiAPI") as mock_api_class,
+        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_wlan.AnsibleModule") as mock_module_class,
+        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_wlan.UnifiAPI") as mock_api_class,
     ):
         mock_module = mock_module_class.return_value
         mock_module.params = params
@@ -238,7 +252,7 @@ def test_switch_profile_check_mode_create():
         assert kwargs["changed"] is True
 
 
-def test_switch_profile_check_mode_update():
+def test_wlan_network_not_found():
     params = {
         "host": "192.0.2.1",
         "username": "admin",
@@ -246,29 +260,34 @@ def test_switch_profile_check_mode_update():
         "site": "default",
         "validate_certs": False,
         "state": "present",
-        "name": "Existing Profile",
-        "model": "USW-Pro",
+        "name": "Guest WLAN",
+        "enabled": True,
+        "network_name": "NonExistent",
+        "security": "wpapsk",
+        "passphrase": "secret123",
     }
 
     with (
-        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_switch_profile.AnsibleModule") as mock_module_class,
-        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_switch_profile.UnifiAPI") as mock_api_class,
+        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_wlan.AnsibleModule") as mock_module_class,
+        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_wlan.UnifiAPI") as mock_api_class,
     ):
         mock_module = mock_module_class.return_value
         mock_module.params = params
-        mock_module.check_mode = True
+        mock_module.check_mode = False
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
         mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
 
         mock_api.request.side_effect = [
-            ([{"_id": "prof1", "name": "Existing Profile", "model": "USW-Flex"}], {"status": 200}),
+            ([{"_id": "wlan1", "name": "Other WLAN"}], {"status": 200}),
+            ([{"_id": "net1", "name": "Default"}], {"status": 200}),
         ]
 
-        run_module()
+        import pytest
+        with pytest.raises(Exception, match="fail_json"):
+            run_module()
 
-        assert mock_api.request.call_count == 1
-        mock_module.exit_json.assert_called_once()
-        kwargs = mock_module.exit_json.call_args[1]
-        assert kwargs["changed"] is True
+        mock_module.fail_json.assert_called_once()
+        args = mock_module.fail_json.call_args[1]
+        assert "not found" in args["msg"].lower()

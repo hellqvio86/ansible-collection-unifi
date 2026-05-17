@@ -76,6 +76,23 @@
             ip: "192.0.2.50"
             enabled: true
 
+        - name: Configure NTP servers and timezone
+          hellqvio86.unifi.unifi_system_settings:
+            ntp:
+              server_1: "0.pool.ntp.org"
+              server_2: "1.pool.ntp.org"
+              timezone: "Europe/Stockholm"
+
+        - name: Disable device LEDs
+          hellqvio86.unifi.unifi_system_settings:
+            mgmt:
+              led_enabled: false
+
+        - name: Disable SSH password auth
+          hellqvio86.unifi.unifi_system_settings:
+            mgmt:
+              ssh_password_enabled: false
+
         - name: Ensure SSH Keys are persistent
           hellqvio86.unifi.unifi_ssh_key:
             keys:

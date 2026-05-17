@@ -17,7 +17,7 @@ options:
         description: List of subsets to gather.
         type: list
         elements: str
-        choices: [ wifi, firewall_groups, firewall_zones, firewall_policies, rsyslog, port_profiles, devices, dhcp_reservations, networks, system_settings ]
+        choices: [ wifi, firewall_groups, firewall_zones, firewall_policies, rsyslog, port_profiles, devices, dhcp_reservations, networks, system_settings, port_forward ]
         default: [ wifi, firewall_groups, firewall_zones, firewall_policies, rsyslog ]
 author:
     - hellqvio86 (@hellqvio86)
@@ -42,7 +42,7 @@ def run_module():
         gather_subset=dict(
             type="list",
             elements="str",
-            choices=["wifi", "firewall_groups", "firewall_zones", "firewall_policies", "rsyslog", "port_profiles", "devices", "dhcp_reservations", "networks", "system_settings"],
+            choices=["wifi", "firewall_groups", "firewall_zones", "firewall_policies", "rsyslog", "port_profiles", "devices", "dhcp_reservations", "networks", "system_settings", "port_forward"],
             default=["wifi", "firewall_groups", "firewall_zones", "firewall_policies", "rsyslog"],
         ),
     )
@@ -241,6 +241,24 @@ def run_module():
                 "ssh_password_enabled": mgmt.get("x_ssh_auth_password_enabled"),
                 "ssh_bind_wildcard": mgmt.get("x_ssh_bind_wildcard"),
             }
+
+    if "port_forward" in subset:
+        res, _ = api.request(f"/proxy/network/api/s/{site}/rest/portforward")
+        results["port_forward"] = []
+        for r in api.as_list(res):
+            if not isinstance(r, dict):
+                continue
+            results["port_forward"].append({
+                "name": r.get("name"),
+                "enabled": r.get("enabled"),
+                "protocol": r.get("proto"),
+                "src": r.get("src", ""),
+                "dst_port": r.get("dst_port"),
+                "fwd_port": r.get("fwd_port"),
+                "fwd_ip": r.get("fwd_ip"),
+                "fwd_network": network_map.get(r.get("fwd_network_id")),
+                "log": r.get("log", False),
+            })
 
     module.exit_json(changed=False, unifi_info=results)
 

@@ -43,7 +43,7 @@ Or include it in your `requirements.yml`:
 ```yaml
 collections:
   - name: hellqvio86.unifi
-    version: 0.0.10
+    version: 0.0.11
 ```
 
 ## Getting Started: Dump Your Current State
@@ -55,15 +55,13 @@ export UNIFI_HOST="192.0.2.1"
 export UNIFI_USERNAME="admin"
 export UNIFI_PASSWORD="password"
 
-ansible-playbook hellqvio86.unifi.unifi_dump_all.yml
-# or, if you have the source repo:
-# ansible-playbook unifi_dump_all.yml
+ansible-playbook playbooks/unifi_dump_all.yml
 ```
 
 This generates a `unifi_dump/` directory with one YAML file per category (wifi, networks, firewall, DHCP, etc.). Use these files as a reference to build your playbooks and group_vars.
 
 **Onboarding workflow:**
-1. **Dump** your current state with `unifi_dump_all.yml`
+1. **Dump** your current state with `playbooks/unifi_dump_all.yml`
 2. **Review** the dumped YAML files to understand your setup
 3. **Write** playbooks using the modules listed below
 4. **Apply** changes gradually with ansible-pull or a management playbook

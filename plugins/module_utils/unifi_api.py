@@ -1,6 +1,7 @@
 import base64
 import json
 import os
+import time
 
 from ansible.module_utils.urls import fetch_url
 
@@ -54,6 +55,18 @@ class UnifiAPI:
         if hasattr(self.module, "params"):
             self.module.params["validate_certs"] = self.validate_certs
 
+    def _fetch_with_retry(self, url: str, method: str, headers: dict[str, str], payload: str | None):
+        retries = 2
+        backoff = 1
+        for attempt in range(retries + 1):
+            response, info = fetch_url(self.module, url, data=payload, method=method, headers=headers)
+            if info.get("status") != 429:
+                return response, info
+            if attempt < retries:
+                time.sleep(backoff)
+                backoff *= 2
+        return response, info
+
     def login(self) -> bool:
         if self.session_cookie and self.csrf_token:
             return True
@@ -65,13 +78,11 @@ class UnifiAPI:
         login_url = f"{self.base_url}/api/auth/login"
         login_payload = json.dumps({"username": self.username, "password": self.password})
 
-        # fetch_url extracts validate_certs from module.params
-        response, info = fetch_url(
-            self.module,
+        response, info = self._fetch_with_retry(
             login_url,
-            data=login_payload,
-            method="POST",
-            headers={"Content-Type": "application/json"},
+            "POST",
+            {"Content-Type": "application/json"},
+            login_payload,
         )
 
         if info["status"] != 200:
@@ -117,10 +128,20 @@ class UnifiAPI:
         headers = {"Content-Type": "application/json", "Cookie": self.session_cookie, "X-CSRF-Token": self.csrf_token}
 
         payload = json.dumps(data) if data else None
-        response, info = fetch_url(self.module, url, data=payload, method=method, headers=headers)
+        response, info = self._fetch_with_retry(url, method, headers, payload)
+
+        if info.get("status") in [401, 403] and self.username and self.password:
+            self.session_cookie = None
+            self.csrf_token = None
+            self.login()
+            headers = {"Content-Type": "application/json", "Cookie": self.session_cookie, "X-CSRF-Token": self.csrf_token}
+            response, info = self._fetch_with_retry(url, method, headers, payload)
 
         if info["status"] not in [200, 201, 204]:
             return None, info
+
+        if response is None:
+            return {}, info
 
         res_data = response.read()
         try:

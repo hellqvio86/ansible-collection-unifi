@@ -1,0 +1,197 @@
+---
+- name: Dump UniFi state to local YAML files
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+  vars:
+    output_dir: "{{ lookup('env', 'UNIFI_DUMP_DIR') | default('./unifi_dump', true) }}"
+  tasks:
+    - name: Ensure output directory exists
+      ansible.builtin.file:
+        path: "{{ output_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Gather all UniFi state
+      hellqvio86.unifi.unifi_info:
+        host: "{{ lookup('env', 'UNIFI_HOST') }}"
+        username: "{{ lookup('env', 'UNIFI_USERNAME') }}"
+        password: "{{ lookup('env', 'UNIFI_PASSWORD') }}"
+        site: "{{ lookup('env', 'UNIFI_SITE') | default('default', true) }}"
+        validate_certs: "{{ lookup('env', 'UNIFI_VALIDATE_CERTS') | default('false', true) | bool }}"
+        gather_subset:
+          - wifi
+          - firewall_groups
+          - firewall_zones
+          - firewall_policies
+          - rsyslog
+          - port_profiles
+          - devices
+          - dhcp_reservations
+          - networks
+          - system_settings
+          - port_forward
+      register: _unifi_state
+
+    - name: Show summary
+      ansible.builtin.debug:
+        msg:
+          - "wifi: {{ _unifi_state.unifi_info.wifi | default([]) | length }} networks"
+          - "firewall_groups: {{ _unifi_state.unifi_info.firewall_groups | default([]) | length }} groups"
+          - "firewall_zones: {{ _unifi_state.unifi_info.firewall_zones | default([]) | length }} zones"
+          - "firewall_policies: {{ _unifi_state.unifi_info.firewall_policies | default([]) | length }} policies"
+          - "rsyslog: {{ 'configured' if (_unifi_state.unifi_info.rsyslog | default({}) | length > 0) else 'not configured' }}"
+          - "port_profiles: {{ _unifi_state.unifi_info.port_profiles | default([]) | length }} profiles"
+          - "devices: {{ _unifi_state.unifi_info.devices | default([]) | length }} devices"
+          - "dhcp_reservations: {{ _unifi_state.unifi_info.dhcp_reservations | default([]) | length }} reservations"
+          - "networks: {{ _unifi_state.unifi_info.networks | default([]) | length }} networks"
+          - "system_settings: {{ 'present' if _unifi_state.unifi_info.system_settings else 'not gathered' }}"
+          - "port_forward: {{ _unifi_state.unifi_info.port_forward | default([]) | length }} rules"
+
+    - name: Write WiFi networks
+      ansible.builtin.copy:
+        dest: "{{ output_dir }}/wifi.yml"
+        mode: "0644"
+        content: |
+          ---
+          # Generated UniFi WiFi Networks Export
+          # Date: {{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S%z') }}
+
+          unifi_controller_wifi_networks:
+          {{ _unifi_state.unifi_info.wifi | default([]) | to_nice_yaml(indent=2) | indent(2, true) }}
+
+    - name: Write firewall groups
+      ansible.builtin.copy:
+        dest: "{{ output_dir }}/firewall_groups.yml"
+        mode: "0644"
+        content: |
+          ---
+          # Generated UniFi Firewall Groups Export
+          # Date: {{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S%z') }}
+
+          unifi_controller_firewall_groups:
+          {{ _unifi_state.unifi_info.firewall_groups | default([]) | to_nice_yaml(indent=2) | indent(2, true) }}
+
+    - name: Write firewall zones
+      ansible.builtin.copy:
+        dest: "{{ output_dir }}/firewall_zones.yml"
+        mode: "0644"
+        content: |
+          ---
+          # Generated UniFi Firewall Zones Export
+          # Date: {{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S%z') }}
+
+          unifi_controller_firewall_zones:
+          {{ _unifi_state.unifi_info.firewall_zones | default([]) | to_nice_yaml(indent=2) | indent(2, true) }}
+
+    - name: Write firewall policies
+      ansible.builtin.copy:
+        dest: "{{ output_dir }}/firewall_policies.yml"
+        mode: "0644"
+        content: |
+          ---
+          # Generated UniFi Firewall Policies Export
+          # Date: {{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S%z') }}
+
+          unifi_controller_firewall_policies:
+          {{ _unifi_state.unifi_info.firewall_policies | default([]) | to_nice_yaml(indent=2) | indent(2, true) }}
+
+    - name: Write DHCP reservations
+      ansible.builtin.copy:
+        dest: "{{ output_dir }}/dhcp_reservations.yml"
+        mode: "0644"
+        content: |
+          ---
+          # Generated UniFi DHCP Reservations Export
+          # Date: {{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S%z') }}
+
+          unifi_controller_dhcp_reservations:
+          {{ _unifi_state.unifi_info.dhcp_reservations | default([]) | to_nice_yaml(indent=2) | indent(2, true) }}
+
+    - name: Build DHCP server settings list
+      ansible.builtin.set_fact:
+        _dhcp_server_list: >-
+          {{ _unifi_state.unifi_info.networks | default([])
+          | selectattr('dhcpd_enabled', 'equalto', true)
+          | map('dict2items')
+          | map('rejectattr', 'value', 'none')
+          | map('rejectattr', 'value', 'equalto', '')
+          | map('items2dict')
+          | list }}
+
+    - name: Write DHCP server settings
+      ansible.builtin.copy:
+        dest: "{{ output_dir }}/dhcp_server.yml"
+        mode: "0644"
+        content: |
+          ---
+          # Generated UniFi DHCP Server Settings Export
+          # Date: {{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S%z') }}
+
+          unifi_controller_dhcp_server:
+          {{ _dhcp_server_list | default([]) | to_nice_yaml(indent=2) | indent(2, true) }}
+
+    - name: Write port forward rules
+      ansible.builtin.copy:
+        dest: "{{ output_dir }}/port_forward.yml"
+        mode: "0644"
+        content: |
+          ---
+          # Generated UniFi Port Forwarding Rules Export
+          # Date: {{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S%z') }}
+
+          unifi_controller_port_forward:
+          {{ _unifi_state.unifi_info.port_forward | default([]) | to_nice_yaml(indent=2) | indent(2, true) }}
+
+    - name: Write system settings
+      ansible.builtin.copy:
+        dest: "{{ output_dir }}/system_settings.yml"
+        mode: "0644"
+        content: |
+          ---
+          # Generated UniFi System Settings Export
+          # Date: {{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S%z') }}
+
+          unifi_controller_system_settings:
+          {{ _unifi_state.unifi_info.system_settings | default({}) | to_nice_yaml(indent=2) | indent(2, true) }}
+
+    - name: Write port profiles
+      ansible.builtin.copy:
+        dest: "{{ output_dir }}/port_profiles.yml"
+        mode: "0644"
+        content: |
+          ---
+          # Generated UniFi Port Profiles Export
+          # Date: {{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S%z') }}
+
+          unifi_controller_switch_port_profiles:
+          {{ _unifi_state.unifi_info.port_profiles | default([]) | to_nice_yaml(indent=2) | indent(2, true) }}
+
+    - name: Write devices (informational)
+      ansible.builtin.copy:
+        dest: "{{ output_dir }}/devices.yml"
+        mode: "0644"
+        content: |
+          ---
+          # Generated UniFi Devices Export (informational)
+          # Date: {{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S%z') }}
+
+          unifi_controller_devices:
+          {{ _unifi_state.unifi_info.devices | default([]) | to_nice_yaml(indent=2) | indent(2, true) }}
+
+    - name: Write rsyslog settings
+      ansible.builtin.copy:
+        dest: "{{ output_dir }}/rsyslog.yml"
+        mode: "0644"
+        content: |
+          ---
+          # Generated UniFi Rsyslog Settings Export
+          # Date: {{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S%z') }}
+
+          unifi_controller_rsyslog:
+          {{ _unifi_state.unifi_info.rsyslog | default({}) | to_nice_yaml(indent=2) | indent(2, true) }}
+
+    - name: Print completion
+      ansible.builtin.debug:
+        msg: "Dump complete. Files written to {{ output_dir }}/"

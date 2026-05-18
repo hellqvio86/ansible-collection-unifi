@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.11
+
+### Improvements
+- **`unifi_info`**: Fail fast on API request errors instead of silently returning partial subset data.
+- **`unifi_api`**: Added retry/backoff handling for `429` and session refresh/relogin retry flow for `401`/`403`.
+- **`unifi_dhcp_reservation`**: Added explicit failure on network fetch errors and normalized `before`/`after`/`diff` return fields.
+- **Onboarding**: Added bundled `playbooks/unifi_dump_all.yml` and aligned docs to use shipped playbook path.
+- **Licensing**: Standardized module headers to MIT to match collection metadata.
+
 ## 0.0.10
 
 ### Bug Fixes

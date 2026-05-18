@@ -18,5 +18,10 @@ This document summarizes the standards and restrictions enforced during the deve
 - **Excluded Files**: Development-only files (Makefiles, CI configs, test suites, virtual environments, AI metadata) are explicitly excluded from the build.
 - **Standardized Build Path**: Release artifacts are consolidated into the `releases/` directory.
 
+## Licensing Policy
+- **Collection License**: This repository uses the MIT license (see `LICENSE.md` and `galaxy.yml`).
+- **Module Header Standard**: Python modules in `plugins/modules/` must use `# MIT License (see LICENSE.md)` in their file headers.
+- **No GPL Header Text**: Do not introduce GNU GPL header text in this collection unless the project license model is explicitly changed.
+
 ## Project Vision
 - **Professional Grade**: The collection aims to be "Professional Grade" for public release on Ansible Galaxy, emphasizing reliability, documentation, and ease of use.

@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # (c) 2026, hellqvio86 (@hellqvio86)
-# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+# MIT License (see LICENSE.md)
 
 DOCUMENTATION = r"""
 ---

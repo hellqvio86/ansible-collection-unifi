@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # (c) 2026, hellqvio86 (@hellqvio86)
-# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+# MIT License (see LICENSE.md)
 
 DOCUMENTATION = r"""
 ---
@@ -169,7 +169,9 @@ def run_module():
     # Resolve network_name to network_id if provided
     network_id = None
     if module.params["network_name"]:
-        networks_res, _ = api.request(f"/proxy/network/api/s/{site}/rest/networkconf")
+        networks_res, net_info = api.request(f"/proxy/network/api/s/{site}/rest/networkconf")
+        if networks_res is None:
+            module.fail_json(msg="Failed to fetch networks", info=net_info)
         networks = api.as_list(networks_res)
         network = next(
             (n for n in networks if isinstance(n, dict) and n.get("name") == module.params["network_name"]),
@@ -180,6 +182,13 @@ def run_module():
         network_id = network["_id"]
 
     if state == "present":
+        before = {
+            "mac": client.get("mac"),
+            "name": client.get("name"),
+            "fixed_ip": client.get("fixed_ip"),
+            "use_fixedip": client.get("use_fixedip"),
+            "network_id": client.get("network_id"),
+        }
         desired_payload = {"use_fixedip": True}
 
         if module.params["fixed_ip"]:
@@ -215,6 +224,24 @@ def run_module():
 
         module.exit_json(
             changed=changed,
+            before=before,
+            after={
+                "mac": result_client.get("mac"),
+                "name": result_client.get("name"),
+                "fixed_ip": result_client.get("fixed_ip"),
+                "use_fixedip": result_client.get("use_fixedip"),
+                "network_id": result_client.get("network_id"),
+            },
+            diff={
+                "before": before,
+                "after": {
+                    "mac": result_client.get("mac"),
+                    "name": result_client.get("name"),
+                    "fixed_ip": result_client.get("fixed_ip"),
+                    "use_fixedip": result_client.get("use_fixedip"),
+                    "network_id": result_client.get("network_id"),
+                },
+            },
             reservation={
                 "mac": result_client.get("mac"),
                 "name": result_client.get("name"),
@@ -226,6 +253,13 @@ def run_module():
         )
 
     elif state == "absent":
+        before = {
+            "mac": client.get("mac"),
+            "name": client.get("name"),
+            "fixed_ip": client.get("fixed_ip"),
+            "use_fixedip": client.get("use_fixedip"),
+            "network_id": client.get("network_id"),
+        }
         if client.get("use_fixedip"):
             changed = True
             if not module.check_mode:
@@ -240,7 +274,28 @@ def run_module():
                 res_list = api.as_list(res)
                 result_client = res_list[0] if res_list else res
 
-        module.exit_json(changed=changed, client=result_client)
+        module.exit_json(
+            changed=changed,
+            before=before,
+            after={
+                "mac": result_client.get("mac"),
+                "name": result_client.get("name"),
+                "fixed_ip": result_client.get("fixed_ip"),
+                "use_fixedip": result_client.get("use_fixedip"),
+                "network_id": result_client.get("network_id"),
+            },
+            diff={
+                "before": before,
+                "after": {
+                    "mac": result_client.get("mac"),
+                    "name": result_client.get("name"),
+                    "fixed_ip": result_client.get("fixed_ip"),
+                    "use_fixedip": result_client.get("use_fixedip"),
+                    "network_id": result_client.get("network_id"),
+                },
+            },
+            client=result_client,
+        )
 
 
 if __name__ == "__main__":

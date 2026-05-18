@@ -10,6 +10,19 @@ For modern UniFi devices (UDM, UXG), use the `unifi_firewall_policy` and `unifi_
 
 The `unifi_info` module is your best tool for auditing your current state. You can gather specific subsets of data to keep your playbooks fast.
 
+For full onboarding exports, run the bundled playbook:
+
+```bash
+export UNIFI_HOST="192.0.2.1"
+export UNIFI_USERNAME="admin"
+export UNIFI_PASSWORD="password"
+# optional: export UNIFI_SITE="default"
+# optional: export UNIFI_VALIDATE_CERTS="false"
+# optional: export UNIFI_DUMP_DIR="./unifi_dump"
+
+ansible-playbook playbooks/unifi_dump_all.yml
+```
+
 ```yaml
 - name: Gather WiFi and Firewall state
   hellqvio86.unifi.unifi_info:

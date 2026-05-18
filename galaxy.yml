@@ -1,7 +1,7 @@
 ---
 namespace: hellqvio86
 name: unifi
-version: 0.0.10
+version: 0.0.11
 readme: README.md
 authors:
   - Olof Hellqvist (@hellqvio86)
@@ -34,4 +34,3 @@ build_ignore:
   - ".ansible"
   - "test_output.txt"
   - "agents.md"
-  - "unifi_dump_all.yml"

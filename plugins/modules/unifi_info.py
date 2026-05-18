@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # (c) 2026, hellqvio86 (@hellqvio86)
-# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+# MIT License (see LICENSE.md)
 
 DOCUMENTATION = r"""
 ---
@@ -76,8 +76,14 @@ def run_module():
     subset = module.params["gather_subset"]
     results = {}
 
+    def request_or_fail(path, context):
+        res, info = api.request(path)
+        if res is None:
+            module.fail_json(msg=f"Failed to fetch {context}", path=path, info=info)
+        return res
+
     # Helper for mapping IDs to Names
-    networks_res, _ = api.request(f"/proxy/network/api/s/{site}/rest/networkconf")
+    networks_res = request_or_fail(f"/proxy/network/api/s/{site}/rest/networkconf", "networks")
     network_map = {n["_id"]: n["name"] for n in api.as_list(networks_res) if isinstance(n, dict)}
 
     # Build subnet -> name mapping for clients without network_id
@@ -90,7 +96,7 @@ def run_module():
                 pass
 
     if "wifi" in subset:
-        res, _ = api.request(f"/proxy/network/api/s/{site}/rest/wlanconf")
+        res = request_or_fail(f"/proxy/network/api/s/{site}/rest/wlanconf", "wifi networks")
         results["wifi"] = []
         for w in api.as_list(res):
             if not isinstance(w, dict):
@@ -107,7 +113,7 @@ def run_module():
             )
 
     if "firewall_groups" in subset:
-        res, _ = api.request(f"/proxy/network/api/s/{site}/rest/firewallgroup")
+        res = request_or_fail(f"/proxy/network/api/s/{site}/rest/firewallgroup", "firewall groups")
         results["firewall_groups"] = []
         for g in api.as_list(res):
             if not isinstance(g, dict):
@@ -117,7 +123,7 @@ def run_module():
             )
 
     if "firewall_zones" in subset:
-        res, _ = api.request(f"/proxy/network/v2/api/site/{site}/firewall/zone")
+        res = request_or_fail(f"/proxy/network/v2/api/site/{site}/firewall/zone", "firewall zones")
         results["firewall_zones"] = []
         for z in api.as_list(res):
             if not isinstance(z, dict):
@@ -128,10 +134,10 @@ def run_module():
 
     if "firewall_policies" in subset:
         # Resolve zone IDs for mapping
-        zones_res, _ = api.request(f"/proxy/network/v2/api/site/{site}/firewall/zone")
+        zones_res = request_or_fail(f"/proxy/network/v2/api/site/{site}/firewall/zone", "firewall zones")
         zone_map = {z["_id"]: z["name"] for z in api.as_list(zones_res) if isinstance(z, dict)}
 
-        res, _ = api.request(f"/proxy/network/v2/api/site/{site}/firewall-policies")
+        res = request_or_fail(f"/proxy/network/v2/api/site/{site}/firewall-policies", "firewall policies")
         results["firewall_policies"] = []
         for p in api.as_list(res):
             if not isinstance(p, dict):
@@ -157,7 +163,7 @@ def run_module():
             )
 
     if "rsyslog" in subset:
-        res, _ = api.request(f"/proxy/network/api/s/{site}/get/setting")
+        res = request_or_fail(f"/proxy/network/api/s/{site}/get/setting", "system settings")
         rsyslog = next((s for s in api.as_list(res) if isinstance(s, dict) and s.get("key") == "rsyslogd"), None)
         if rsyslog:
             results["rsyslog"] = {
@@ -168,7 +174,7 @@ def run_module():
             }
 
     if "port_profiles" in subset:
-        res, _ = api.request(f"/proxy/network/api/s/{site}/rest/portconf")
+        res = request_or_fail(f"/proxy/network/api/s/{site}/rest/portconf", "port profiles")
         results["port_profiles"] = []
         for p in api.as_list(res):
             if not isinstance(p, dict):
@@ -182,11 +188,11 @@ def run_module():
             )
 
     if "devices" in subset:
-        res, _ = api.request(f"/proxy/network/api/s/{site}/rest/device")
+        res = request_or_fail(f"/proxy/network/api/s/{site}/rest/device", "devices")
         results["devices"] = api.as_list(res)
 
     if "dhcp_reservations" in subset:
-        res, _ = api.request(f"/proxy/network/api/s/{site}/stat/alluser")
+        res = request_or_fail(f"/proxy/network/api/s/{site}/stat/alluser", "dhcp reservations")
         results["dhcp_reservations"] = []
         for c in api.as_list(res):
             if not isinstance(c, dict):
@@ -241,7 +247,7 @@ def run_module():
             )
 
     if "system_settings" in subset:
-        res, _ = api.request(f"/proxy/network/api/s/{site}/get/setting")
+        res = request_or_fail(f"/proxy/network/api/s/{site}/get/setting", "system settings")
         all_settings = api.as_list(res)
         ntp = next((s for s in all_settings if isinstance(s, dict) and s.get("key") == "ntp"), None)
         mgmt = next((s for s in all_settings if isinstance(s, dict) and s.get("key") == "mgmt"), None)
@@ -262,7 +268,7 @@ def run_module():
             }
 
     if "port_forward" in subset:
-        res, _ = api.request(f"/proxy/network/api/s/{site}/rest/portforward")
+        res = request_or_fail(f"/proxy/network/api/s/{site}/rest/portforward", "port forward rules")
         results["port_forward"] = []
         for r in api.as_list(res):
             if not isinstance(r, dict):

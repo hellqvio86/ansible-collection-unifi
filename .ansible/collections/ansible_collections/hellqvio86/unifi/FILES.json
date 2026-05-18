@@ -18,7 +18,7 @@
    "name": "docs/usage.md",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "5c17055bea32385e5532e08dd639cbdc8850d18d291f86e050e05b0f8d9bfcba",
+   "chksum_sha256": "e8340cb7e8ba5e8711117c31f37e367cdfbff1e099ab13ef4ee6283e299bcb12",
    "format": 1
   },
   {
@@ -183,115 +183,115 @@
    "format": 1
   },
   {
-   "name": "plugins/modules/unifi_ssl_config.py",
-   "ftype": "file",
-   "chksum_type": "sha256",
-   "chksum_sha256": "3d26652918aeb60e1ac5fbed9c8ace0ab2c24cc0ecb063ba3dd3372258dabb79",
-   "format": 1
-  },
-  {
    "name": "plugins/modules/unifi_dhcp_reservation.py",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "d2b0c366abcdeedb90818cf364dce54f025703c2f618078964e4866b307c549f",
-   "format": 1
-  },
-  {
-   "name": "plugins/modules/unifi_firewall_group.py",
-   "ftype": "file",
-   "chksum_type": "sha256",
-   "chksum_sha256": "ce96efded9a2a6b71c297f2c0d8bcd24781b6d6cce45967532606421d96f41ee",
-   "format": 1
-  },
-  {
-   "name": "plugins/modules/unifi_firewall_policy.py",
-   "ftype": "file",
-   "chksum_type": "sha256",
-   "chksum_sha256": "098748273e323bcc3bfeee4970a5e3311708935f9e54de82717672f9c75d4601",
-   "format": 1
-  },
-  {
-   "name": "plugins/modules/unifi_firewall_zone.py",
-   "ftype": "file",
-   "chksum_type": "sha256",
-   "chksum_sha256": "e5d04e33cad0abbb51c63ae27ce160452a20464602d8b9fe89a8c0304864fd4c",
-   "format": 1
-  },
-  {
-   "name": "plugins/modules/unifi_port_profile.py",
-   "ftype": "file",
-   "chksum_type": "sha256",
-   "chksum_sha256": "536f515be85ef00b117efc6bbe5663264a349a656ef737e54b4f32d4f014a0ce",
-   "format": 1
-  },
-  {
-   "name": "plugins/modules/unifi_rsyslog.py",
-   "ftype": "file",
-   "chksum_type": "sha256",
-   "chksum_sha256": "a1bdc331c7f1469e6639f9232e6c421d063d6cfbfc4747f8b36ea44294eae2de",
-   "format": 1
-  },
-  {
-   "name": "plugins/modules/unifi_ssh_key.py",
-   "ftype": "file",
-   "chksum_type": "sha256",
-   "chksum_sha256": "87927c1d4526918a9c8ae4f1258ad18c442b029fcf9e724005cdcf2d15c43358",
-   "format": 1
-  },
-  {
-   "name": "plugins/modules/unifi_switch_profile.py",
-   "ftype": "file",
-   "chksum_type": "sha256",
-   "chksum_sha256": "4d426c232a53761faede91c8adbbdd156a7585e9c0e397938b5cf39c073fc653",
-   "format": 1
-  },
-  {
-   "name": "plugins/modules/unifi_switch_profile_assignment.py",
-   "ftype": "file",
-   "chksum_type": "sha256",
-   "chksum_sha256": "f917e953e411da5f7d19d7adf516c8770d7f35de5534bf8571de7c08adac42a9",
-   "format": 1
-  },
-  {
-   "name": "plugins/modules/unifi_user_certificate.py",
-   "ftype": "file",
-   "chksum_type": "sha256",
-   "chksum_sha256": "3162abd9b5003af1d57838b72782c51c8651924dadf9e0ab3d104b820913788d",
-   "format": 1
-  },
-  {
-   "name": "plugins/modules/unifi_wlan.py",
-   "ftype": "file",
-   "chksum_type": "sha256",
-   "chksum_sha256": "35f6b5d11e6ab2ba04efa25eb9fae24fc85bef285a7f7a17726e3f1ef6b20871",
+   "chksum_sha256": "f21625178f69243b14affa784220eee3f5ec34a4ce7bd4c08676c4aaa36a1a10",
    "format": 1
   },
   {
    "name": "plugins/modules/unifi_dhcp_server.py",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "448ae4f40bfbb00783f0022f76b6b039a290ebc3f4386231595d64e8a8b16b1c",
+   "chksum_sha256": "f6fdabc1e853268d302e927f648504d000b895da911de4d33d837fdab02a58c8",
    "format": 1
   },
   {
-   "name": "plugins/modules/unifi_system_settings.py",
+   "name": "plugins/modules/unifi_firewall_group.py",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "6d2b3175bfe94057151dacb95e0ad9db49c8a6951d777c953ecf86d78d6866e5",
+   "chksum_sha256": "0636e8f9c109d0819b35fd5ed82c1b9eb0c0c4d42a2ec8d57edc5501c9d99bab",
+   "format": 1
+  },
+  {
+   "name": "plugins/modules/unifi_firewall_policy.py",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "c66c6fc3af82675b8f78105f6922ff7b8b1526305b7061f88fe0c816a3711eb2",
+   "format": 1
+  },
+  {
+   "name": "plugins/modules/unifi_firewall_zone.py",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "33e78308fc4ac0e2b11ed490f26f7e4dbd81a8ea18298f862a0ec2b2c778f1c0",
    "format": 1
   },
   {
    "name": "plugins/modules/unifi_info.py",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "7ff1023da5418570b640a23500f9a4bc126568382ad3840a4e6c6c02a78b6a4f",
+   "chksum_sha256": "d05d9871951e716e1d021f5211d9b397cb74f5109db462edf54ecc7d104f9f1d",
    "format": 1
   },
   {
    "name": "plugins/modules/unifi_port_forward.py",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "5e02a84c7d9731e642c9c7ab3ca1506f68a3e755b73ee99629def8bce8e96a13",
+   "chksum_sha256": "a892b74b1f14ac2635fa6584f8c3339902445d9ded700ec01f94c69393bf0d0a",
+   "format": 1
+  },
+  {
+   "name": "plugins/modules/unifi_port_profile.py",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "e6fd29566a6933a85105cbdcc01aef70677b52c9d4052368bd2308087d5d7c04",
+   "format": 1
+  },
+  {
+   "name": "plugins/modules/unifi_rsyslog.py",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "988742352da00554ea04f752df85072f56dc14c3d0a44eee03ab2eb21e22cdee",
+   "format": 1
+  },
+  {
+   "name": "plugins/modules/unifi_ssh_key.py",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "b4e7120542b139e94ae857b039cfbefa3bc04eacdf155c4829e835025b649bc8",
+   "format": 1
+  },
+  {
+   "name": "plugins/modules/unifi_ssl_config.py",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "6147469da21bb841678bd5fe5ca2015966cc246a6ff2d64d194091f571eed279",
+   "format": 1
+  },
+  {
+   "name": "plugins/modules/unifi_switch_profile.py",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "8d291ac8391414a0b190b19efd3e2dc74479f59c50b878a889945ec2605bdf7e",
+   "format": 1
+  },
+  {
+   "name": "plugins/modules/unifi_switch_profile_assignment.py",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "b6ad29306c61656a82370723636707a95688b463f098c04b5b8499555abbaa4a",
+   "format": 1
+  },
+  {
+   "name": "plugins/modules/unifi_system_settings.py",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "b3ba6c7646b287f52c6396d439aecf58dc47055eed51342e12039003c1d684f5",
+   "format": 1
+  },
+  {
+   "name": "plugins/modules/unifi_user_certificate.py",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "7e87a83b5f350a73c4979248294615c135c124c2fb0a9685b0f99bbb76440229",
+   "format": 1
+  },
+  {
+   "name": "plugins/modules/unifi_wlan.py",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "12c8125e03d9ddb61a6e86adee2f77852778757f6427fa878f691409f17c2373",
    "format": 1
   },
   {
@@ -305,7 +305,7 @@
    "name": "plugins/module_utils/unifi_api.py",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "a05ea999cc654f713d403d5110be9cf897026d47018e2621e9e90214ea221a0b",
+   "chksum_sha256": "56b6f0645373fc70c10051138cfcac6818c12dbc649395ee272274f86d8f713f",
    "format": 1
   },
   {
@@ -372,17 +372,31 @@
    "format": 1
   },
   {
-   "name": "README.md",
-   "ftype": "file",
-   "chksum_type": "sha256",
-   "chksum_sha256": "e5a1c8e12ce08e05e942f3bd5f1dc13e48309a73c2c2e60d1bd5c3da9c97f80d",
-   "format": 1
-  },
-  {
    "name": "CHANGELOG.md",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "f698f26d38b8bb3a0206883269cd707791b8801c83ac9ccfb7370d86010a59b3",
+   "chksum_sha256": "c09b4ea98867ad7ea6f21c41b2b5df4a0f119784a28c1508c2991092929e8e9c",
+   "format": 1
+  },
+  {
+   "name": "README.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "f918ccdbca1da036bd984130fdbbeb49424b6d177835b8ab623f7f7e3644004c",
+   "format": 1
+  },
+  {
+   "name": "playbooks",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "playbooks/unifi_dump_all.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "aef333e453474a53059f1483750e43db92bf55634db6b77458a931e288b1815e",
    "format": 1
   }
  ],

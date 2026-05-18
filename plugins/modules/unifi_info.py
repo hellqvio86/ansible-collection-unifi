@@ -188,7 +188,16 @@ def run_module():
             )
 
     if "devices" in subset:
-        res = request_or_fail(f"/proxy/network/api/s/{site}/rest/device", "devices")
+        res, info = api.request(f"/proxy/network/api/s/{site}/rest/device")
+        if res is None and info.get("status") == 404:
+            # Some controllers expose devices via stat/device instead of rest/device.
+            res = request_or_fail(f"/proxy/network/api/s/{site}/stat/device", "devices")
+        elif res is None:
+            module.fail_json(
+                msg="Failed to fetch devices",
+                path=f"/proxy/network/api/s/{site}/rest/device",
+                info=info,
+            )
         results["devices"] = api.as_list(res)
 
     if "dhcp_reservations" in subset:

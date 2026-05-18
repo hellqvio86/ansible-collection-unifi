@@ -74,7 +74,11 @@ def run_module():
         module.fail_json(msg="'cert' and 'key' are required when state=present")
 
     api = UnifiAPI(
-        module, module.params["host"], module.params["username"], module.params["password"], module.params["validate_certs"],
+        module,
+        module.params["host"],
+        module.params["username"],
+        module.params["password"],
+        module.params["validate_certs"],
         module.params.get("unifi_session_cookie"),
         module.params.get("unifi_csrf_token"),
     )
@@ -105,7 +109,9 @@ def run_module():
                         data={"active": True},
                     )
                     if not status_res:
-                        module.fail_json(msg="Failed to activate uploaded user certificate", info=info, certificate_id=result["id"])
+                        module.fail_json(
+                            msg="Failed to activate uploaded user certificate", info=info, certificate_id=result["id"]
+                        )
                     result = status_res
                     changed = True
         else:
@@ -123,7 +129,9 @@ def run_module():
                         data={"active": True},
                     )
                     if not status_res:
-                        module.fail_json(msg="Failed to activate existing user certificate", info=info, certificate_id=cert_id)
+                        module.fail_json(
+                            msg="Failed to activate existing user certificate", info=info, certificate_id=cert_id
+                        )
                     result = status_res
     else:
         if existing:

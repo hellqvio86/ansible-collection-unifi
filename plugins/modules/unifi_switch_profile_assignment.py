@@ -12,7 +12,7 @@ description:
     - Supports single assignment mode and batch mode.
 options:
     host: {type: str, required: false}
-    username: {type: str, required: true}
+    username: {type: str, required: false}
     password: {type: str, required: false}
     site: {type: str, default: default}
     validate_certs: {type: bool, default: false}
@@ -92,7 +92,11 @@ def run_module():
 
     desired_items = _normalize_desired(module)
     api = UnifiAPI(
-        module, module.params["host"], module.params["username"], module.params["password"], module.params["validate_certs"],
+        module,
+        module.params["host"],
+        module.params["username"],
+        module.params["password"],
+        module.params["validate_certs"],
         module.params.get("unifi_session_cookie"),
         module.params.get("unifi_csrf_token"),
     )

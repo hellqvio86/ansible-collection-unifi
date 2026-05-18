@@ -21,7 +21,9 @@ def test_switch_profile_assignment():
         patch(
             "ansible_collections.hellqvio86.unifi.plugins.modules.unifi_switch_profile_assignment.AnsibleModule"
         ) as mock_module_class,
-        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_switch_profile_assignment.UnifiAPI") as mock_api_class,
+        patch(
+            "ansible_collections.hellqvio86.unifi.plugins.modules.unifi_switch_profile_assignment.UnifiAPI"
+        ) as mock_api_class,
     ):
         mock_module = mock_module_class.return_value
         mock_module.params = params
@@ -30,7 +32,11 @@ def test_switch_profile_assignment():
         mock_module.fail_json.side_effect = Exception("fail_json called")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         # Mock responses
         mock_api.request.side_effect = [
@@ -93,7 +99,9 @@ def test_switch_profile_assignment_no_change():
         patch(
             "ansible_collections.hellqvio86.unifi.plugins.modules.unifi_switch_profile_assignment.AnsibleModule"
         ) as mock_module_class,
-        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_switch_profile_assignment.UnifiAPI") as mock_api_class,
+        patch(
+            "ansible_collections.hellqvio86.unifi.plugins.modules.unifi_switch_profile_assignment.UnifiAPI"
+        ) as mock_api_class,
     ):
         mock_module = mock_module_class.return_value
         mock_module.params = params
@@ -101,7 +109,11 @@ def test_switch_profile_assignment_no_change():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         # Mock responses
         mock_api.request.side_effect = [
@@ -150,7 +162,9 @@ def test_switch_profile_assignment_remove():
         patch(
             "ansible_collections.hellqvio86.unifi.plugins.modules.unifi_switch_profile_assignment.AnsibleModule"
         ) as mock_module_class,
-        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_switch_profile_assignment.UnifiAPI") as mock_api_class,
+        patch(
+            "ansible_collections.hellqvio86.unifi.plugins.modules.unifi_switch_profile_assignment.UnifiAPI"
+        ) as mock_api_class,
     ):
         mock_module = mock_module_class.return_value
         mock_module.params = params
@@ -158,7 +172,11 @@ def test_switch_profile_assignment_remove():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         # Mock responses
         mock_api.request.side_effect = [

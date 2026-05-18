@@ -34,11 +34,30 @@ def test_dhcp_server_create():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
-            ([{"_id": "net1", "name": "Default", "dhcpd_enabled": False, "dhcpd_start": "", "dhcpd_stop": ""}], {"status": 200}),
-            ([{"_id": "net1", "name": "Default", "dhcpd_enabled": True, "dhcpd_start": "192.168.1.100", "dhcpd_stop": "192.168.1.200", "dhcpd_leasetime": 86400}], {"status": 200}),
+            (
+                [{"_id": "net1", "name": "Default", "dhcpd_enabled": False, "dhcpd_start": "", "dhcpd_stop": ""}],
+                {"status": 200},
+            ),
+            (
+                [
+                    {
+                        "_id": "net1",
+                        "name": "Default",
+                        "dhcpd_enabled": True,
+                        "dhcpd_start": "192.168.1.100",
+                        "dhcpd_stop": "192.168.1.200",
+                        "dhcpd_leasetime": 86400,
+                    }
+                ],
+                {"status": 200},
+            ),
         ]
 
         run_module()
@@ -85,10 +104,28 @@ def test_dhcp_server_no_change():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
-            ([{"_id": "net1", "name": "Default", "dhcpd_enabled": True, "dhcpd_start": "192.168.1.100", "dhcpd_stop": "192.168.1.200", "dhcpd_leasetime": 86400, "dhcpd_dns_1": "192.168.1.1", "dhcpd_dns_2": "8.8.8.8"}], {"status": 200}),
+            (
+                [
+                    {
+                        "_id": "net1",
+                        "name": "Default",
+                        "dhcpd_enabled": True,
+                        "dhcpd_start": "192.168.1.100",
+                        "dhcpd_stop": "192.168.1.200",
+                        "dhcpd_leasetime": 86400,
+                        "dhcpd_dns_1": "192.168.1.1",
+                        "dhcpd_dns_2": "8.8.8.8",
+                    }
+                ],
+                {"status": 200},
+            ),
         ]
 
         run_module()
@@ -130,10 +167,25 @@ def test_dhcp_server_absent():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
-            ([{"_id": "net1", "name": "Default", "dhcpd_enabled": True, "dhcpd_start": "192.168.1.100", "dhcpd_stop": "192.168.1.200"}], {"status": 200}),
+            (
+                [
+                    {
+                        "_id": "net1",
+                        "name": "Default",
+                        "dhcpd_enabled": True,
+                        "dhcpd_start": "192.168.1.100",
+                        "dhcpd_stop": "192.168.1.200",
+                    }
+                ],
+                {"status": 200},
+            ),
             ([{"_id": "net1", "name": "Default", "dhcpd_enabled": False}], {"status": 200}),
         ]
 
@@ -178,7 +230,11 @@ def test_dhcp_server_absent_noop():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             ([{"_id": "net1", "name": "Default", "dhcpd_enabled": False}], {"status": 200}),
@@ -223,13 +279,18 @@ def test_dhcp_server_network_not_found():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             ([], {"status": 200}),
         ]
 
         import pytest
+
         with pytest.raises(Exception, match="fail_json"):
             run_module()
 
@@ -269,10 +330,17 @@ def test_dhcp_server_check_mode():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
-            ([{"_id": "net1", "name": "Default", "dhcpd_enabled": False, "dhcpd_start": "", "dhcpd_stop": ""}], {"status": 200}),
+            (
+                [{"_id": "net1", "name": "Default", "dhcpd_enabled": False, "dhcpd_start": "", "dhcpd_stop": ""}],
+                {"status": 200},
+            ),
         ]
 
         run_module()
@@ -314,11 +382,43 @@ def test_dhcp_server_update_single_field():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
-            ([{"_id": "net1", "name": "Default", "dhcpd_enabled": True, "dhcpd_start": "192.168.1.100", "dhcpd_stop": "192.168.1.200", "dhcpd_leasetime": 86400, "dhcpd_dns_1": "8.8.8.8", "dhcpd_dns_2": ""}], {"status": 200}),
-            ([{"_id": "net1", "name": "Default", "dhcpd_enabled": True, "dhcpd_start": "192.168.1.100", "dhcpd_stop": "192.168.1.200", "dhcpd_leasetime": 86400, "dhcpd_dns_1": "1.1.1.1", "dhcpd_dns_2": ""}], {"status": 200}),
+            (
+                [
+                    {
+                        "_id": "net1",
+                        "name": "Default",
+                        "dhcpd_enabled": True,
+                        "dhcpd_start": "192.168.1.100",
+                        "dhcpd_stop": "192.168.1.200",
+                        "dhcpd_leasetime": 86400,
+                        "dhcpd_dns_1": "8.8.8.8",
+                        "dhcpd_dns_2": "",
+                    }
+                ],
+                {"status": 200},
+            ),
+            (
+                [
+                    {
+                        "_id": "net1",
+                        "name": "Default",
+                        "dhcpd_enabled": True,
+                        "dhcpd_start": "192.168.1.100",
+                        "dhcpd_stop": "192.168.1.200",
+                        "dhcpd_leasetime": 86400,
+                        "dhcpd_dns_1": "1.1.1.1",
+                        "dhcpd_dns_2": "",
+                    }
+                ],
+                {"status": 200},
+            ),
         ]
 
         run_module()

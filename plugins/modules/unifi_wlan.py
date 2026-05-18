@@ -13,15 +13,15 @@ description:
 options:
     host:
         description: The host of the UniFi controller.
-        required: true
+        required: false
         type: str
     username:
         description: UniFi controller username.
-        required: true
+        required: false
         type: str
     password:
         description: UniFi controller password.
-        required: true
+        required: false
         type: str
     site:
         description: UniFi site name.
@@ -133,7 +133,9 @@ def run_module():
         # Resolve network name to ID if possible
         networks_res, info = api.request(f"/proxy/network/api/s/{site}/rest/networkconf")
         networks = api.as_list(networks_res)
-        network = next((n for n in networks if isinstance(n, dict) and n.get("name") == module.params["network_name"]), None)
+        network = next(
+            (n for n in networks if isinstance(n, dict) and n.get("name") == module.params["network_name"]), None
+        )
         if network:
             desired_payload["networkconf_id"] = network["_id"]
         else:
@@ -177,9 +179,7 @@ def run_module():
         if existing:
             changed = True
             if not module.check_mode:
-                _, info = api.request(
-                    f"/proxy/network/api/s/{site}/rest/wlanconf/{existing['_id']}", method="DELETE"
-                )
+                _, info = api.request(f"/proxy/network/api/s/{site}/rest/wlanconf/{existing['_id']}", method="DELETE")
                 if info["status"] not in [200, 204]:
                     module.fail_json(msg="Failed to delete WLAN configuration", info=info)
             result_wlan = None

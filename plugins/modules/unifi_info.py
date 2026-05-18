@@ -42,7 +42,19 @@ def run_module():
         gather_subset=dict(
             type="list",
             elements="str",
-            choices=["wifi", "firewall_groups", "firewall_zones", "firewall_policies", "rsyslog", "port_profiles", "devices", "dhcp_reservations", "networks", "system_settings", "port_forward"],
+            choices=[
+                "wifi",
+                "firewall_groups",
+                "firewall_zones",
+                "firewall_policies",
+                "rsyslog",
+                "port_profiles",
+                "devices",
+                "dhcp_reservations",
+                "networks",
+                "system_settings",
+                "port_forward",
+            ],
             default=["wifi", "firewall_groups", "firewall_zones", "firewall_policies", "rsyslog"],
         ),
     )
@@ -83,14 +95,16 @@ def run_module():
         for w in api.as_list(res):
             if not isinstance(w, dict):
                 continue
-            results["wifi"].append({
-                "name": w.get("name"),
-                "enabled": w.get("enabled"),
-                "security": w.get("security"),
-                "passphrase": w.get("x_passphrase"),
-                "network": network_map.get(w.get("networkconf_id"), "Unknown"),
-                "bands": w.get("wlan_bands")
-            })
+            results["wifi"].append(
+                {
+                    "name": w.get("name"),
+                    "enabled": w.get("enabled"),
+                    "security": w.get("security"),
+                    "passphrase": w.get("x_passphrase"),
+                    "network": network_map.get(w.get("networkconf_id"), "Unknown"),
+                    "bands": w.get("wlan_bands"),
+                }
+            )
 
     if "firewall_groups" in subset:
         res, _ = api.request(f"/proxy/network/api/s/{site}/rest/firewallgroup")
@@ -98,11 +112,9 @@ def run_module():
         for g in api.as_list(res):
             if not isinstance(g, dict):
                 continue
-            results["firewall_groups"].append({
-                "name": g.get("name"),
-                "type": g.get("group_type"),
-                "members": g.get("group_members")
-            })
+            results["firewall_groups"].append(
+                {"name": g.get("name"), "type": g.get("group_type"), "members": g.get("group_members")}
+            )
 
     if "firewall_zones" in subset:
         res, _ = api.request(f"/proxy/network/v2/api/site/{site}/firewall/zone")
@@ -110,10 +122,9 @@ def run_module():
         for z in api.as_list(res):
             if not isinstance(z, dict):
                 continue
-            results["firewall_zones"].append({
-                "name": z.get("name"),
-                "networks": [network_map.get(nid, nid) for nid in z.get("network_ids", [])]
-            })
+            results["firewall_zones"].append(
+                {"name": z.get("name"), "networks": [network_map.get(nid, nid) for nid in z.get("network_ids", [])]}
+            )
 
     if "firewall_policies" in subset:
         # Resolve zone IDs for mapping
@@ -125,23 +136,25 @@ def run_module():
         for p in api.as_list(res):
             if not isinstance(p, dict):
                 continue
-            results["firewall_policies"].append({
-                "name": p.get("name"),
-                "action": p.get("action"),
-                "protocol": p.get("protocol"),
-                "index": p.get("index"),
-                "enabled": p.get("enabled"),
-                "source": {
-                    "zone": zone_map.get(p.get("source", {}).get("zone_id")),
-                    "ips": p.get("source", {}).get("ips", []),
-                    "port": p.get("source", {}).get("port")
-                },
-                "destination": {
-                    "zone": zone_map.get(p.get("destination", {}).get("zone_id")),
-                    "ips": p.get("destination", {}).get("ips", []),
-                    "port": p.get("destination", {}).get("port")
+            results["firewall_policies"].append(
+                {
+                    "name": p.get("name"),
+                    "action": p.get("action"),
+                    "protocol": p.get("protocol"),
+                    "index": p.get("index"),
+                    "enabled": p.get("enabled"),
+                    "source": {
+                        "zone": zone_map.get(p.get("source", {}).get("zone_id")),
+                        "ips": p.get("source", {}).get("ips", []),
+                        "port": p.get("source", {}).get("port"),
+                    },
+                    "destination": {
+                        "zone": zone_map.get(p.get("destination", {}).get("zone_id")),
+                        "ips": p.get("destination", {}).get("ips", []),
+                        "port": p.get("destination", {}).get("port"),
+                    },
                 }
-            })
+            )
 
     if "rsyslog" in subset:
         res, _ = api.request(f"/proxy/network/api/s/{site}/get/setting")
@@ -151,7 +164,7 @@ def run_module():
                 "enabled": rsyslog.get("enabled"),
                 "ip": rsyslog.get("ip"),
                 "port": rsyslog.get("port"),
-                "log_all_contents": rsyslog.get("log_all_contents")
+                "log_all_contents": rsyslog.get("log_all_contents"),
             }
 
     if "port_profiles" in subset:
@@ -160,11 +173,13 @@ def run_module():
         for p in api.as_list(res):
             if not isinstance(p, dict):
                 continue
-            results["port_profiles"].append({
-                "name": p.get("name"),
-                "native_network": network_map.get(p.get("native_networkconf_id")),
-                "tagged_networks": [network_map.get(nid) for nid in p.get("tagged_networkconf_ids", [])]
-            })
+            results["port_profiles"].append(
+                {
+                    "name": p.get("name"),
+                    "native_network": network_map.get(p.get("native_networkconf_id")),
+                    "tagged_networks": [network_map.get(nid) for nid in p.get("tagged_networkconf_ids", [])],
+                }
+            )
 
     if "devices" in subset:
         res, _ = api.request(f"/proxy/network/api/s/{site}/rest/device")
@@ -192,34 +207,38 @@ def run_module():
                         except ValueError:
                             pass
 
-                results["dhcp_reservations"].append({
-                    "mac": c.get("mac"),
-                    "name": c.get("name"),
-                    "fixed_ip": c.get("fixed_ip"),
-                    "network": network,
-                })
+                results["dhcp_reservations"].append(
+                    {
+                        "mac": c.get("mac"),
+                        "name": c.get("name"),
+                        "fixed_ip": c.get("fixed_ip"),
+                        "network": network,
+                    }
+                )
 
     if "networks" in subset:
         results["networks"] = []
         for n in api.as_list(networks_res):
             if not isinstance(n, dict):
                 continue
-            results["networks"].append({
-                "name": n.get("name"),
-                "purpose": n.get("purpose"),
-                "enabled": n.get("enabled"),
-                "vlan_enabled": n.get("vlan_enabled"),
-                "vlan": n.get("vlan"),
-                "subnet": n.get("ip_subnet"),
-                "dhcpd_enabled": n.get("dhcpd_enabled"),
-                "dhcpd_start": n.get("dhcpd_start"),
-                "dhcpd_stop": n.get("dhcpd_stop"),
-                "dhcpd_leasetime": n.get("dhcpd_leasetime"),
-                "dhcpd_dns_1": n.get("dhcpd_dns_1"),
-                "dhcpd_dns_2": n.get("dhcpd_dns_2"),
-                "dhcpd_gateway": n.get("dhcpd_gateway"),
-                "dhcpd_domain_name": n.get("dhcpd_domain_name"),
-            })
+            results["networks"].append(
+                {
+                    "name": n.get("name"),
+                    "purpose": n.get("purpose"),
+                    "enabled": n.get("enabled"),
+                    "vlan_enabled": n.get("vlan_enabled"),
+                    "vlan": n.get("vlan"),
+                    "subnet": n.get("ip_subnet"),
+                    "dhcpd_enabled": n.get("dhcpd_enabled"),
+                    "dhcpd_start": n.get("dhcpd_start"),
+                    "dhcpd_stop": n.get("dhcpd_stop"),
+                    "dhcpd_leasetime": n.get("dhcpd_leasetime"),
+                    "dhcpd_dns_1": n.get("dhcpd_dns_1"),
+                    "dhcpd_dns_2": n.get("dhcpd_dns_2"),
+                    "dhcpd_gateway": n.get("dhcpd_gateway"),
+                    "dhcpd_domain_name": n.get("dhcpd_domain_name"),
+                }
+            )
 
     if "system_settings" in subset:
         res, _ = api.request(f"/proxy/network/api/s/{site}/get/setting")
@@ -248,17 +267,19 @@ def run_module():
         for r in api.as_list(res):
             if not isinstance(r, dict):
                 continue
-            results["port_forward"].append({
-                "name": r.get("name"),
-                "enabled": r.get("enabled"),
-                "protocol": r.get("proto"),
-                "src": r.get("src", ""),
-                "dst_port": r.get("dst_port"),
-                "fwd_port": r.get("fwd_port"),
-                "fwd_ip": r.get("fwd_ip"),
-                "fwd_network": network_map.get(r.get("fwd_network_id")),
-                "log": r.get("log", False),
-            })
+            results["port_forward"].append(
+                {
+                    "name": r.get("name"),
+                    "enabled": r.get("enabled"),
+                    "protocol": r.get("proto"),
+                    "src": r.get("src", ""),
+                    "dst_port": r.get("dst_port"),
+                    "fwd_port": r.get("fwd_port"),
+                    "fwd_ip": r.get("fwd_ip"),
+                    "fwd_network": network_map.get(r.get("fwd_network_id")),
+                    "log": r.get("log", False),
+                }
+            )
 
     module.exit_json(changed=False, unifi_info=results)
 

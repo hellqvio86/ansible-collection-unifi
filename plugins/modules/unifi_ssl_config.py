@@ -111,7 +111,7 @@ def run_module():
         except OSError:
             pass
 
-        if current_cert.strip() != cert_content.strip():
+        if current_cert.strip() != (cert_content or "").strip():
             changed = True
             if not module.check_mode:
                 with sftp.open(target_cert, "w") as f:
@@ -126,7 +126,7 @@ def run_module():
         except OSError:
             pass
 
-        if current_key.strip() != key_content.strip():
+        if current_key.strip() != (key_content or "").strip():
             changed = True
             if not module.check_mode:
                 with sftp.open(target_key, "w") as f:

@@ -58,6 +58,26 @@ from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI
 
 
+def _build_desired_payload(module):
+    payload = {
+        "name": module.params["name"],
+    }
+    if module.params.get("model") is not None:
+        payload["model"] = module.params["model"]
+    if module.params.get("description") is not None:
+        payload["description"] = module.params["description"]
+    if module.params.get("port_profile_overrides") is not None:
+        payload["port_profile_overrides"] = module.params["port_profile_overrides"]
+    return payload
+
+
+def _needs_update(existing, desired):
+    for key in ("model", "description", "port_profile_overrides"):
+        if key in desired and existing.get(key) != desired[key]:
+            return True
+    return False
+
+
 def run_module():
     module_args = dict(
         host=dict(type="str"),
@@ -87,24 +107,57 @@ def run_module():
     )
     api.login()
 
+    site = module.params["site"]
+    name = module.params["name"]
 
+    # Fetch existing switch profiles
+    res, info = api.request(f"/proxy/network/api/s/{site}/rest/switchprofile")
+    profiles = api.as_list(res)
 
-    # Fetch existing switch profiles (stored as custom attributes or in a specific endpoint)
-    # For now, we use a custom metadata endpoint or just store them in a site-level config
-    # UniFi doesn't have a native 'switch profile' entity in the same way it has port profiles.
-    # This is likely a custom implementation for the user's role.
+    existing = next((p for p in profiles if p.get("name") == name), None)
 
-    # Actually, in this role, switch profiles are managed by the role itself to apply overrides.
-    # But wait, I should check if there's an API for this.
-    # In the user's role, these are just data structures.
+    changed = False
+    result_profile = existing
 
-    # I'll implement a basic mock/idempotent check for now or skip if not an actual API entity.
-    # Actually, looking at the role, it uses this module.
+    desired_payload = _build_desired_payload(module)
 
-    # I'll just make it exit success for now to keep the role running,
-    # as the real logic happens in switch_profile_assignment.
+    if module.params["state"] == "present":
+        if not existing:
+            changed = True
+            if not module.check_mode:
+                res, info = api.request(
+                    f"/proxy/network/api/s/{site}/rest/switchprofile", method="POST", data=desired_payload
+                )
+                res_list = api.as_list(res)
+                result_profile = res_list[0] if res_list else res
+                if not result_profile:
+                    module.fail_json(msg="Failed to create switch profile", info=info)
+        else:
+            if _needs_update(existing, desired_payload):
+                changed = True
+                if not module.check_mode:
+                    res, info = api.request(
+                        f"/proxy/network/api/s/{site}/rest/switchprofile/{existing['_id']}",
+                        method="PUT",
+                        data=desired_payload,
+                    )
+                    res_list = api.as_list(res)
+                    result_profile = res_list[0] if res_list else res
+                    if not result_profile:
+                        module.fail_json(msg="Failed to update switch profile", info=info)
 
-    module.exit_json(changed=False, msg="Switch profiles are managed as logical entities in this collection.")
+    elif module.params["state"] == "absent":
+        if existing:
+            changed = True
+            if not module.check_mode:
+                _, info = api.request(
+                    f"/proxy/network/api/s/{site}/rest/switchprofile/{existing['_id']}", method="DELETE"
+                )
+                if info["status"] not in [200, 204]:
+                    module.fail_json(msg="Failed to delete switch profile", info=info)
+            result_profile = None
+
+    module.exit_json(changed=changed, profile=result_profile)
 
 
 if __name__ == "__main__":

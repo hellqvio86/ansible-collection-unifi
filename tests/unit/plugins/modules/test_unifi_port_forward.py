@@ -34,11 +34,28 @@ def test_port_forward_create():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             ([], {"status": 200}),
-            ([{"_id": "pf1", "name": "SSH to Server", "enabled": True, "proto": "tcp", "dst_port": "2222", "fwd_port": "2222", "fwd_ip": "192.168.1.10"}], {"status": 201}),
+            (
+                [
+                    {
+                        "_id": "pf1",
+                        "name": "SSH to Server",
+                        "enabled": True,
+                        "proto": "tcp",
+                        "dst_port": "2222",
+                        "fwd_port": "2222",
+                        "fwd_ip": "192.168.1.10",
+                    }
+                ],
+                {"status": 201},
+            ),
         ]
 
         run_module()
@@ -86,10 +103,30 @@ def test_port_forward_no_change():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
-            ([{"_id": "pf1", "name": "SSH to Server", "enabled": True, "proto": "tcp", "src": "", "dst_port": "2222", "fwd_port": "22", "fwd_ip": "192.168.1.10", "fwd_network_id": "", "log": False}], {"status": 200}),
+            (
+                [
+                    {
+                        "_id": "pf1",
+                        "name": "SSH to Server",
+                        "enabled": True,
+                        "proto": "tcp",
+                        "src": "",
+                        "dst_port": "2222",
+                        "fwd_port": "22",
+                        "fwd_ip": "192.168.1.10",
+                        "fwd_network_id": "",
+                        "log": False,
+                    }
+                ],
+                {"status": 200},
+            ),
         ]
 
         run_module()
@@ -131,11 +168,47 @@ def test_port_forward_update():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
-            ([{"_id": "pf1", "name": "SSH to Server", "enabled": True, "proto": "tcp", "src": "", "dst_port": "2222", "fwd_port": "22", "fwd_ip": "192.168.1.10", "fwd_network_id": "", "log": False}], {"status": 200}),
-            ([{"_id": "pf1", "name": "SSH to Server", "enabled": False, "proto": "tcp", "src": "", "dst_port": "2222", "fwd_port": "22", "fwd_ip": "192.168.1.10", "fwd_network_id": "", "log": False}], {"status": 200}),
+            (
+                [
+                    {
+                        "_id": "pf1",
+                        "name": "SSH to Server",
+                        "enabled": True,
+                        "proto": "tcp",
+                        "src": "",
+                        "dst_port": "2222",
+                        "fwd_port": "22",
+                        "fwd_ip": "192.168.1.10",
+                        "fwd_network_id": "",
+                        "log": False,
+                    }
+                ],
+                {"status": 200},
+            ),
+            (
+                [
+                    {
+                        "_id": "pf1",
+                        "name": "SSH to Server",
+                        "enabled": False,
+                        "proto": "tcp",
+                        "src": "",
+                        "dst_port": "2222",
+                        "fwd_port": "22",
+                        "fwd_ip": "192.168.1.10",
+                        "fwd_network_id": "",
+                        "log": False,
+                    }
+                ],
+                {"status": 200},
+            ),
         ]
 
         run_module()
@@ -181,7 +254,11 @@ def test_port_forward_absent():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             ([{"_id": "pf1", "name": "SSH to Server", "enabled": True}], {"status": 200}),
@@ -231,7 +308,11 @@ def test_port_forward_absent_noop():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             ([], {"status": 200}),
@@ -276,7 +357,11 @@ def test_port_forward_check_mode():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             ([], {"status": 200}),
@@ -321,7 +406,11 @@ def test_port_forward_with_network():
         mock_module.fail_json.side_effect = Exception("fail_json")
 
         mock_api = mock_api_class.return_value
-        mock_api.as_list.side_effect = lambda x: x if isinstance(x, list) else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
 
         mock_api.request.side_effect = [
             ([{"_id": "net1", "name": "Default"}], {"status": 200}),

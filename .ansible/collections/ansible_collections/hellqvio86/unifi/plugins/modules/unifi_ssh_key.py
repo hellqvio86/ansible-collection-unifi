@@ -70,7 +70,11 @@ def run_module():
 
     # 1. Initialize API and Login
     api = UnifiAPI(
-        module, host, username, password, validate_certs,
+        module,
+        host,
+        username,
+        password,
+        validate_certs,
         module.params.get("unifi_session_cookie"),
         module.params.get("unifi_csrf_token"),
     )

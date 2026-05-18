@@ -153,7 +153,11 @@ def run_module():
 
     # 1. Initialize API and Login
     api = UnifiAPI(
-        module, host, username, password, validate_certs,
+        module,
+        host,
+        username,
+        password,
+        validate_certs,
         module.params.get("unifi_session_cookie"),
         module.params.get("unifi_csrf_token"),
     )
@@ -281,7 +285,9 @@ def apply_policy(module, api, site, zone_map, network_map, policies, desired):
             if name in network_map:
                 resolved.append(network_map[name])
             else:
-                module.fail_json(msg=f"Network '{name}' not found for firewall policy", name=desired["name"], network=name)
+                module.fail_json(
+                    msg=f"Network '{name}' not found for firewall policy", name=desired["name"], network=name
+                )
         return resolved
 
     if src_params["matching_target"] != "ANY":
@@ -332,7 +338,9 @@ def apply_policy(module, api, site, zone_map, network_map, policies, desired):
 
     if state == "absent" and existing:
         if not module.check_mode:
-            _, info = api.request(f"/proxy/network/v2/api/site/{site}/firewall-policies/{existing['_id']}", method="DELETE")
+            _, info = api.request(
+                f"/proxy/network/v2/api/site/{site}/firewall-policies/{existing['_id']}", method="DELETE"
+            )
             if info["status"] not in [200, 204]:
                 module.fail_json(msg="Failed to delete policy", name=desired["name"], info=info)
         return True, None
@@ -377,7 +385,9 @@ def policy_needs_update(existing, desired_payload):
 
     dst_field = match_field(desired_payload["destination"])
     if dst_field:
-        if sorted(existing["destination"].get(dst_field, [])) != sorted(desired_payload["destination"].get(dst_field, [])):
+        if sorted(existing["destination"].get(dst_field, [])) != sorted(
+            desired_payload["destination"].get(dst_field, [])
+        ):
             return True
     elif existing["destination"].get("ips") or existing["destination"].get("network_ids"):
         return True

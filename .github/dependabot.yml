@@ -1,4 +1,3 @@
----
 version: 2
 updates:
   - package-ecosystem: "github-actions"
@@ -6,7 +5,11 @@ updates:
     schedule:
       interval: "weekly"
 
+    assignees:
+      - hellqvio86
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
       interval: "daily"
+    assignees:
+      - hellqvio86

@@ -56,16 +56,26 @@ class UnifiAPI:
             self.module.params["validate_certs"] = self.validate_certs
 
     def _fetch_with_retry(self, url: str, method: str, headers: dict[str, str], payload: str | None):
-        retries = 2
-        backoff = 1
-        for attempt in range(retries + 1):
-            response, info = fetch_url(self.module, url, data=payload, method=method, headers=headers)
-            if info.get("status") != 429:
+        import fcntl
+        import time
+        
+        retries = 5
+        backoff = 2
+        
+        lock_file = "/tmp/ansible_unifi_api.lock"
+        with open(lock_file, "w") as lock_fd:
+            fcntl.flock(lock_fd, fcntl.LOCK_EX)
+            try:
+                for attempt in range(retries + 1):
+                    response, info = fetch_url(self.module, url, data=payload, method=method, headers=headers)
+                    if info.get("status") != 429:
+                        return response, info
+                    if attempt < retries:
+                        time.sleep(backoff)
+                        backoff *= 2
                 return response, info
-            if attempt < retries:
-                time.sleep(backoff)
-                backoff *= 2
-        return response, info
+            finally:
+                fcntl.flock(lock_fd, fcntl.LOCK_UN)
 
     def login(self) -> bool:
         if self.session_cookie and self.csrf_token:

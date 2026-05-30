@@ -1,7 +1,6 @@
 import base64
 import json
 import os
-import time
 
 from ansible.module_utils.urls import fetch_url
 

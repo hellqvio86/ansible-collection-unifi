@@ -112,6 +112,12 @@ def run_module():
 
     # Fetch existing switch profiles
     res, info = api.request(f"/proxy/network/api/s/{site}/rest/switchprofile")
+    if info.get("status") != 200:
+        module.exit_json(
+            changed=False,
+            switchprofile_api_supported=False,
+            msg="Switch profile API unsupported on this controller; skipped.",
+        )
     profiles = api.as_list(res)
 
     existing = next((p for p in profiles if p.get("name") == name), None)

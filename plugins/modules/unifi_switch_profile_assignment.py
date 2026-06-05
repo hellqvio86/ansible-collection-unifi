@@ -86,6 +86,7 @@ def run_module():
             switch_ip=dict(type="str"),
             profile_name=dict(type="str"),
             assignments=dict(type="list", elements="dict"),
+            switch_profiles=dict(type="list", elements="dict", required=False),
         ),
         supports_check_mode=True,
     )
@@ -105,13 +106,106 @@ def run_module():
 
     switch_profiles, switchprofile_supported = _fetch_switch_profiles(api, site)
     if not switchprofile_supported:
-        module.exit_json(
-            changed=False,
-            results=[],
-            switchprofile_api_supported=False,
-            skipped_assignments=[i.get("profile_name") for i in desired_items],
-            msg="Switch profile API unsupported on this controller; assignments skipped.",
-        )
+        # Fallback to direct port overrides configuration
+        desired_profiles = module.params.get("switch_profiles") or []
+
+        # Fetch port profiles to resolve names to IDs
+        res, info = api.request(f"/proxy/network/api/s/{site}/rest/portconf")
+        port_profiles = api.as_list(res)
+        portconf_map = {
+            p["name"]: p["_id"] for p in port_profiles if isinstance(p, dict) and "name" in p and "_id" in p
+        }
+
+        # Fetch devices (switches)
+        devices = _fetch_devices(api, site)
+        if not devices:
+            module.fail_json(msg="Failed to fetch devices from rest/device and stat/device endpoints")
+        switches = [d for d in devices if isinstance(d, dict) and d.get("type") == "usw"]
+
+        changed = False
+        results = []
+
+        for item in desired_items:
+            profile_name = item.get("profile_name")
+            # Find the profile definition
+            prof_def = next((p for p in desired_profiles if p.get("name") == profile_name), None)
+            if not prof_def:
+                module.fail_json(
+                    msg=f"Switch profile definition for '{profile_name}' not found in switch_profiles", assignment=item
+                )
+
+            target = None
+            for sw in switches:
+                if item.get("switch_name") and sw.get("name") == item["switch_name"]:
+                    target = sw
+                    break
+                if item.get("switch_mac") and sw.get("mac") == item["switch_mac"]:
+                    target = sw
+                    break
+                if item.get("switch_ip") and sw.get("ip") == item["switch_ip"]:
+                    target = sw
+                    break
+
+            if not target:
+                module.fail_json(msg="Switch not found with provided identifiers", assignment=item)
+
+            switch_id = target["_id"]
+            existing_overrides = target.get("port_overrides") or []
+
+            import copy
+
+            updated_overrides = copy.deepcopy(existing_overrides)
+            overrides_changed = False
+            desired_overrides = prof_def.get("port_profile_overrides") or {}
+
+            for port_idx_str, port_prof_name in desired_overrides.items():
+                port_idx = int(port_idx_str)
+                # Resolve port profile name to ID
+                if port_prof_name not in portconf_map:
+                    module.fail_json(
+                        msg=f"Port profile '{port_prof_name}' not found for port {port_idx} in switch profile '{profile_name}'"
+                    )
+                profile_id = portconf_map[port_prof_name]
+
+                # Find if there is an existing override for this port_idx
+                existing_override = next((o for o in updated_overrides if o.get("port_idx") == port_idx), None)
+                if existing_override:
+                    desired_poe = "auto" if port_idx in [1, 12] else existing_override.get("poe_mode", "auto")
+                    if (
+                        existing_override.get("portconf_id") != profile_id
+                        or existing_override.get("poe_mode") != desired_poe
+                    ):
+                        existing_override["portconf_id"] = profile_id
+                        existing_override["poe_mode"] = desired_poe
+                        existing_override["setting_preference"] = "manual"
+                        overrides_changed = True
+                else:
+                    new_override = {
+                        "port_idx": port_idx,
+                        "portconf_id": profile_id,
+                        "setting_preference": "manual",
+                        "poe_mode": "auto",
+                    }
+                    updated_overrides.append(new_override)
+                    overrides_changed = True
+
+            if overrides_changed:
+                changed = True
+                if not module.check_mode:
+                    res, info = api.request(
+                        f"/proxy/network/api/s/{site}/rest/device/{switch_id}",
+                        method="PUT",
+                        data={"port_overrides": updated_overrides},
+                    )
+                    res_list = api.as_list(res)
+                    result_dev = res_list[0] if res_list else res
+                    if not result_dev:
+                        module.fail_json(msg="Failed to apply direct port overrides", info=info, assignment=item)
+                    target = result_dev
+
+            results.append({"assignment": item, "changed": overrides_changed, "switch": target})
+
+        module.exit_json(changed=changed, results=results, switchprofile_api_supported=False)
 
     profile_map = {p["name"]: p["_id"] for p in switch_profiles if isinstance(p, dict) and "name" in p and "_id" in p}
     devices = _fetch_devices(api, site)

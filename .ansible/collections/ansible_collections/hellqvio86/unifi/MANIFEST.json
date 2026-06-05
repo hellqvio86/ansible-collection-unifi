@@ -2,7 +2,7 @@
  "collection_info": {
   "namespace": "hellqvio86",
   "name": "unifi",
-  "version": "0.0.11",
+  "version": "0.0.14",
   "authors": [
    "Olof Hellqvist (@hellqvio86)"
   ],
@@ -27,7 +27,7 @@
   "name": "FILES.json",
   "ftype": "file",
   "chksum_type": "sha256",
-  "chksum_sha256": "530a6bbcfa27d081c8f5c7f7e15c562c4407d7fb48d9583774efb078f615107b",
+  "chksum_sha256": "a4467a6f4007faa979368feb36e0258b0804e6419e78f181c5561479495c9565",
   "format": 1
  },
  "format": 1

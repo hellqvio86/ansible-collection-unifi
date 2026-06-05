@@ -336,3 +336,51 @@ def test_switch_profile_check_mode_update():
         mock_module.exit_json.assert_called_once()
         kwargs = mock_module.exit_json.call_args[1]
         assert kwargs["changed"] is True
+
+
+def test_switch_profile_unsupported_api():
+    params = {
+        "host": "192.0.2.1",
+        "username": "admin",
+        "password": "password",
+        "site": "default",
+        "validate_certs": False,
+        "state": "present",
+        "name": "Existing Profile",
+        "model": "USW-Pro",
+    }
+
+    with (
+        patch(
+            "ansible_collections.hellqvio86.unifi.plugins.modules.unifi_switch_profile.AnsibleModule"
+        ) as mock_module_class,
+        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_switch_profile.UnifiAPI") as mock_api_class,
+    ):
+        mock_module = mock_module_class.return_value
+        mock_module.params = params
+        mock_module.check_mode = False
+        mock_module.fail_json.side_effect = Exception("fail_json")
+        mock_module.exit_json.side_effect = SystemExit("exit_json")
+
+        mock_api = mock_api_class.return_value
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
+
+        mock_api.request.side_effect = [
+            (None, {"status": 404}),
+        ]
+
+        try:
+            run_module()
+        except SystemExit:
+            pass
+
+        assert mock_api.request.call_count == 1
+        mock_module.exit_json.assert_called_once()
+        kwargs = mock_module.exit_json.call_args[1]
+        assert kwargs["changed"] is False
+        assert kwargs["switchprofile_api_supported"] is False
+        assert "unsupported" in kwargs["msg"]

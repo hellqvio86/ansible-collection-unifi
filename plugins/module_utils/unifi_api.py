@@ -57,10 +57,10 @@ class UnifiAPI:
     def _fetch_with_retry(self, url: str, method: str, headers: dict[str, str], payload: str | None):
         import fcntl
         import time
-        
+
         retries = 5
         backoff = 2
-        
+
         lock_file = "/tmp/ansible_unifi_api.lock"
         with open(lock_file, "w") as lock_fd:
             fcntl.flock(lock_fd, fcntl.LOCK_EX)
@@ -143,7 +143,11 @@ class UnifiAPI:
             self.session_cookie = None
             self.csrf_token = None
             self.login()
-            headers = {"Content-Type": "application/json", "Cookie": self.session_cookie, "X-CSRF-Token": self.csrf_token}
+            headers = {
+                "Content-Type": "application/json",
+                "Cookie": self.session_cookie,
+                "X-CSRF-Token": self.csrf_token,
+            }
             response, info = self._fetch_with_retry(url, method, headers, payload)
 
         if info["status"] not in [200, 201, 204]:

@@ -15,13 +15,6 @@
    "format": 1
   },
   {
-   "name": "docs/usage.md",
-   "ftype": "file",
-   "chksum_type": "sha256",
-   "chksum_sha256": "e8340cb7e8ba5e8711117c31f37e367cdfbff1e099ab13ef4ee6283e299bcb12",
-   "format": 1
-  },
-  {
    "name": "docs/modules",
    "ftype": "dir",
    "chksum_type": null,
@@ -148,6 +141,13 @@
    "format": 1
   },
   {
+   "name": "docs/usage.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "e8340cb7e8ba5e8711117c31f37e367cdfbff1e099ab13ef4ee6283e299bcb12",
+   "format": 1
+  },
+  {
    "name": "meta",
    "ftype": "dir",
    "chksum_type": null,
@@ -221,7 +221,7 @@
    "name": "plugins/modules/unifi_info.py",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "d05d9871951e716e1d021f5211d9b397cb74f5109db462edf54ecc7d104f9f1d",
+   "chksum_sha256": "39eef30e6b635267e7254f02d00e858fff43e2bead56ea104d906d93def5966e",
    "format": 1
   },
   {
@@ -263,14 +263,14 @@
    "name": "plugins/modules/unifi_switch_profile.py",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "8d291ac8391414a0b190b19efd3e2dc74479f59c50b878a889945ec2605bdf7e",
+   "chksum_sha256": "ad3a77ea07c23a205b6d94ba5d27dc3994fd7a0076410fa58a8bc7a604ae7fdb",
    "format": 1
   },
   {
    "name": "plugins/modules/unifi_switch_profile_assignment.py",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "b6ad29306c61656a82370723636707a95688b463f098c04b5b8499555abbaa4a",
+   "chksum_sha256": "c70c10d3c4d7b4b6a8f174442f4baed5bb1e0aa85da1b597a0e9e32c4ead78a2",
    "format": 1
   },
   {
@@ -305,7 +305,7 @@
    "name": "plugins/module_utils/unifi_api.py",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "56b6f0645373fc70c10051138cfcac6818c12dbc649395ee272274f86d8f713f",
+   "chksum_sha256": "10f9417593c0b8a4939f646f5c590e59ff4b748ef0b8fbcecb52ea61b35b634c",
    "format": 1
   },
   {
@@ -375,14 +375,14 @@
    "name": "CHANGELOG.md",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "c09b4ea98867ad7ea6f21c41b2b5df4a0f119784a28c1508c2991092929e8e9c",
+   "chksum_sha256": "a3b58bef3de84c3b1643a0463f62feab41053e6ef7a2cfbfcfb053cf2c11f9ec",
    "format": 1
   },
   {
    "name": "README.md",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "f918ccdbca1da036bd984130fdbbeb49424b6d177835b8ab623f7f7e3644004c",
+   "chksum_sha256": "68d9fb6e4a03419634327963faf2cde16035c9c9e211e09c4dcc851bba0068d3",
    "format": 1
   },
   {

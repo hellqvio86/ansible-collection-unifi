@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.12
+
+### Bug Fixes
+- **`unifi_info`**: Added devices endpoint compatibility fallback from `/rest/device` to `/stat/device` when controllers return `404` on the REST path.
+
 ## 0.0.11
 
 ### Improvements

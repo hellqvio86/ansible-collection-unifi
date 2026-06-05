@@ -29,6 +29,32 @@ author:
     - hellqvio86 (@hellqvio86)
 """
 
+EXAMPLES = r"""
+- name: Assign switch profile to a switch (standard API mode)
+  hellqvio86.unifi.unifi_switch_profile_assignment:
+    host: "192.0.2.1"
+    username: "admin"
+    password: "password"
+    switch_name: "Core-Switch"
+    profile_name: "Standard-24-Port"
+    state: present
+
+- name: Assign switch profile using fallback direct port overrides (preserves PoE auto on ports 1 and 12)
+  hellqvio86.unifi.unifi_switch_profile_assignment:
+    host: "192.0.2.1"
+    username: "admin"
+    password: "password"
+    switch_name: "Core-Switch"
+    profile_name: "Standard-24-Port"
+    switch_profiles:
+      - name: "Standard-24-Port"
+        port_profile_overrides:
+          "1": "Trunk-Profile"
+          "12": "Trunk-Profile"
+          "2": "IoT-Profile"
+    state: present
+"""
+
 from ansible.module_utils.basic import AnsibleModule
 
 from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI

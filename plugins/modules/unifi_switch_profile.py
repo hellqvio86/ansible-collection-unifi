@@ -53,6 +53,22 @@ author:
     - hellqvio86 (@hellqvio86)
 """
 
+EXAMPLES = r"""
+- name: Create a switch profile with port overrides
+  hellqvio86.unifi.unifi_switch_profile:
+    host: "192.0.2.1"
+    username: "admin"
+    password: "password"
+    name: "Standard-24-Port"
+    model: "USL24P"
+    description: "Switch profile for 24-port switch"
+    port_profile_overrides:
+      "1": "Trunk-Profile"
+      "12": "Trunk-Profile"
+      "2": "IoT-Profile"
+    state: present
+"""
+
 from ansible.module_utils.basic import AnsibleModule
 
 from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI

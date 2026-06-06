@@ -112,8 +112,7 @@ def run_module():
     # Build payload
     desired_payload = {
         "name": module.params["name"],
-        "type": module.params["type"].upper(),
-        "description": module.params["description"] or "",
+        "network_ids": [],
     }
 
     changed = False
@@ -131,28 +130,9 @@ def run_module():
                 if not result_zone:
                     module.fail_json(msg="Failed to create firewall zone", info=info)
         else:
-            # Normalize for comparison
-            if (
-                existing.get("name") != desired_payload["name"]
-                or existing.get("type") != desired_payload["type"]
-                or existing.get("description", "") != desired_payload["description"]
-            ):
-                changed = True
-
-            if changed and not module.check_mode:
-                put_payload = {
-                    "name": desired_payload["name"],
-                    "description": desired_payload["description"],
-                }
-                res, info = api.request(
-                    f"/proxy/network/v2/api/site/{site}/firewall/zone/{existing['_id']}",
-                    method="PUT",
-                    data=put_payload,
-                )
-                res_list = api.as_list(res)
-                result_zone = res_list[0] if res_list else res
-                if not result_zone:
-                    module.fail_json(msg="Failed to update firewall zone", info=info)
+            # The zone already exists with the same name. Since zone type/properties cannot be
+            # updated in-place via PUT on the UniFi API, we treat existing zones as unchanged.
+            changed = False
 
     elif module.params["state"] == "absent":
         if existing:

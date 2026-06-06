@@ -66,7 +66,7 @@ class UnifiAPI:
             fcntl.flock(lock_fd, fcntl.LOCK_EX)
             try:
                 for attempt in range(retries + 1):
-                    response, info = fetch_url(self.module, url, data=payload, method=method, headers=headers)
+                    response, info = fetch_url(self.module, url, data=payload, method=method, headers=headers, timeout=30)
                     if info.get("status") != 429:
                         return response, info
                     if attempt < retries:

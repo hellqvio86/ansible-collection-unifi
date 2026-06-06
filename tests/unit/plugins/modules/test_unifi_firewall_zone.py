@@ -45,7 +45,7 @@ def test_zone_create():
         post_call = mock_api.request.call_args_list[1]
         assert post_call[1]["method"] == "POST"
         assert post_call[1]["data"]["name"] == "Internal"
-        assert post_call[1]["data"]["type"] == "LAN"
+        assert post_call[1]["data"]["network_ids"] == []
 
         mock_module.exit_json.assert_called_once()
         kwargs = mock_module.exit_json.call_args[1]
@@ -128,22 +128,15 @@ def test_zone_update():
 
         mock_api.request.side_effect = [
             ([{"_id": "zone1", "name": "Internal", "type": "LAN", "description": "Main LAN zone"}], {"status": 200}),
-            (
-                [{"_id": "zone1", "name": "Internal", "type": "CUSTOM", "description": "Updated description"}],
-                {"status": 200},
-            ),
         ]
 
         run_module()
 
-        assert mock_api.request.call_count == 2
-        put_call = mock_api.request.call_args_list[1]
-        assert put_call[1]["method"] == "PUT"
-        assert put_call[1]["data"]["description"] == "Updated description"
+        assert mock_api.request.call_count == 1
 
         mock_module.exit_json.assert_called_once()
         kwargs = mock_module.exit_json.call_args[1]
-        assert kwargs["changed"] is True
+        assert kwargs["changed"] is False
 
 
 def test_zone_absent():

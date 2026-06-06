@@ -1,7 +1,7 @@
 ---
 namespace: hellqvio86
 name: unifi
-version: 0.0.15
+version: 0.0.16
 readme: README.md
 authors:
   - Olof Hellqvist (@hellqvio86)

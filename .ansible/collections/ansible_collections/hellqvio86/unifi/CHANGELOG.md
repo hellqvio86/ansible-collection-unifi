@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.16
+
+### Bug Fixes
+- **`unifi_firewall_zone`**: Skip `PUT` requests on zone update as the endpoint does not support them (resulting in 500 errors). Exclude unsupported `type` parameter from the `POST` creation payload, and include the mandatory empty `network_ids` list.
+- **`unifi_api`**: Extended `fetch_url` timeout to 30 seconds to prevent timeouts during large controller state requests.
+- **Test Suite**: Updated firewall zone unit tests to align with the payload structure and skip zone update PUT calls.
+
 ## 0.0.15
 
 ### Bug Fixes

@@ -69,6 +69,22 @@ jobs:
         run: |
           VERSION="${{ steps.current.outputs.version }}"
           TARBALL="releases/hellqvio86-unifi-${VERSION}.tar.gz"
+          
+          CHANGELOG_NOTES=$(python3 -c '
+          import sys
+          version = sys.argv[1]
+          with open("CHANGELOG.md", "r") as f:
+              content = f.read()
+          sections = content.split("\n## ")
+          found = ""
+          for s in sections:
+              lines = s.splitlines()
+              if lines and (lines[0].strip().startswith(version) or lines[0].strip() == version):
+                  found = "\n".join(lines[1:]).strip()
+                  break
+          print(found)
+          ' "${VERSION}")
+          
           NOTES=$(cat <<EOF
           ## hellqvio86.unifi v${VERSION}
 
@@ -80,9 +96,10 @@ jobs:
           \`\`\`
 
           ### Changelog
-          _Update this section before publishing._
+          ${CHANGELOG_NOTES:-_No changelog found in CHANGELOG.md_}
           EOF
           )
+          
           gh release create "v${VERSION}" \
             --title "v${VERSION}" \
             --draft \

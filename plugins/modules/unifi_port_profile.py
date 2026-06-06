@@ -104,6 +104,11 @@ def run_module():
 
     # Build payload
     desired_payload = {"name": module.params["name"]}
+
+    # Track LAN network IDs for exclusion calculation
+    lan_network_ids = [n["_id"] for n in networks if isinstance(n, dict) and n.get("purpose") != "wan" and "_id" in n]
+
+    nn_id = None
     if module.params["native_network_name"]:
         nn_id = network_map.get(module.params["native_network_name"])
         if not nn_id:
@@ -117,7 +122,14 @@ def run_module():
             if not tn_id:
                 module.fail_json(msg=f"Tagged network '{name}' not found")
             tn_ids.append(tn_id)
-        desired_payload["tagged_networkconf_ids"] = tn_ids
+
+        # In modern UniFi controller API, tagged networks are represented by tagged_vlan_mgmt="custom",
+        # forward="customize", and excluded_networkconf_ids containing all LAN networks EXCEPT native and tagged.
+        desired_payload["tagged_vlan_mgmt"] = "custom"
+        desired_payload["forward"] = "customize"
+        desired_payload["excluded_networkconf_ids"] = [
+            nid for nid in lan_network_ids if nid != nn_id and nid not in tn_ids
+        ]
 
     if module.params["autoneg"] is not None:
         desired_payload["autoneg"] = module.params["autoneg"]
@@ -138,7 +150,12 @@ def run_module():
                     module.fail_json(msg="Failed to create port profile", info=info)
         else:
             for key, value in desired_payload.items():
-                if existing.get(key) != value:
+                if key == "excluded_networkconf_ids":
+                    existing_list = existing.get(key) or []
+                    if sorted(existing_list) != sorted(value):
+                        changed = True
+                        break
+                elif existing.get(key) != value:
                     changed = True
                     break
 

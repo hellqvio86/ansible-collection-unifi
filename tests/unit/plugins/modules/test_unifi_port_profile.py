@@ -42,7 +42,14 @@ def test_port_profile_create():
             # 1. Fetch existing profiles
             ([], {"status": 200}),
             # 2. Fetch networks
-            ([{"name": "IoT", "_id": "net_iot"}, {"name": "Camera", "_id": "net_cam"}], {"status": 200}),
+            (
+                [
+                    {"name": "IoT", "_id": "net_iot"},
+                    {"name": "Camera", "_id": "net_cam"},
+                    {"name": "Other", "_id": "net_other"},
+                ],
+                {"status": 200},
+            ),
             # 3. Create profile (POST)
             ({"name": "IoT Profile", "_id": "prof123"}, {"status": 201}),
         ]
@@ -54,7 +61,9 @@ def test_port_profile_create():
         last_call = mock_api.request.call_args_list[2]
         assert last_call[1]["method"] == "POST"
         assert last_call[1]["data"]["native_networkconf_id"] == "net_iot"
-        assert last_call[1]["data"]["tagged_networkconf_ids"] == ["net_cam"]
+        assert last_call[1]["data"]["tagged_vlan_mgmt"] == "custom"
+        assert last_call[1]["data"]["forward"] == "customize"
+        assert last_call[1]["data"]["excluded_networkconf_ids"] == ["net_other"]
 
         mock_module.exit_json.assert_called_once()
         kwargs = mock_module.exit_json.call_args[1]
@@ -105,7 +114,9 @@ def test_port_profile_no_change():
                         "name": "Existing Profile",
                         "_id": "prof123",
                         "native_networkconf_id": "net_iot",
-                        "tagged_networkconf_ids": [],
+                        "tagged_vlan_mgmt": "custom",
+                        "forward": "customize",
+                        "excluded_networkconf_ids": [],
                         "poe_mode": "auto",
                         "isolation": False,
                         "autoneg": True,

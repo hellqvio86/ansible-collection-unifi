@@ -140,10 +140,14 @@ def run_module():
                 changed = True
 
             if changed and not module.check_mode:
+                put_payload = {
+                    "name": desired_payload["name"],
+                    "description": desired_payload["description"],
+                }
                 res, info = api.request(
                     f"/proxy/network/v2/api/site/{site}/firewall/zone/{existing['_id']}",
                     method="PUT",
-                    data=desired_payload,
+                    data=put_payload,
                 )
                 res_list = api.as_list(res)
                 result_zone = res_list[0] if res_list else res

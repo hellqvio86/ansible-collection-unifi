@@ -53,6 +53,12 @@ options:
     passphrase:
         description: WPA passphrase for secured networks.
         type: str
+    band:
+        description: >
+            Band restriction for the WLAN.
+            Use 'both' for dual-band, '2g' for 2.4 GHz only, '5g' for 5 GHz only.
+        choices: [ both, 2g, 5g ]
+        type: str
 author:
     - hellqvio86 (@hellqvio86)
 """
@@ -100,6 +106,7 @@ def run_module():
         network_name=dict(type="str"),
         security=dict(type="str", choices=["open", "wpapsk", "wpa2", "wpa3"]),
         passphrase=dict(type="str", no_log=True),
+        band=dict(type="str", choices=["both", "2g", "5g"]),
     )
 
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
@@ -145,6 +152,13 @@ def run_module():
         desired_payload["security"] = module.params["security"]
     if module.params["passphrase"]:
         desired_payload["x_passphrase"] = module.params["passphrase"]
+    if module.params.get("band"):
+        band = module.params.get("band")
+        desired_payload["wlan_band"] = band
+        if band == "both":
+            desired_payload["wlan_bands"] = ["2g", "5g"]
+        else:
+            desired_payload["wlan_bands"] = [band]
 
     changed = False
     result_wlan = existing
@@ -152,6 +166,12 @@ def run_module():
     if module.params["state"] == "present":
         if not existing:
             changed = True
+            if wlans:
+                ref_wlan = next((w for w in wlans if isinstance(w, dict) and w.get("ap_group_ids")), None)
+                if ref_wlan:
+                    desired_payload["ap_group_ids"] = ref_wlan["ap_group_ids"]
+                    if "ap_group_mode" in ref_wlan:
+                        desired_payload["ap_group_mode"] = ref_wlan["ap_group_mode"]
             if not module.check_mode:
                 res, info = api.request(
                     f"/proxy/network/api/s/{site}/rest/wlanconf", method="POST", data=desired_payload

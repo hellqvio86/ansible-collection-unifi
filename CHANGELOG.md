@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.0.15
+
+### Bug Fixes
+- **`unifi_firewall_zone`**: Restrict PUT request payload to `name` and `description` to prevent API errors on update.
+- **`unifi_port_profile`**: Updated to support the modern UniFi controller API by utilizing `tagged_vlan_mgmt="custom"`, `forward="customize"`, and calculating `excluded_networkconf_ids` from networks.
+- **`unifi_switch_profile_assignment`**: Automatically clean up conflicting network configuration keys in port overrides.
+- **`unifi_wlan`**: Added `band` configuration parameter (`both`, `2g`, `5g`) and clone existing `ap_group_ids` when creating new WLANs.
+- **Test Suite**: Fixed and enhanced unit tests for `unifi_port_profile` and `unifi_wlan` modules using pytest.
+
+## 0.0.14
+
+### Bug Fixes
+- **Port Overrides**: Fix PoE mode preservation for port overrides.
+- **`unifi_switch_profile`**: Handle unsupported switch profile API configurations gracefully.
+- **Test Suite**: Added additional unit tests.
+
+## 0.0.13
+
+### Improvements
+- **`unifi_api`**: Serialize UniFi API requests using file locks (`/tmp/ansible_unifi_api.lock`) to prevent HTTP 429 rate limits during concurrent execution.
+
 ## 0.0.12
 
 ### Bug Fixes

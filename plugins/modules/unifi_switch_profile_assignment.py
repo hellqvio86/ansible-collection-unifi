@@ -171,13 +171,22 @@ def run_module():
                 existing_override = next((o for o in updated_overrides if o.get("port_idx") == port_idx), None)
                 if existing_override:
                     desired_poe = "auto" if port_idx in [1, 12] else existing_override.get("poe_mode", "auto")
+
+                    # Clean up keys that would conflict with the assigned profile's network settings.
+                    # If these keys exist in the port override, they will override the profile configuration.
+                    conflicting_keys = ["tagged_vlan_mgmt", "forward", "native_networkconf_id", "voice_networkconf_id"]
+                    has_conflicting = any(k in existing_override for k in conflicting_keys)
+
                     if (
                         existing_override.get("portconf_id") != profile_id
                         or existing_override.get("poe_mode") != desired_poe
+                        or has_conflicting
                     ):
                         existing_override["portconf_id"] = profile_id
                         existing_override["poe_mode"] = desired_poe
                         existing_override["setting_preference"] = "manual"
+                        for k in conflicting_keys:
+                            existing_override.pop(k, None)
                         overrides_changed = True
                 else:
                     new_override = {

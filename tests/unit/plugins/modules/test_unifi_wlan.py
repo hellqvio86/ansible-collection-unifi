@@ -353,3 +353,54 @@ def test_wlan_network_not_found():
         mock_module.fail_json.assert_called_once()
         args = mock_module.fail_json.call_args[1]
         assert "not found" in args["msg"].lower()
+
+
+def test_wlan_create_with_band():
+    params = {
+        "host": "192.0.2.1",
+        "username": "admin",
+        "password": "password",
+        "site": "default",
+        "validate_certs": False,
+        "state": "present",
+        "name": "Guest WLAN",
+        "enabled": True,
+        "network_name": None,
+        "security": "wpapsk",
+        "passphrase": "secret123",
+        "band": "both",
+    }
+
+    with (
+        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_wlan.AnsibleModule") as mock_module_class,
+        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_wlan.UnifiAPI") as mock_api_class,
+    ):
+        mock_module = mock_module_class.return_value
+        mock_module.params = params
+        mock_module.check_mode = False
+        mock_module.fail_json.side_effect = Exception("fail_json")
+
+        mock_api = mock_api_class.return_value
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
+
+        mock_api.request.side_effect = [
+            ([], {"status": 200}),
+            ([{"_id": "wlan1", "name": "Guest WLAN", "enabled": True, "security": "wpapsk"}], {"status": 201}),
+        ]
+
+        run_module()
+
+        assert mock_api.request.call_count == 2
+        post_call = mock_api.request.call_args_list[1]
+        assert post_call[1]["method"] == "POST"
+        assert post_call[1]["data"]["name"] == "Guest WLAN"
+        assert post_call[1]["data"]["wlan_band"] == "both"
+        assert post_call[1]["data"]["wlan_bands"] == ["2g", "5g"]
+
+        mock_module.exit_json.assert_called_once()
+        kwargs = mock_module.exit_json.call_args[1]
+        assert kwargs["changed"] is True

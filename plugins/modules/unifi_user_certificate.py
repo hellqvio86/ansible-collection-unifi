@@ -86,43 +86,39 @@ def run_module():
 
     existing_res, info = api.request("/api/userCertificates")
     existing_list = api.as_list(existing_res)
-    existing = next((c for c in existing_list if c.get("name") == name), None)
+
+    # Compute fingerprint of local PEM certificate if we are in present state
+    local_fingerprint = None
+    if state == "present":
+        try:
+            import ssl
+            import hashlib
+            # Extract only the first certificate (leaf) in the PEM chain
+            first_pem = cert.split("-----END CERTIFICATE-----")[0] + "-----END CERTIFICATE-----"
+            der_cert = ssl.PEM_cert_to_DER_cert(first_pem)
+            local_fingerprint = ":".join(
+                hashlib.sha1(der_cert).hexdigest()[i:i+2] for i in range(0, 40, 2)
+            ).upper()
+        except Exception as e:
+            module.fail_json(msg="Failed to compute certificate fingerprint: " + str(e))
 
     changed = False
-    result = existing
+    result = None
 
     if state == "present":
-        if not existing:
-            changed = True
-            if not module.check_mode:
-                payload = {"name": name, "cert": cert, "key": key}
-                res, info = api.request("/api/userCertificates", method="POST", data=payload)
-                res_list = api.as_list(res)
-                result = res_list[0] if res_list else res
-                if not result:
-                    module.fail_json(msg="Failed to upload user certificate", info=info)
-                # Optionally activate uploaded cert for UniFi OS Web UI.
-                if active and result.get("id"):
-                    status_res, info = api.request(
-                        f"/api/userCertificates/{result['id']}/status",
-                        method="PUT",
-                        data={"active": True},
-                    )
-                    if not status_res:
-                        module.fail_json(
-                            msg="Failed to activate uploaded user certificate", info=info, certificate_id=result["id"]
-                        )
-                    result = status_res
-                    changed = True
-        else:
-            result = existing
-            # Ensure target cert is active when requested.
-            if active and not bool(existing.get("active", False)):
+        # Check if there is an existing certificate with the same fingerprint
+        matching_fp_cert = next(
+            (c for c in existing_list if c.get("fingerprint", "").upper() == local_fingerprint),
+            None
+        )
+
+        if matching_fp_cert:
+            # Certificate is already uploaded!
+            result = matching_fp_cert
+            if active and not bool(matching_fp_cert.get("active", False)):
                 changed = True
                 if not module.check_mode:
-                    cert_id = existing.get("id")
-                    if not cert_id:
-                        module.fail_json(msg="Existing certificate missing id, cannot activate", certificate=existing)
+                    cert_id = matching_fp_cert.get("id")
                     status_res, info = api.request(
                         f"/api/userCertificates/{cert_id}/status",
                         method="PUT",
@@ -133,16 +129,75 @@ def run_module():
                             msg="Failed to activate existing user certificate", info=info, certificate_id=cert_id
                         )
                     result = status_res
-    else:
-        if existing:
+            
+            # Clean up other inactive certificates starting with name prefix
+            if not module.check_mode:
+                active_id = result.get("id")
+                for c in existing_list:
+                    c_name = c.get("name", "")
+                    c_id = c.get("id")
+                    if c_id and c_id != active_id and c_name.startswith(name) and not bool(c.get("active", False)):
+                        api.request(f"/api/userCertificates/{c_id}", method="DELETE")
+        else:
+            # Certificate is NOT on the UDM. We need to upload it.
+            # Use a unique name format: {name}-{short_fingerprint} to prevent name conflicts
+            short_fp = local_fingerprint.replace(":", "").lower()[:8]
+            upload_name = f"{name}-{short_fp}"
+            
+            # Delete any existing inactive certificate with this upload_name first if it somehow exists
+            if not module.check_mode:
+                for c in existing_list:
+                    if c.get("name") == upload_name and not bool(c.get("active", False)):
+                        c_id = c.get("id")
+                        if c_id:
+                            api.request(f"/api/userCertificates/{c_id}", method="DELETE")
+            
             changed = True
             if not module.check_mode:
-                cert_id = existing.get("id")
-                if not cert_id:
-                    module.fail_json(msg="Existing certificate missing id, cannot delete", certificate=existing)
-                _, info = api.request(f"/api/userCertificates/{cert_id}", method="DELETE")
-                if info.get("status") not in [200, 204]:
-                    module.fail_json(msg="Failed to delete user certificate", info=info, certificate_id=cert_id)
+                payload = {"name": upload_name, "cert": cert, "key": key}
+                res, info = api.request("/api/userCertificates", method="POST", data=payload)
+                res_list = api.as_list(res)
+                new_cert = res_list[0] if res_list else res
+                if not new_cert:
+                    module.fail_json(msg="Failed to upload user certificate", info=info)
+                new_id = new_cert.get("id")
+                
+                # Activate the uploaded cert
+                if active and new_id:
+                    status_res, info = api.request(
+                        f"/api/userCertificates/{new_id}/status",
+                        method="PUT",
+                        data={"active": True},
+                    )
+                    if not status_res:
+                        module.fail_json(
+                            msg="Failed to activate uploaded user certificate", info=info, certificate_id=new_id
+                        )
+                    result = status_res
+                else:
+                    result = new_cert
+
+                # Clean up any other inactive certificates starting with name prefix
+                active_id = result.get("id")
+                for c in existing_list:
+                    c_name = c.get("name", "")
+                    c_id = c.get("id")
+                    if c_id and c_id != active_id and c_name.startswith(name) and not bool(c.get("active", False)):
+                        api.request(f"/api/userCertificates/{c_id}", method="DELETE")
+            else:
+                result = {"name": upload_name, "fingerprint": local_fingerprint, "active": active}
+    else:
+        # Find any certificates that start with 'name'
+        to_delete = [c for c in existing_list if c.get("name", "").startswith(name)]
+        if to_delete:
+            changed = True
+            if not module.check_mode:
+                for c in to_delete:
+                    cert_id = c.get("id")
+                    if cert_id:
+                        _, info = api.request(f"/api/userCertificates/{cert_id}", method="DELETE")
+                        if info.get("status") not in [200, 204]:
+                            module.fail_json(msg="Failed to delete user certificate", info=info, certificate_id=cert_id)
             result = None
 
     module.exit_json(changed=changed, certificate=result)

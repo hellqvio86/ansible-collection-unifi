@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.19
+
+### Bug Fixes
+- **`sec`**: Resolve CodeQL weak hash alert on sensitive data by using cryptography x509 fingerprinting.
+- **`ci`**: Fix draft release creation notes formatting with python script to avoid bash evaluation bugs.
+
+### Other Changes
+- Automate changelog generation and update version to 0.0.18.
 ## 0.0.18
 
 ### New Features

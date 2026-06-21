@@ -72,6 +72,7 @@ jobs:
           
           python3 -c '
           import sys
+          import textwrap
           version = sys.argv[1]
           found = ""
           try:
@@ -86,18 +87,19 @@ jobs:
           except Exception:
               pass
           
-          notes = f"""## hellqvio86.unifi v{version}
-
-Collection built and ready for publication to Ansible Galaxy.
-
-### Install
-```bash
-ansible-galaxy collection install hellqvio86.unifi=={version}
-```
-
-### Changelog
-{found or "_No changelog found in CHANGELOG.md_"}
-"""
+          notes = textwrap.dedent(f"""\
+              ## hellqvio86.unifi v{version}
+              
+              Collection built and ready for publication to Ansible Galaxy.
+              
+              ### Install
+              ```bash
+              ansible-galaxy collection install hellqvio86.unifi=={version}
+              ```
+              
+              ### Changelog
+              {found or "_No changelog found in CHANGELOG.md_"}
+          """)
           with open("release_notes.txt", "w") as f:
               f.write(notes)
           ' "${VERSION}"

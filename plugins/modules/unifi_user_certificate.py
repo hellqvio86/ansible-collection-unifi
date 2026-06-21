@@ -6,7 +6,7 @@ DOCUMENTATION = r"""
 ---
 module: unifi_user_certificate
 short_description: Manage UniFi OS user certificates via control-plane API
-version_added: "0.0.3"
+version_added: "0.0.17"
 description:
     - Uploads and manages certificates in UniFi OS at /api/userCertificates.
 options:

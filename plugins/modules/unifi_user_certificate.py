@@ -91,14 +91,16 @@ def run_module():
     local_fingerprint = None
     if state == "present":
         try:
-            import hashlib
-            import ssl
+            from cryptography import x509
+            from cryptography.hazmat.primitives import hashes
+            
             # Extract only the first certificate (leaf) in the PEM chain
             first_pem = cert.split("-----END CERTIFICATE-----")[0] + "-----END CERTIFICATE-----"
-            der_cert = ssl.PEM_cert_to_DER_cert(first_pem)
+            cert_obj = x509.load_pem_x509_certificate(first_pem.encode('utf-8'))
+            fp_hex = cert_obj.fingerprint(hashes.SHA1()).hex().upper()
             local_fingerprint = ":".join(
-                hashlib.sha1(der_cert).hexdigest()[i:i+2] for i in range(0, 40, 2)
-            ).upper()
+                fp_hex[i:i+2] for i in range(0, 40, 2)
+            )
         except Exception as e:
             module.fail_json(msg="Failed to compute certificate fingerprint: " + str(e))
 

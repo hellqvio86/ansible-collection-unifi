@@ -291,7 +291,7 @@
    "name": "plugins/modules/unifi_user_certificate.py",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "c9918bc7b5c552d887c299395647cb8182705f253ac73549be56df9551fe60ad",
+   "chksum_sha256": "8e7ce5ba51c30e3417bb9a3ccfe278f18fa536bea22bf273eb0bbf93a364ff09",
    "format": 1
   },
   {

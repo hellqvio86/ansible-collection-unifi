@@ -70,40 +70,42 @@ jobs:
           VERSION="${{ steps.current.outputs.version }}"
           TARBALL="releases/hellqvio86-unifi-${VERSION}.tar.gz"
           
-          CHANGELOG_NOTES=$(python3 -c '
+          python3 -c '
           import sys
           version = sys.argv[1]
-          with open("CHANGELOG.md", "r") as f:
-              content = f.read()
-          sections = content.split("\n## ")
           found = ""
-          for s in sections:
-              lines = s.splitlines()
-              if lines and (lines[0].strip().startswith(version) or lines[0].strip() == version):
-                  found = "\n".join(lines[1:]).strip()
-                  break
-          print(found)
-          ' "${VERSION}")
+          try:
+              with open("CHANGELOG.md", "r") as f:
+                  content = f.read()
+              sections = content.split("\n## ")
+              for s in sections:
+                  lines = s.splitlines()
+                  if lines and (lines[0].strip().startswith(version) or lines[0].strip() == version):
+                      found = "\n".join(lines[1:]).strip()
+                      break
+          except Exception:
+              pass
           
-          NOTES=$(cat <<EOF
-          ## hellqvio86.unifi v${VERSION}
+          notes = f"""## hellqvio86.unifi v{version}
 
-          Collection built and ready for publication to Ansible Galaxy.
+Collection built and ready for publication to Ansible Galaxy.
 
-          ### Install
-          \`\`\`bash
-          ansible-galaxy collection install hellqvio86.unifi==${VERSION}
-          \`\`\`
+### Install
+```bash
+ansible-galaxy collection install hellqvio86.unifi=={version}
+```
 
-          ### Changelog
-          ${CHANGELOG_NOTES:-_No changelog found in CHANGELOG.md_}
-          EOF
-          )
+### Changelog
+{found or "_No changelog found in CHANGELOG.md_"}
+"""
+          with open("release_notes.txt", "w") as f:
+              f.write(notes)
+          ' "${VERSION}"
           
           gh release create "v${VERSION}" \
             --title "v${VERSION}" \
             --draft \
-            --notes "${NOTES}" \
+            --notes-file release_notes.txt \
             "${TARBALL}"
 
   # Publishes to Ansible Galaxy — triggered by publishing a GitHub release, or manually

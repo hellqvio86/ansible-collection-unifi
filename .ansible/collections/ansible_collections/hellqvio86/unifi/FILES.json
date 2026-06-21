@@ -253,13 +253,6 @@
    "format": 1
   },
   {
-   "name": "plugins/modules/unifi_user_certificate.py",
-   "ftype": "file",
-   "chksum_type": "sha256",
-   "chksum_sha256": "7e87a83b5f350a73c4979248294615c135c124c2fb0a9685b0f99bbb76440229",
-   "format": 1
-  },
-  {
    "name": "plugins/modules/unifi_switch_profile.py",
    "ftype": "file",
    "chksum_type": "sha256",
@@ -292,6 +285,13 @@
    "ftype": "file",
    "chksum_type": "sha256",
    "chksum_sha256": "d148d2075e761294d852430eda0b1a1d8ad29935dae869e5c2c349e6bceeda67",
+   "format": 1
+  },
+  {
+   "name": "plugins/modules/unifi_user_certificate.py",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "d9fea90d47ea375b31797968f0ea5444796b78a92c52c7199423d5192a285cf8",
    "format": 1
   },
   {

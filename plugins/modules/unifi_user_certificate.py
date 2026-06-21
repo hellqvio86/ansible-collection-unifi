@@ -91,8 +91,8 @@ def run_module():
     local_fingerprint = None
     if state == "present":
         try:
-            import ssl
             import hashlib
+            import ssl
             # Extract only the first certificate (leaf) in the PEM chain
             first_pem = cert.split("-----END CERTIFICATE-----")[0] + "-----END CERTIFICATE-----"
             der_cert = ssl.PEM_cert_to_DER_cert(first_pem)

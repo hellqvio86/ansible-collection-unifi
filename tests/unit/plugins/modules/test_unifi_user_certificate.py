@@ -46,7 +46,7 @@ def test_cert_create():
         assert mock_api.request.call_count == 3
         post_call = mock_api.request.call_args_list[1]
         assert post_call[1]["method"] == "POST"
-        assert post_call[1]["data"]["name"] == "mycert"
+        assert post_call[1]["data"]["name"] == "mycert-523c7c69"
         status_call = mock_api.request.call_args_list[2]
         assert status_call[1]["method"] == "PUT"
         assert status_call[1]["data"]["active"] is True
@@ -89,7 +89,7 @@ def test_cert_no_change():
         )
 
         mock_api.request.side_effect = [
-            ([{"id": "cert1", "name": "mycert", "active": True}], {"status": 200}),
+            ([{"id": "cert1", "name": "mycert", "active": True, "fingerprint": "52:3C:7C:69:4F:9E:AB:CF:FC:2C:D7:3A:45:0D:80:1E:E8:32:53:00"}], {"status": 200}),
         ]
 
         run_module()
@@ -133,7 +133,7 @@ def test_cert_activate_existing():
         )
 
         mock_api.request.side_effect = [
-            ([{"id": "cert1", "name": "mycert", "active": False}], {"status": 200}),
+            ([{"id": "cert1", "name": "mycert", "active": False, "fingerprint": "52:3C:7C:69:4F:9E:AB:CF:FC:2C:D7:3A:45:0D:80:1E:E8:32:53:00"}], {"status": 200}),
             ({"id": "cert1", "name": "mycert", "active": True}, {"status": 200}),
         ]
 

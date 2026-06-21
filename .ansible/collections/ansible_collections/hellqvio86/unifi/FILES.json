@@ -291,7 +291,7 @@
    "name": "plugins/modules/unifi_user_certificate.py",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "d9fea90d47ea375b31797968f0ea5444796b78a92c52c7199423d5192a285cf8",
+   "chksum_sha256": "c9918bc7b5c552d887c299395647cb8182705f253ac73549be56df9551fe60ad",
    "format": 1
   },
   {
@@ -396,7 +396,21 @@
    "name": "CHANGELOG.md",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "5586032775432ce6a6caf2ffe8365c793a5d89999e70ba214621f786b53cfa24",
+   "chksum_sha256": "a2e44c64f2aa75c81bb87b1294c385d4593cbd61935470ca80af56a7bfc3828e",
+   "format": 1
+  },
+  {
+   "name": "scripts",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "scripts/update_changelog.py",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "648b26951754fd7b2f77485784ce4dccc31589555cba47d813b084fe2eec2dcc",
    "format": 1
   }
  ],

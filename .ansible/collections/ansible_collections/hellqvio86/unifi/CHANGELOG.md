@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.0.18
+
+### New Features
+- **`unifi_user_certificate`**: Match certs by fingerprint and use unique names for new uploads to prevent duplicates.
+
+### Dependencies
+- **`deps`**: Update cryptography requirement from >=48.0.1 to >=49.0.0.
+- **`deps`**: Update cryptography requirement from >=48.0.0 to >=48.0.1.
+
+### Test Coverage
+- Update unifi_user_certificate unit tests for fingerprint matching.
+
+### CI/CD
+- Dynamically extract current version notes from CHANGELOG.md for draft release.
+
+### Other Changes
+- Sort imports, update manifest, and add unit test updates.
 ## 0.0.16
 
 ### Bug Fixes

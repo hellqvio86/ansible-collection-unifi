@@ -41,7 +41,7 @@ setup-structure:
 test: venv setup-structure
 	PYTHONPATH=. $(PYTEST) tests/unit
 
-lint: venv
+lint: venv setup-structure
 	$(RUFF) check .
 	$(ANSIBLE_LINT) .
 

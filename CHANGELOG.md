@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.20
+
+### Bug Fixes
+- **`meta`**: Define `action_groups.unifi` in `meta/runtime.yml` to support `module_defaults` group resolution.
+
 ## 0.0.19
 
 ### Bug Fixes

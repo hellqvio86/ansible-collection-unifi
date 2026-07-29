@@ -263,7 +263,7 @@ def run_module():
         if client.get("use_fixedip"):
             changed = True
             if not module.check_mode:
-                payload = {"use_fixedip": False}
+                payload = {"use_fixedip": False, "fixed_ip": ""}
                 res, info = api.request(
                     f"/proxy/network/api/s/{site}/rest/user/{client['_id']}",
                     method="PUT",

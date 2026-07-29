@@ -260,7 +260,7 @@ def run_module():
             "use_fixedip": client.get("use_fixedip"),
             "network_id": client.get("network_id"),
         }
-        if client.get("use_fixedip"):
+        if client.get("use_fixedip") or client.get("fixed_ip"):
             changed = True
             if not module.check_mode:
                 payload = {"use_fixedip": False, "fixed_ip": ""}

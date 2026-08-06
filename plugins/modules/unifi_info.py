@@ -272,9 +272,13 @@ def run_module():
         if mgmt:
             results["system_settings"]["mgmt"] = {
                 "led_enabled": mgmt.get("led_enabled"),
+                "led_night_mode_enabled": mgmt.get("led_night_mode_enabled"),
+                "led_night_mode_beg_hour": mgmt.get("led_night_mode_beg_hour"),
+                "led_night_mode_end_hour": mgmt.get("led_night_mode_end_hour"),
                 "ssh_password_enabled": mgmt.get("x_ssh_auth_password_enabled"),
                 "ssh_bind_wildcard": mgmt.get("x_ssh_bind_wildcard"),
             }
+
 
     if "port_forward" in subset:
         res = request_or_fail(f"/proxy/network/api/s/{site}/rest/portforward", "port forward rules")

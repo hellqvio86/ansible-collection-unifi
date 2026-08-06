@@ -146,9 +146,13 @@ NTP_FIELD_MAP = {
 
 MGMT_FIELD_MAP = {
     "led_enabled": "led_enabled",
+    "led_night_mode_enabled": "led_night_mode_enabled",
+    "led_night_mode_beg_hour": "led_night_mode_beg_hour",
+    "led_night_mode_end_hour": "led_night_mode_end_hour",
     "ssh_password_enabled": "x_ssh_auth_password_enabled",
     "ssh_bind_wildcard": "x_ssh_bind_wildcard",
 }
+
 
 
 def _build_ntp_payload(ntp_params):
@@ -197,10 +201,14 @@ def run_module():
             type="dict",
             options=dict(
                 led_enabled=dict(type="bool"),
+                led_night_mode_enabled=dict(type="bool"),
+                led_night_mode_beg_hour=dict(type="int"),
+                led_night_mode_end_hour=dict(type="int"),
                 ssh_password_enabled=dict(type="bool"),
                 ssh_bind_wildcard=dict(type="bool"),
             ),
         ),
+
     )
 
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)

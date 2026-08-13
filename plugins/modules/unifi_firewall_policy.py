@@ -117,6 +117,9 @@ def run_module():
         name=dict(type="str", required=True),
         action=dict(type="str", choices=["ALLOW", "BLOCK", "REJECT", "ISOLATE"], default="ALLOW"),
         protocol=dict(type="str", choices=["all", "tcp", "udp", "tcp_udp", "icmp", "icmpv6"], default="all"),
+        connection_state_type=dict(type="str", choices=["ALL", "RESPOND_ONLY", "CUSTOM"], default="ALL"),
+        connection_states=dict(type="list", elements="str", choices=["NEW", "ESTABLISHED", "RELATED", "INVALID"], default=[]),
+        create_allow_respond=dict(type="bool", required=False),
         index=dict(type="int", default=10000),
         enabled=dict(type="bool", default=True),
         logging=dict(type="bool", default=False),
@@ -136,6 +139,9 @@ def run_module():
         name=dict(type="str"),
         action=dict(type="str", choices=["ALLOW", "BLOCK", "REJECT", "ISOLATE"], default="ALLOW"),
         protocol=dict(type="str", choices=["all", "tcp", "udp", "tcp_udp", "icmp", "icmpv6"], default="all"),
+        connection_state_type=dict(type="str", choices=["ALL", "RESPOND_ONLY", "CUSTOM"], default="ALL"),
+        connection_states=dict(type="list", elements="str", choices=["NEW", "ESTABLISHED", "RELATED", "INVALID"], default=[]),
+        create_allow_respond=dict(type="bool", required=False),
         index=dict(type="int", default=10000),
         enabled=dict(type="bool", default=True),
         logging=dict(type="bool", default=False),
@@ -249,6 +255,16 @@ def apply_policy(module, api, site, zone_map, network_map, policies, desired):
             existing = policy
             break
 
+    connection_state_type = desired.get("connection_state_type", "ALL")
+    connection_states = desired.get("connection_states", [])
+    create_allow_respond = (
+        desired.get("create_allow_respond")
+        if desired.get("create_allow_respond") is not None
+        else (desired.get("action", "ALLOW") == "ALLOW")
+    )
+    if connection_state_type == "CUSTOM" or desired.get("action") in ["BLOCK", "REJECT", "ISOLATE"]:
+        create_allow_respond = False
+
     desired_payload = {
         "name": desired["name"],
         "action": desired.get("action", "ALLOW"),
@@ -258,9 +274,9 @@ def apply_policy(module, api, site, zone_map, network_map, policies, desired):
         "logging": desired.get("logging", False),
         "ip_version": "BOTH",
         "schedule": {"mode": "ALWAYS"},
-        "connection_state_type": "ALL",
-        "connection_states": [],
-        "create_allow_respond": desired.get("action", "ALLOW") == "ALLOW",
+        "connection_state_type": connection_state_type,
+        "connection_states": connection_states,
+        "create_allow_respond": create_allow_respond,
         "icmp_typename": "ANY",
         "icmp_v6_typename": "ANY",
         "match_ip_sec": False,
@@ -359,9 +375,12 @@ def policy_needs_update(existing, desired_payload):
             return "ips"
         return None
 
-    for key in ["action", "protocol", "index", "enabled", "logging"]:
+    for key in ["action", "protocol", "index", "enabled", "logging", "connection_state_type", "create_allow_respond"]:
         if existing.get(key) != desired_payload[key]:
             return True
+
+    if sorted(existing.get("connection_states", [])) != sorted(desired_payload.get("connection_states", [])):
+        return True
 
     for side in ["source", "destination"]:
         existing_side = existing.get(side, {})

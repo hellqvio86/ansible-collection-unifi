@@ -262,7 +262,7 @@ def apply_policy(module, api, site, zone_map, network_map, policies, desired):
         if desired.get("create_allow_respond") is not None
         else (desired.get("action", "ALLOW") == "ALLOW")
     )
-    if desired.get("action") in ["BLOCK", "REJECT", "ISOLATE"]:
+    if connection_state_type == "CUSTOM" or desired.get("action") in ["BLOCK", "REJECT", "ISOLATE"]:
         create_allow_respond = False
 
     desired_payload = {

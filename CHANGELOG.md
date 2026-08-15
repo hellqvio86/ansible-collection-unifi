@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.22
+
+## New feature
+- **snat support**
+
 ## 0.0.21
 
 ### New Features

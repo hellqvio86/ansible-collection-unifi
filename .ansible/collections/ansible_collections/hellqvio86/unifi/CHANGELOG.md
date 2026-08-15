@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.0.21
+
+### New Features
+- **`unifi_firewall_policy`**: Add support for `connection_state_type`, `connection_states`, and `create_allow_respond` options to configure stateful connection tracking.
+
+## 0.0.20
+
+### Bug Fixes
+- **`meta`**: Define `action_groups.unifi` in `meta/runtime.yml` to support `module_defaults` group resolution.
+
 ## 0.0.19
 
 ### Bug Fixes

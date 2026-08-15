@@ -37,12 +37,12 @@ direct iptables access are never used.
 ### Masquerade Home Assistant traffic to an IoT subnet
 
 ```yaml
-- name: SNAT Home Assistant to Xiaomi IoT
+- name: SNAT Home Assistant to Generic IoT
   hellqvio86.unifi.unifi_nat_rule:
     host: "192.0.2.1"
     username: "admin"
     password: "secret"
-    name: "SNAT Home Assistant to Xiaomi IoT"
+    name: "SNAT Home Assistant to Generic IoT"
     type: masquerade
     src_address: "192.0.2.10"
     dst_address: "198.51.100.0/24"
@@ -73,7 +73,7 @@ direct iptables access are never used.
     host: "192.0.2.1"
     username: "admin"
     password: "secret"
-    name: "SNAT Home Assistant to Xiaomi IoT"
+    name: "SNAT Home Assistant to Generic IoT"
     src_address: "192.0.2.10"
     state: absent
 ```

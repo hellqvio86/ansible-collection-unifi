@@ -278,7 +278,17 @@ def run_module():
                 "ssh_password_enabled": mgmt.get("x_ssh_auth_password_enabled"),
                 "ssh_bind_wildcard": mgmt.get("x_ssh_bind_wildcard"),
             }
-
+        switch = next(
+            (s for s in all_settings if isinstance(s, dict) and s.get("key") in ("global_switch", "switch")), None
+        )
+        if switch:
+            results["system_settings"]["switch"] = {
+                "dhcp_snooping_enabled": switch.get("dhcp_snooping_enabled"),
+                "flowctrl_enabled": switch.get("flowctrl_enabled"),
+                "jumboframe_enabled": switch.get("jumboframe_enabled"),
+                "stp_version": switch.get("stp_version"),
+                "dot1x_enabled": switch.get("dot1x_enabled"),
+            }
 
     if "port_forward" in subset:
         res = request_or_fail(f"/proxy/network/api/s/{site}/rest/portforward", "port forward rules")

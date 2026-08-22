@@ -165,7 +165,7 @@
    "name": "docs/modules/unifi_nat_rule.md",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "efb2762cf3fc0377438c8f6e40616f70abd249bdd146fbfa448b063923752ec5",
+   "chksum_sha256": "15a8da379682e32aa4bba272f7378447b792eddf7afbb326f6621c7078423350",
    "format": 1
   },
   {
@@ -361,14 +361,14 @@
    "name": "plugins/modules/unifi_firewall_policy.py",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "8c22560e69af5e7ad396b64cf30bc14f608a09bba6383c4a05632273efe1e736",
+   "chksum_sha256": "cf754d7c5d240f5570179fa1cd6def0970bdd7ce81bfd7f4c85586713acaf9c5",
    "format": 1
   },
   {
    "name": "plugins/modules/unifi_nat_rule.py",
    "ftype": "file",
    "chksum_type": "sha256",
-   "chksum_sha256": "c0373e814efe1619355db10016d1e8209fceb10c03afc7143473ce96508a2e0a",
+   "chksum_sha256": "70431726d5a32842d2925381fa286df60173da347135155dbee6ae889f520cc5",
    "format": 1
   },
   {
@@ -383,13 +383,6 @@
    "ftype": "file",
    "chksum_type": "sha256",
    "chksum_sha256": "648b26951754fd7b2f77485784ce4dccc31589555cba47d813b084fe2eec2dcc",
-   "format": 1
-  },
-  {
-   "name": "CHANGELOG.md",
-   "ftype": "file",
-   "chksum_type": "sha256",
-   "chksum_sha256": "3528ad52e33ef858e52fa74f869144d39229b7f58e0b4a64fe1af5d111c1bf49",
    "format": 1
   },
   {
@@ -411,6 +404,13 @@
    "ftype": "dir",
    "chksum_type": null,
    "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "CHANGELOG.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "fd9051cd9af146ed5dd2b13eb24ed5b162feff77aeb98f70d9bb7398d501619f",
    "format": 1
   }
  ],

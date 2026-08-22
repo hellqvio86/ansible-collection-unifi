@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.0.23
+
+### Bug Fixes
+- **`unifi_firewall_policy`**: Add `ip_version` option and automatically map `protocol: icmp` to `ip_version: IPV4` and `protocol: icmpv6` to `ip_version: IPV6` to prevent API errors (`FirewallPolicyProtocolUnsupportedOnIpVersion`).
+
+## 0.0.22
+
+## New feature
+- **snat support**
+
 ## 0.0.21
 
 ### New Features

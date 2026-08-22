@@ -283,11 +283,11 @@ def run_module():
         )
         if switch:
             results["system_settings"]["switch"] = {
-                "dhcp_snooping_enabled": switch.get("dhcp_snooping_enabled"),
+                "dhcp_snooping_enabled": switch.get("dhcp_snoop", switch.get("dhcp_snooping_enabled")),
                 "flowctrl_enabled": switch.get("flowctrl_enabled"),
                 "jumboframe_enabled": switch.get("jumboframe_enabled"),
                 "stp_version": switch.get("stp_version"),
-                "dot1x_enabled": switch.get("dot1x_enabled"),
+                "dot1x_enabled": switch.get("dot1x_portctrl_enabled", switch.get("dot1x_enabled")),
             }
 
     if "port_forward" in subset:

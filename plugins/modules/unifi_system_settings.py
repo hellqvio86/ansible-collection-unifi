@@ -182,11 +182,11 @@ MGMT_FIELD_MAP = {
 }
 
 SWITCH_FIELD_MAP = {
-    "dhcp_snooping_enabled": "dhcp_snooping_enabled",
+    "dhcp_snooping_enabled": "dhcp_snoop",
     "flowctrl_enabled": "flowctrl_enabled",
     "jumboframe_enabled": "jumboframe_enabled",
     "stp_version": "stp_version",
-    "dot1x_enabled": "dot1x_enabled",
+    "dot1x_enabled": "dot1x_portctrl_enabled",
 }
 
 

@@ -405,7 +405,7 @@ def test_system_settings_switch_update():
                     {
                         "_id": "sw1",
                         "key": "global_switch",
-                        "dhcp_snooping_enabled": False,
+                        "dhcp_snoop": False,
                         "flowctrl_enabled": False,
                         "jumboframe_enabled": False,
                         "stp_version": "stp",
@@ -418,11 +418,11 @@ def test_system_settings_switch_update():
                     {
                         "_id": "sw1",
                         "key": "global_switch",
-                        "dhcp_snooping_enabled": True,
+                        "dhcp_snoop": True,
                         "flowctrl_enabled": False,
                         "jumboframe_enabled": True,
                         "stp_version": "rstp",
-                        "dot1x_enabled": False,
+                        "dot1x_portctrl_enabled": False,
                     }
                 ],
                 {"status": 200},
@@ -435,14 +435,14 @@ def test_system_settings_switch_update():
         put_call = mock_api.request.call_args_list[1]
         assert put_call[0][0] == "/proxy/network/api/s/default/set/setting/global_switch/sw1"
         assert put_call[1]["method"] == "PUT"
-        assert put_call[1]["data"]["dhcp_snooping_enabled"] is True
+        assert put_call[1]["data"]["dhcp_snoop"] is True
         assert put_call[1]["data"]["jumboframe_enabled"] is True
         assert put_call[1]["data"]["stp_version"] == "rstp"
 
         mock_module.exit_json.assert_called_once()
         kwargs = mock_module.exit_json.call_args[1]
         assert kwargs["changed"] is True
-        assert kwargs["settings"]["switch"]["dhcp_snooping_enabled"] is True
+        assert kwargs["settings"]["switch"]["dhcp_snoop"] is True
 
 
 def test_system_settings_switch_no_change():
@@ -486,11 +486,11 @@ def test_system_settings_switch_no_change():
                     {
                         "_id": "sw1",
                         "key": "global_switch",
-                        "dhcp_snooping_enabled": True,
+                        "dhcp_snoop": True,
                         "flowctrl_enabled": False,
                         "jumboframe_enabled": True,
                         "stp_version": "rstp",
-                        "dot1x_enabled": False,
+                        "dot1x_portctrl_enabled": False,
                     }
                 ],
                 {"status": 200},

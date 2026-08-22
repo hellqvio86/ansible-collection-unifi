@@ -190,7 +190,7 @@ def test_info_system_settings():
                     {
                         "_id": "s3",
                         "key": "global_switch",
-                        "dhcp_snooping_enabled": True,
+                        "dhcp_snoop": True,
                         "flowctrl_enabled": False,
                         "jumboframe_enabled": True,
                         "stp_version": "rstp",

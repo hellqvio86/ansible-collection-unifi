@@ -187,6 +187,14 @@ def test_info_system_settings():
                 [
                     {"_id": "s1", "key": "ntp", "ntp_server_1": "0.pool.ntp.org", "timezone": "UTC"},
                     {"_id": "s2", "key": "mgmt", "led_enabled": True, "x_ssh_auth_password_enabled": False},
+                    {
+                        "_id": "s3",
+                        "key": "global_switch",
+                        "dhcp_snoop": True,
+                        "flowctrl_enabled": False,
+                        "jumboframe_enabled": True,
+                        "stp_version": "rstp",
+                    },
                 ],
                 {"status": 200},
             ),
@@ -201,6 +209,8 @@ def test_info_system_settings():
         assert "system_settings" in info
         assert info["system_settings"]["ntp"]["server_1"] == "0.pool.ntp.org"
         assert info["system_settings"]["mgmt"]["led_enabled"] is True
+        assert info["system_settings"]["switch"]["dhcp_snooping_enabled"] is True
+        assert info["system_settings"]["switch"]["stp_version"] == "rstp"
 
 
 def test_info_port_forward():

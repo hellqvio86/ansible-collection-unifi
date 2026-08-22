@@ -73,9 +73,37 @@ options:
                     - Whether SSH binds to all interfaces (0.0.0.0).
                     - Maps to C(x_ssh_bind_wildcard).
                 type: bool
+    switch:
+        description:
+            - Global switch settings (DHCP snooping, flow control, jumbo frames, STP).
+            - Maps to the C(setting/global_switch) endpoint.
+        type: dict
+        suboptions:
+            dhcp_snooping_enabled:
+                description:
+                    - Whether DHCP snooping is enabled globally across switches.
+                type: bool
+            flowctrl_enabled:
+                description:
+                    - Whether flow control is enabled globally.
+                type: bool
+            jumboframe_enabled:
+                description:
+                    - Whether jumbo frames are enabled globally.
+                type: bool
+            stp_version:
+                description:
+                    - Spanning Tree Protocol mode.
+                type: str
+                choices: ["stp", "rstp", "mstp", "disabled"]
+            dot1x_enabled:
+                description:
+                    - Whether 802.1X control is enabled globally.
+                type: bool
 author:
     - hellqvio86 (@hellqvio86)
 """
+
 
 EXAMPLES = r"""
 - name: Configure NTP servers and timezone
@@ -153,6 +181,13 @@ MGMT_FIELD_MAP = {
     "ssh_bind_wildcard": "x_ssh_bind_wildcard",
 }
 
+SWITCH_FIELD_MAP = {
+    "dhcp_snooping_enabled": "dhcp_snoop",
+    "flowctrl_enabled": "flowctrl_enabled",
+    "jumboframe_enabled": "jumboframe_enabled",
+    "stp_version": "stp_version",
+    "dot1x_enabled": "dot1x_portctrl_enabled",
+}
 
 
 def _build_ntp_payload(ntp_params):
@@ -168,6 +203,14 @@ def _build_mgmt_payload(mgmt_params):
     for param_key, api_key in MGMT_FIELD_MAP.items():
         if mgmt_params.get(param_key) is not None:
             payload[api_key] = mgmt_params[param_key]
+    return payload
+
+
+def _build_switch_payload(switch_params, key="global_switch"):
+    payload = {"key": key}
+    for param_key, api_key in SWITCH_FIELD_MAP.items():
+        if switch_params.get(param_key) is not None:
+            payload[api_key] = switch_params[param_key]
     return payload
 
 
@@ -208,7 +251,16 @@ def run_module():
                 ssh_bind_wildcard=dict(type="bool"),
             ),
         ),
-
+        switch=dict(
+            type="dict",
+            options=dict(
+                dhcp_snooping_enabled=dict(type="bool"),
+                flowctrl_enabled=dict(type="bool"),
+                jumboframe_enabled=dict(type="bool"),
+                stp_version=dict(type="str", choices=["stp", "rstp", "mstp", "disabled"]),
+                dot1x_enabled=dict(type="bool"),
+            ),
+        ),
     )
 
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
@@ -237,6 +289,7 @@ def run_module():
 
     ntp_params = module.params.get("ntp")
     mgmt_params = module.params.get("mgmt")
+    switch_params = module.params.get("switch")
 
     # Handle NTP settings
     if ntp_params is not None:
@@ -287,6 +340,32 @@ def run_module():
                 current_mgmt = api.as_list(res)[0] if api.as_list(res) else res
 
         result_settings["mgmt"] = current_mgmt
+
+    # Handle global switch settings (DHCP snooping, STP, jumbo frames, etc.)
+    if switch_params is not None:
+        current_switch = next(
+            (s for s in settings if isinstance(s, dict) and s.get("key") in ("global_switch", "switch")),
+            None,
+        )
+        if not current_switch:
+            module.fail_json(msg="Global switch setting not found on controller")
+
+        key = current_switch.get("key", "global_switch")
+        desired_switch = _build_switch_payload(switch_params, key=key)
+
+        if _check_changed(current_switch, desired_switch):
+            changed = True
+            if not module.check_mode:
+                res, info = api.request(
+                    f"/proxy/network/api/s/{site}/set/setting/{key}/{current_switch['_id']}",
+                    method="PUT",
+                    data=desired_switch,
+                )
+                if not res:
+                    module.fail_json(msg="Failed to update global switch settings", info=info)
+                current_switch = api.as_list(res)[0] if api.as_list(res) else res
+
+        result_settings["switch"] = current_switch
 
     module.exit_json(changed=changed, settings=result_settings)
 

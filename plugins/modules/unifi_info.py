@@ -12,7 +12,8 @@ description:
 options:
     host: {type: str}
     site: {type: str, default: default}
-    validate_certs: {type: bool, default: false}
+    validate_certs: {type: bool, default: true}
+    ca_path: {type: path, required: false}
     gather_subset:
         description: List of subsets to gather.
         type: list
@@ -36,7 +37,8 @@ def run_module():
         username=dict(type="str", no_log=True),
         password=dict(type="str", no_log=True),
         site=dict(type="str", default="default"),
-        validate_certs=dict(type="bool", default=False),
+        validate_certs=dict(type="bool", default=True),
+        ca_path=dict(type="path", required=False),
         unifi_session_cookie=dict(type="str", no_log=True, required=False),
         unifi_csrf_token=dict(type="str", no_log=True, required=False),
         gather_subset=dict(
@@ -69,6 +71,7 @@ def run_module():
         module.params.get("validate_certs"),
         module.params.get("unifi_session_cookie"),
         module.params.get("unifi_csrf_token"),
+        ca_path=module.params.get("ca_path"),
     )
     api.login()
 
@@ -106,7 +109,6 @@ def run_module():
                     "name": w.get("name"),
                     "enabled": w.get("enabled"),
                     "security": w.get("security"),
-                    "passphrase": w.get("x_passphrase"),
                     "network": network_map.get(w.get("networkconf_id"), "Unknown"),
                     "bands": w.get("wlan_bands"),
                 }

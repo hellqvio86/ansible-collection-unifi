@@ -1,7 +1,7 @@
 ---
 namespace: hellqvio86
 name: unifi
-version: 0.0.23
+version: 0.0.24
 readme: README.md
 authors:
   - Olof Hellqvist (@hellqvio86)
@@ -29,7 +29,6 @@ build_ignore:
   - ".ruff_cache"
   - ".pytest_cache"
   - "releases"
-  - "requirements.txt"
   - "pyproject.toml"
   - ".ansible"
   - "test_output.txt"

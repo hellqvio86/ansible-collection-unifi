@@ -17,7 +17,8 @@ def _setup_mocks(mock_module_class, mock_api_class, params, request_side_effects
 
     mock_api = mock_api_class.return_value
     mock_api.as_list.side_effect = lambda x: (
-        x if isinstance(x, list)
+        x
+        if isinstance(x, list)
         else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
     )
     mock_api.request.side_effect = request_side_effects
@@ -65,12 +66,13 @@ def test_nat_rule_create():
         patch(f"{_MODULE}.UnifiAPI") as mock_api_class,
     ):
         mock_module, mock_api = _setup_mocks(
-            mock_module_class, mock_api_class,
+            mock_module_class,
+            mock_api_class,
             _base_params(),
             [
-                _NETCONF_RESP,                          # _resolve_network_id (outbound_interface set)
-                ([], {"status": 200}),                  # GET nat rules → empty
-                ([created_rule], {"status": 201}),      # POST → created
+                _NETCONF_RESP,  # _resolve_network_id (outbound_interface set)
+                ([], {"status": 200}),  # GET nat rules → empty
+                ([created_rule], {"status": 201}),  # POST → created
             ],
         )
 
@@ -105,11 +107,12 @@ def test_nat_rule_no_change():
         patch(f"{_MODULE}.UnifiAPI") as mock_api_class,
     ):
         mock_module, _ = _setup_mocks(
-            mock_module_class, mock_api_class,
+            mock_module_class,
+            mock_api_class,
             _base_params(),
             [
-                _NETCONF_RESP,                          # _resolve_network_id
-                ([existing_rule], {"status": 200}),     # GET → rule exists and matches
+                _NETCONF_RESP,  # _resolve_network_id
+                ([existing_rule], {"status": 200}),  # GET → rule exists and matches
             ],
         )
 
@@ -129,7 +132,7 @@ def test_nat_rule_update():
         "src_address": "192.0.2.10",
         "dst_address": "198.51.100.0/24",
         "outbound_network_id": "net-iot-1",
-        "enabled": False,   # will be toggled to True
+        "enabled": False,  # will be toggled to True
         "logging": False,
     }
     updated_rule = {**existing_rule, "enabled": True}
@@ -139,12 +142,13 @@ def test_nat_rule_update():
         patch(f"{_MODULE}.UnifiAPI") as mock_api_class,
     ):
         mock_module, mock_api = _setup_mocks(
-            mock_module_class, mock_api_class,
+            mock_module_class,
+            mock_api_class,
             _base_params(enabled=True),
             [
-                _NETCONF_RESP,                          # _resolve_network_id
-                ([existing_rule], {"status": 200}),     # GET → rule differs
-                ([updated_rule], {"status": 200}),      # PUT → updated
+                _NETCONF_RESP,  # _resolve_network_id
+                ([existing_rule], {"status": 200}),  # GET → rule differs
+                ([updated_rule], {"status": 200}),  # PUT → updated
             ],
         )
 
@@ -179,12 +183,13 @@ def test_nat_rule_delete():
         patch(f"{_MODULE}.UnifiAPI") as mock_api_class,
     ):
         mock_module, mock_api = _setup_mocks(
-            mock_module_class, mock_api_class,
+            mock_module_class,
+            mock_api_class,
             _base_params(state="absent", outbound_interface=""),
             [
                 # no netconf call — outbound_interface is empty
-                ([existing_rule], {"status": 200}),     # GET → rule found
-                ({}, {"status": 204}),                  # DELETE
+                ([existing_rule], {"status": 200}),  # GET → rule found
+                ({}, {"status": 204}),  # DELETE
             ],
         )
 
@@ -207,11 +212,12 @@ def test_nat_rule_absent_already_gone():
         patch(f"{_MODULE}.UnifiAPI") as mock_api_class,
     ):
         mock_module, _ = _setup_mocks(
-            mock_module_class, mock_api_class,
+            mock_module_class,
+            mock_api_class,
             _base_params(state="absent", outbound_interface=""),
             [
                 # no netconf call — outbound_interface is empty
-                ([], {"status": 200}),                  # GET → empty list
+                ([], {"status": 200}),  # GET → empty list
             ],
         )
 
@@ -220,3 +226,34 @@ def test_nat_rule_absent_already_gone():
         kwargs = mock_module.exit_json.call_args[1]
         assert kwargs["changed"] is False
         assert kwargs["rule"] is None
+
+
+def test_nat_rule_ambiguous_fails():
+    """If multiple rules match the same name, fail_json should be called."""
+    with (
+        patch(f"{_MODULE}.AnsibleModule") as mock_module_class,
+        patch(f"{_MODULE}.UnifiAPI") as mock_api_class,
+    ):
+        mock_module, _ = _setup_mocks(
+            mock_module_class,
+            mock_api_class,
+            _base_params(outbound_interface=""),
+            [
+                (
+                    [
+                        {"_id": "nat-1", "name": "SNAT HA to IoT"},
+                        {"_id": "nat-2", "name": "SNAT HA to IoT"},
+                    ],
+                    {"status": 200},
+                ),
+            ],
+        )
+
+        import pytest
+
+        with pytest.raises(Exception, match="fail_json called"):
+            run_module()
+
+        mock_module.fail_json.assert_called_once()
+        kwargs = mock_module.fail_json.call_args[1]
+        assert "ambiguous" in kwargs["msg"].lower()

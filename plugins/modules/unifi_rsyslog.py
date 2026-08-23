@@ -28,8 +28,12 @@ options:
         type: str
     validate_certs:
         description: Verify SSL certificates.
-        default: false
+        default: true
         type: bool
+    ca_path:
+        description: Path to CA bundle file for TLS verification.
+        required: false
+        type: path
     enabled:
         description: Whether remote syslog is enabled.
         type: bool
@@ -69,7 +73,8 @@ def run_module():
         username=dict(type="str", no_log=True),
         password=dict(type="str", no_log=True),
         site=dict(type="str", default="default"),
-        validate_certs=dict(type="bool", default=False),
+        validate_certs=dict(type="bool", default=True),
+        ca_path=dict(type="path", required=False),
         unifi_session_cookie=dict(type="str", no_log=True, required=False),
         unifi_csrf_token=dict(type="str", no_log=True, required=False),
         enabled=dict(type="bool", default=True),
@@ -90,6 +95,7 @@ def run_module():
         module.params["validate_certs"],
         module.params.get("unifi_session_cookie"),
         module.params.get("unifi_csrf_token"),
+        ca_path=module.params.get("ca_path"),
     )
     api.login()
 

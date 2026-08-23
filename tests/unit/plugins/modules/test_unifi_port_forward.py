@@ -427,3 +427,60 @@ def test_port_forward_with_network():
         mock_module.exit_json.assert_called_once()
         kwargs = mock_module.exit_json.call_args[1]
         assert kwargs["changed"] is True
+
+
+def test_port_forward_ambiguous_fails():
+    params = {
+        "host": "192.0.2.1",
+        "username": "admin",
+        "password": "password",
+        "site": "default",
+        "validate_certs": False,
+        "state": "present",
+        "name": "Duplicate Rule",
+        "enabled": True,
+        "protocol": "tcp",
+        "src": "",
+        "dst_port": "2222",
+        "fwd_port": "22",
+        "fwd_ip": "192.168.1.10",
+        "fwd_network": None,
+        "log": False,
+    }
+
+    with (
+        patch(
+            "ansible_collections.hellqvio86.unifi.plugins.modules.unifi_port_forward.AnsibleModule"
+        ) as mock_module_class,
+        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_port_forward.UnifiAPI") as mock_api_class,
+    ):
+        mock_module = mock_module_class.return_value
+        mock_module.params = params
+        mock_module.check_mode = False
+        mock_module.fail_json.side_effect = Exception("fail_json called")
+
+        mock_api = mock_api_class.return_value
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
+
+        mock_api.request.side_effect = [
+            (
+                [
+                    {"_id": "pf1", "name": "Duplicate Rule"},
+                    {"_id": "pf2", "name": "Duplicate Rule"},
+                ],
+                {"status": 200},
+            ),
+        ]
+
+        import pytest
+
+        with pytest.raises(Exception, match="fail_json called"):
+            run_module()
+
+        mock_module.fail_json.assert_called_once()
+        kwargs = mock_module.fail_json.call_args[1]
+        assert "ambiguous" in kwargs["msg"].lower()

@@ -21,7 +21,10 @@ options:
         required: false
     validate_certs:
         type: bool
-        default: false
+        default: true
+    ca_path:
+        type: path
+        required: false
     state:
         type: str
         choices: [present, absent]
@@ -45,6 +48,17 @@ from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI
 
 
+def _is_matching_cert(cert_name: str, resource_name: str) -> bool:
+    """Check if certificate name strictly matches the resource name or its managed fingerprint format."""
+    if cert_name == resource_name:
+        return True
+    prefix = f"{resource_name}-"
+    if cert_name.startswith(prefix) and len(cert_name) == len(prefix) + 8:
+        suffix = cert_name[len(prefix) :]
+        return all(ch in "0123456789abcdefABCDEF" for ch in suffix)
+    return False
+
+
 def run_module():
     module = AnsibleModule(
         argument_spec=dict(
@@ -52,7 +66,8 @@ def run_module():
             username=dict(type="str", no_log=True),
             password=dict(type="str", no_log=True),
             site=dict(type="str", default="default"),
-            validate_certs=dict(type="bool", default=False),
+            validate_certs=dict(type="bool", default=True),
+            ca_path=dict(type="path", required=False),
             unifi_session_cookie=dict(type="str", no_log=True, required=False),
             unifi_csrf_token=dict(type="str", no_log=True, required=False),
             state=dict(type="str", choices=["present", "absent"], default="present"),
@@ -81,6 +96,7 @@ def run_module():
         module.params["validate_certs"],
         module.params.get("unifi_session_cookie"),
         module.params.get("unifi_csrf_token"),
+        ca_path=module.params.get("ca_path"),
     )
     api.login()
 
@@ -93,14 +109,12 @@ def run_module():
         try:
             from cryptography import x509
             from cryptography.hazmat.primitives import hashes
-            
+
             # Extract only the first certificate (leaf) in the PEM chain
             first_pem = cert.split("-----END CERTIFICATE-----")[0] + "-----END CERTIFICATE-----"
-            cert_obj = x509.load_pem_x509_certificate(first_pem.encode('utf-8'))
+            cert_obj = x509.load_pem_x509_certificate(first_pem.encode("utf-8"))
             fp_hex = cert_obj.fingerprint(hashes.SHA1()).hex().upper()
-            local_fingerprint = ":".join(
-                fp_hex[i:i+2] for i in range(0, 40, 2)
-            )
+            local_fingerprint = ":".join(fp_hex[i : i + 2] for i in range(0, 40, 2))
         except Exception as e:
             module.fail_json(msg="Failed to compute certificate fingerprint: " + str(e))
 
@@ -111,7 +125,7 @@ def run_module():
         # Check if there is an existing certificate with the same fingerprint
         matching_fp_cert = next(
             (c for c in existing_list if c.get("fingerprint", "").upper() == local_fingerprint),
-            None
+            None,
         )
 
         if matching_fp_cert:
@@ -131,21 +145,26 @@ def run_module():
                             msg="Failed to activate existing user certificate", info=info, certificate_id=cert_id
                         )
                     result = status_res
-            
-            # Clean up other inactive certificates starting with name prefix
+
+            # Clean up other inactive certificates strictly matching this managed resource name
             if not module.check_mode:
                 active_id = result.get("id")
                 for c in existing_list:
                     c_name = c.get("name", "")
                     c_id = c.get("id")
-                    if c_id and c_id != active_id and c_name.startswith(name) and not bool(c.get("active", False)):
+                    if (
+                        c_id
+                        and c_id != active_id
+                        and _is_matching_cert(c_name, name)
+                        and not bool(c.get("active", False))
+                    ):
                         api.request(f"/api/userCertificates/{c_id}", method="DELETE")
         else:
             # Certificate is NOT on the UDM. We need to upload it.
             # Use a unique name format: {name}-{short_fingerprint} to prevent name conflicts
             short_fp = local_fingerprint.replace(":", "").lower()[:8]
             upload_name = f"{name}-{short_fp}"
-            
+
             # Delete any existing inactive certificate with this upload_name first if it somehow exists
             if not module.check_mode:
                 for c in existing_list:
@@ -153,7 +172,7 @@ def run_module():
                         c_id = c.get("id")
                         if c_id:
                             api.request(f"/api/userCertificates/{c_id}", method="DELETE")
-            
+
             changed = True
             if not module.check_mode:
                 payload = {"name": upload_name, "cert": cert, "key": key}
@@ -163,7 +182,7 @@ def run_module():
                 if not new_cert:
                     module.fail_json(msg="Failed to upload user certificate", info=info)
                 new_id = new_cert.get("id")
-                
+
                 # Activate the uploaded cert
                 if active and new_id:
                     status_res, info = api.request(
@@ -179,18 +198,23 @@ def run_module():
                 else:
                     result = new_cert
 
-                # Clean up any other inactive certificates starting with name prefix
+                # Clean up any other inactive certificates strictly matching this managed resource name
                 active_id = result.get("id")
                 for c in existing_list:
                     c_name = c.get("name", "")
                     c_id = c.get("id")
-                    if c_id and c_id != active_id and c_name.startswith(name) and not bool(c.get("active", False)):
+                    if (
+                        c_id
+                        and c_id != active_id
+                        and _is_matching_cert(c_name, name)
+                        and not bool(c.get("active", False))
+                    ):
                         api.request(f"/api/userCertificates/{c_id}", method="DELETE")
             else:
                 result = {"name": upload_name, "fingerprint": local_fingerprint, "active": active}
     else:
-        # Find any certificates that start with 'name'
-        to_delete = [c for c in existing_list if c.get("name", "").startswith(name)]
+        # Find certificates that strictly match 'name' or '{name}-{8-hex-short-fingerprint}'
+        to_delete = [c for c in existing_list if _is_matching_cert(c.get("name", ""), name)]
         if to_delete:
             changed = True
             if not module.check_mode:

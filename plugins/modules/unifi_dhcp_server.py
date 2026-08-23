@@ -29,8 +29,12 @@ options:
         type: str
     validate_certs:
         description: Verify SSL certificates.
-        default: false
+        default: true
         type: bool
+    ca_path:
+        description: Path to CA bundle file for TLS verification.
+        required: false
+        type: path
     state:
         description:
             - Whether DHCP server should be configured or disabled on the network.
@@ -148,7 +152,8 @@ def run_module():
         username=dict(type="str", no_log=True),
         password=dict(type="str", no_log=True),
         site=dict(type="str", default="default"),
-        validate_certs=dict(type="bool", default=False),
+        validate_certs=dict(type="bool", default=True),
+        ca_path=dict(type="path", required=False),
         state=dict(type="str", choices=["present", "absent"], default="present"),
         network=dict(type="str", required=True),
         enabled=dict(type="bool", default=True),
@@ -186,6 +191,7 @@ def run_module():
         module.params["validate_certs"],
         module.params.get("unifi_session_cookie"),
         module.params.get("unifi_csrf_token"),
+        ca_path=module.params.get("ca_path"),
     )
     api.login()
 
@@ -196,10 +202,10 @@ def run_module():
         module.fail_json(msg="Failed to fetch network configurations", info=info)
 
     networks = api.as_list(res)
-    current = next(
-        (n for n in networks if isinstance(n, dict) and n.get("name") == network_name),
-        None,
-    )
+    matches = [n for n in networks if isinstance(n, dict) and n.get("name") == network_name]
+    if len(matches) > 1:
+        module.fail_json(msg=f"Ambiguous resource: multiple networks match name '{network_name}'")
+    current = matches[0] if matches else None
     if not current:
         module.fail_json(msg=f"Network '{network_name}' not found")
 

@@ -29,8 +29,12 @@ options:
         type: str
     validate_certs:
         description: Verify SSL certificates.
-        default: false
+        default: true
         type: bool
+    ca_path:
+        description: Path to CA bundle file for TLS verification.
+        required: false
+        type: path
     state:
         description:
             - Whether the rule should be present or absent.
@@ -144,7 +148,8 @@ def run_module():
         username=dict(type="str", no_log=True),
         password=dict(type="str", no_log=True),
         site=dict(type="str", default="default"),
-        validate_certs=dict(type="bool", default=False),
+        validate_certs=dict(type="bool", default=True),
+        ca_path=dict(type="path", required=False),
         unifi_session_cookie=dict(type="str", no_log=True, required=False),
         unifi_csrf_token=dict(type="str", no_log=True, required=False),
         state=dict(type="str", choices=["present", "absent"], default="present"),
@@ -169,6 +174,7 @@ def run_module():
         module.params["validate_certs"],
         module.params.get("unifi_session_cookie"),
         module.params.get("unifi_csrf_token"),
+        ca_path=module.params.get("ca_path"),
     )
     api.login()
 
@@ -197,7 +203,10 @@ def run_module():
         module.fail_json(msg="Failed to fetch port forwarding rules", info=info)
 
     rules = api.as_list(res)
-    current = next((r for r in rules if isinstance(r, dict) and r.get("name") == name), None)
+    matches = [r for r in rules if isinstance(r, dict) and r.get("name") == name]
+    if len(matches) > 1:
+        module.fail_json(msg=f"Ambiguous resource: multiple port forward rules match name '{name}'")
+    current = matches[0] if matches else None
 
     if state == "absent":
         if current:

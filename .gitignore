@@ -49,4 +49,6 @@ releases/
 # Logs & Test Output
 pytest.out
 test_output.txt
+debug/
+
 

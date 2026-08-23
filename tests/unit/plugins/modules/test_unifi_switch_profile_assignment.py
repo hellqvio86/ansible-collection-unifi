@@ -348,3 +348,103 @@ def test_switch_profile_assignment_fallback():
         mock_module.exit_json.assert_called_once()
         kwargs = mock_module.exit_json.call_args[1]
         assert kwargs["changed"] is True
+
+
+def test_switch_profile_assignment_fallback_absent():
+    params = {
+        "host": "192.0.2.1",
+        "username": "admin",
+        "password": "password",
+        "site": "default",
+        "validate_certs": False,
+        "state": "absent",
+        "switch_name": "Switch-01",
+        "profile_name": "Access Switch Profile",
+        "switch_profiles": [
+            {
+                "name": "Access Switch Profile",
+                "port_profile_overrides": {
+                    "1": "WAN-Profile",
+                    "2": "IoT-Profile",
+                },
+            }
+        ],
+    }
+
+    with (
+        patch(
+            "ansible_collections.hellqvio86.unifi.plugins.modules.unifi_switch_profile_assignment.AnsibleModule"
+        ) as mock_module_class,
+        patch(
+            "ansible_collections.hellqvio86.unifi.plugins.modules.unifi_switch_profile_assignment.UnifiAPI"
+        ) as mock_api_class,
+    ):
+        mock_module = mock_module_class.return_value
+        mock_module.params = params
+        mock_module.check_mode = False
+        mock_module.fail_json.side_effect = Exception("fail_json called")
+        mock_module.exit_json.side_effect = SystemExit("exit_json")
+
+        mock_api = mock_api_class.return_value
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
+
+        mock_api.request.side_effect = [
+            # 1. Fetch switch profiles (unsupported)
+            (None, {"status": 404}),
+            # 2. Fetch portconf
+            (
+                [
+                    {"name": "WAN-Profile", "_id": "wan_id"},
+                    {"name": "IoT-Profile", "_id": "iot_id"},
+                ],
+                {"status": 200},
+            ),
+            # 3. Fetch devices
+            (
+                [
+                    {
+                        "name": "Switch-01",
+                        "type": "usw",
+                        "_id": "device123",
+                        "port_overrides": [
+                            {"port_idx": 1, "portconf_id": "wan_id"},
+                            {"port_idx": 2, "portconf_id": "iot_id"},
+                            {"port_idx": 3, "portconf_id": "other_id"},
+                        ],
+                    }
+                ],
+                {"status": 200},
+            ),
+            # 4. PUT device
+            (
+                {
+                    "name": "Switch-01",
+                    "type": "usw",
+                    "_id": "device123",
+                },
+                {"status": 200},
+            ),
+        ]
+
+        try:
+            run_module()
+        except SystemExit:
+            pass
+
+        assert mock_api.request.call_count == 4
+        put_call = mock_api.request.call_args_list[3]
+        assert put_call[1]["method"] == "PUT"
+
+        # Overrides 1 and 2 should be removed, leaving only port_idx 3
+        overrides = put_call[1]["data"]["port_overrides"]
+        assert len(overrides) == 1
+        assert overrides[0]["port_idx"] == 3
+        assert overrides[0]["portconf_id"] == "other_id"
+
+        mock_module.exit_json.assert_called_once()
+        kwargs = mock_module.exit_json.call_args[1]
+        assert kwargs["changed"] is True

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.0.24
+
+### Security Fixes
+- **`defaults`**: Default `validate_certs` to `true` across all modules and `UnifiAPI`, and add `ca_path` support for custom CA bundles.
+- **`unifi_info`**: Redact Wi-Fi passphrases (`x_passphrase` / `passphrase`) from module output to prevent accidental secret leakage.
+- **`unifi_api`**: Remove global `/tmp/ansible_unifi_api.lock` file and Unix `fcntl` locking to avoid cross-controller lock starvation and predictable temp-file security risks.
+
+### Bug Fixes
+- **`unifi_user_certificate`**: Match certificates using exact name or `{name}-{fingerprint}` to prevent broad prefix matching from deleting unrelated certificates.
+- **`unifi_switch_profile_assignment`**: Add `state: absent` support in fallback direct port overrides mode.
+- **`resource_matching`**: Add ambiguity checks across all modules to fail explicitly when multiple resources share the same name rather than silently mutating the first match.
+- **`packaging`**: Include `requirements.txt` with upper-bounded dependency versions in Ansible Galaxy collection builds, and add `unifi_nat_rule` to `action_groups.unifi`.
+
 ## 0.0.23
 
 ### Bug Fixes

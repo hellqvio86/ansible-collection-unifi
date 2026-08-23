@@ -31,7 +31,11 @@ options:
   validate_certs:
     description: Validate TLS certificates on the controller.
     type: bool
-    default: false
+    default: true
+  ca_path:
+    description: Path to CA bundle file for TLS verification.
+    type: path
+    required: false
   unifi_session_cookie:
     description: Pre-authenticated session cookie (skips login step).
     type: str
@@ -167,9 +171,7 @@ def _resolve_network_id(api: UnifiAPI, site: str, name: str) -> str:
         None,
     )
     if match is None:
-        api.module.fail_json(
-            msg=f"Network '{name}' not found in networkconf — check the outbound_interface value"
-        )
+        api.module.fail_json(msg=f"Network '{name}' not found in networkconf — check the outbound_interface value")
     return str(match["_id"])
 
 
@@ -209,12 +211,12 @@ def _rules_differ(current: dict[str, Any], desired: dict[str, Any]) -> bool:
     return False
 
 
-def _find_rule(rules: list[Any], name: str) -> dict[str, Any] | None:
-    """Return the first rule dict whose name matches, or None."""
-    return next(
-        (r for r in rules if isinstance(r, dict) and r.get("name") == name),
-        None,
-    )
+def _find_rule(module: AnsibleModule, rules: list[Any], name: str) -> dict[str, Any] | None:
+    """Return the rule dict whose name matches, failing if multiple rules match."""
+    matches = [r for r in rules if isinstance(r, dict) and r.get("name") == name]
+    if len(matches) > 1:
+        module.fail_json(msg=f"Ambiguous resource: multiple NAT rules match name '{name}'")
+    return matches[0] if matches else None
 
 
 def run_module() -> None:
@@ -223,7 +225,8 @@ def run_module() -> None:
         username=dict(type="str", no_log=True),
         password=dict(type="str", no_log=True),
         site=dict(type="str", default="default"),
-        validate_certs=dict(type="bool", default=False),
+        validate_certs=dict(type="bool", default=True),
+        ca_path=dict(type="path", required=False),
         unifi_session_cookie=dict(type="str", no_log=True, required=False),
         unifi_csrf_token=dict(type="str", no_log=True, required=False),
         state=dict(type="str", choices=["present", "absent"], default="present"),
@@ -247,6 +250,7 @@ def run_module() -> None:
         module.params["validate_certs"],
         module.params.get("unifi_session_cookie"),
         module.params.get("unifi_csrf_token"),
+        ca_path=module.params.get("ca_path"),
     )
     api.login()
 
@@ -261,7 +265,7 @@ def run_module() -> None:
     if info["status"] not in [200, 204]:
         module.fail_json(msg="Failed to fetch NAT rules", info=info)
 
-    current = _find_rule(api.as_list(res), name)
+    current = _find_rule(module, api.as_list(res), name)
 
     # --- absent ---
     if state == "absent":

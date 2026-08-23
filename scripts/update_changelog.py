@@ -9,6 +9,7 @@ def run_cmd(args, cwd=None):
     res = subprocess.run(args, capture_output=True, text=True, cwd=cwd)
     return res.stdout.strip(), res.stderr.strip(), res.returncode
 
+
 def get_current_version():
     if not os.path.exists("galaxy.yml"):
         return None
@@ -17,6 +18,7 @@ def get_current_version():
             if line.startswith("version:"):
                 return line.split(":")[1].strip()
     return None
+
 
 def get_changelog_versions():
     versions = []
@@ -28,6 +30,7 @@ def get_changelog_versions():
             if m:
                 versions.append(m.group(1))
     return versions
+
 
 def get_start_commit(prev_version):
     # 1. Check if tag v{prev_version} exists
@@ -51,6 +54,7 @@ def get_start_commit(prev_version):
     out, _, rc = run_cmd(["git", "rev-list", "--max-parents=0", "HEAD"])
     return out.strip() if out else "HEAD"
 
+
 def parse_commits(start_commit):
     out, _, rc = run_cmd(["git", "log", f"{start_commit}..HEAD", "--oneline"])
     if rc != 0 or not out:
@@ -64,10 +68,11 @@ def parse_commits(start_commit):
         commits.append(subj)
     return commits
 
+
 def categorize_commits(commits):
     # Conventional commit regex: type(scope): description
     pattern = re.compile(r"^(\w+)(?:\(([^)]+)\))?:\s*(.*)$")
-    
+
     categories = {
         "New Features": [],
         "Bug Fixes": [],
@@ -75,31 +80,35 @@ def categorize_commits(commits):
         "Dependencies": [],
         "Test Coverage": [],
         "CI/CD": [],
-        "Other Changes": []
+        "Other Changes": [],
     }
-    
+
     for commit in commits:
         commit = commit.strip()
         # Skip branch merges or release bumps
-        if commit.startswith("Merge pull request") or commit.startswith("Merge branch") or "bump version" in commit.lower():
+        if (
+            commit.startswith("Merge pull request")
+            or commit.startswith("Merge branch")
+            or "bump version" in commit.lower()
+        ):
             continue
-            
+
         m = pattern.match(commit)
         if m:
             ctype, scope, desc = m.groups()
             ctype = ctype.lower()
-            
+
             desc = desc.strip()
             if desc:
                 desc = desc[0].upper() + desc[1:]
                 if not desc.endswith("."):
                     desc += "."
-            
+
             if scope:
                 formatted = f"- **`{scope}`**: {desc}"
             else:
                 formatted = f"- {desc}"
-                
+
             if ctype == "feat":
                 categories["New Features"].append(formatted)
             elif ctype == "fix":
@@ -123,13 +132,14 @@ def categorize_commits(commits):
                 if not desc.endswith("."):
                     desc += "."
             categories["Other Changes"].append(f"- {desc}")
-            
+
     return categories
+
 
 def generate_section(version, categories):
     lines = [f"## {version}", ""]
     has_content = False
-    
+
     for cat, items in categories.items():
         if items:
             has_content = True
@@ -137,21 +147,22 @@ def generate_section(version, categories):
             for item in items:
                 lines.append(item)
             lines.append("")
-            
+
     if not has_content:
         lines.append("- No changes recorded.")
         lines.append("")
-        
+
     return "\n".join(lines)
+
 
 def update_changelog():
     version = get_current_version()
     if not version:
         print("Error: Could not find version in galaxy.yml")
         sys.exit(1)
-        
+
     versions_in_log = get_changelog_versions()
-    
+
     # Determine previous version
     if versions_in_log:
         if versions_in_log[0] == version:
@@ -160,14 +171,14 @@ def update_changelog():
             prev_version = versions_in_log[0]
     else:
         prev_version = None
-        
+
     if not prev_version:
         start_commit = None
     else:
         start_commit = get_start_commit(prev_version)
-        
+
     print(f"Generating changelog for version {version} since {start_commit or 'first commit'}...")
-    
+
     if start_commit:
         commits = parse_commits(start_commit)
     else:
@@ -178,15 +189,15 @@ def update_changelog():
                 commit_hash = line.split()[0]
                 subj, _, _ = run_cmd(["git", "show", "-s", "--format=%s", commit_hash])
                 commits.append(subj)
-                
+
     categories = categorize_commits(commits)
     new_section = generate_section(version, categories)
-    
+
     changelog_content = ""
     if os.path.exists("CHANGELOG.md"):
         with open("CHANGELOG.md") as f:
             changelog_content = f.read()
-            
+
     if f"## {version}" in changelog_content:
         pattern = r"(##\s+" + re.escape(version) + r".*?)(?=\n##\s+|\Z)"
         updated_content = re.sub(pattern, new_section.strip(), changelog_content, flags=re.DOTALL)
@@ -196,11 +207,12 @@ def update_changelog():
             updated_content = parts[0] + "# Changelog\n\n" + new_section + parts[1].lstrip()
         else:
             updated_content = "# Changelog\n\n" + new_section + changelog_content
-            
+
     with open("CHANGELOG.md", "w") as f:
         f.write(updated_content)
-        
+
     print("CHANGELOG.md updated successfully.")
+
 
 if __name__ == "__main__":
     update_changelog()

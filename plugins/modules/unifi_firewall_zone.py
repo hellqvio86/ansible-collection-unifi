@@ -29,8 +29,12 @@ options:
         type: str
     validate_certs:
         description: Verify SSL certificates.
-        default: false
+        default: true
         type: bool
+    ca_path:
+        description: Path to CA bundle file for TLS verification.
+        required: false
+        type: path
     state:
         description: Whether the firewall zone should be present or absent.
         choices: [ present, absent ]
@@ -77,7 +81,8 @@ def run_module():
         username=dict(type="str", no_log=True),
         password=dict(type="str", no_log=True),
         site=dict(type="str", default="default"),
-        validate_certs=dict(type="bool", default=False),
+        validate_certs=dict(type="bool", default=True),
+        ca_path=dict(type="path", required=False),
         unifi_session_cookie=dict(type="str", no_log=True, required=False),
         unifi_csrf_token=dict(type="str", no_log=True, required=False),
         state=dict(type="str", choices=["present", "absent"], default="present"),
@@ -96,6 +101,7 @@ def run_module():
         module.params["validate_certs"],
         module.params.get("unifi_session_cookie"),
         module.params.get("unifi_csrf_token"),
+        ca_path=module.params.get("ca_path"),
     )
     api.login()
 
@@ -107,7 +113,10 @@ def run_module():
     if res is None:
         module.fail_json(msg="Failed to fetch firewall zones", info=info)
 
-    existing = next((z for z in zones if z.get("name") == module.params["name"]), None)
+    matches = [z for z in zones if isinstance(z, dict) and z.get("name") == module.params["name"]]
+    if len(matches) > 1:
+        module.fail_json(msg=f"Ambiguous resource: multiple firewall zones match name '{module.params['name']}'")
+    existing = matches[0] if matches else None
 
     # Build payload
     desired_payload = {

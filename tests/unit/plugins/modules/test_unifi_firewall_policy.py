@@ -200,3 +200,72 @@ def test_firewall_policy_create_icmp():
         mock_module.exit_json.assert_called_once()
         args, kwargs = mock_module.exit_json.call_args
         assert kwargs["changed"] is True
+
+
+def test_firewall_policy_ambiguous_match_fails():
+    params = {
+        "host": "192.0.2.1",
+        "username": "admin",
+        "password": "password",
+        "site": "default",
+        "validate_certs": False,
+        "state": "present",
+        "name": "Duplicate Policy",
+        "action": "ALLOW",
+        "protocol": "all",
+        "index": 10000,
+        "enabled": True,
+        "logging": False,
+        "source": {"zone": "Internal"},
+        "destination": {"zone": "Internal"},
+        "policies": None,
+    }
+
+    with (
+        patch(
+            "ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_policy.AnsibleModule"
+        ) as mock_module_class,
+        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_policy.UnifiAPI") as mock_api_class,
+    ):
+        mock_module = mock_module_class.return_value
+        mock_module.params = params
+        mock_module.check_mode = False
+        mock_module.fail_json.side_effect = Exception("fail_json called")
+
+        mock_api = mock_api_class.return_value
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
+
+        mock_api.request.side_effect = [
+            ([{"name": "Internal", "_id": "zone123"}], {"status": 200}),
+            ([], {"status": 200}),
+            (
+                [
+                    {
+                        "name": "Duplicate Policy",
+                        "_id": "dup1",
+                        "source": {"zone_id": "zone123"},
+                        "destination": {"zone_id": "zone123"},
+                    },
+                    {
+                        "name": "Duplicate Policy",
+                        "_id": "dup2",
+                        "source": {"zone_id": "zone123"},
+                        "destination": {"zone_id": "zone123"},
+                    },
+                ],
+                {"status": 200},
+            ),
+        ]
+
+        import pytest
+
+        with pytest.raises(Exception, match="fail_json called"):
+            run_module()
+
+        mock_module.fail_json.assert_called_once()
+        args, kwargs = mock_module.fail_json.call_args
+        assert "ambiguous" in kwargs["msg"].lower()

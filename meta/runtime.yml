@@ -8,6 +8,7 @@ action_groups:
     - unifi_firewall_policy
     - unifi_firewall_zone
     - unifi_info
+    - unifi_nat_rule
     - unifi_port_forward
     - unifi_port_profile
     - unifi_rsyslog

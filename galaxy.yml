@@ -29,7 +29,6 @@ build_ignore:
   - ".ruff_cache"
   - ".pytest_cache"
   - "releases"
-  - "requirements.txt"
   - "pyproject.toml"
   - ".ansible"
   - "test_output.txt"

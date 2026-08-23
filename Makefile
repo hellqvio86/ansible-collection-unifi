@@ -1,4 +1,4 @@
-.PHONY: venv test lint format clean help build publish
+.PHONY: venv test lint format clean help build publish smoke-test
 
 VENV := .venv
 PYTHON := $(VENV)/bin/python
@@ -13,15 +13,21 @@ COLLECTION_NAME := unifi
 VERSION ?= $(shell grep '^version:' galaxy.yml | awk '{print $$2}')
 GALAXY_API_KEY ?=
 
+export ANSIBLE_HOME ?= $(CURDIR)/.ansible
+export ANSIBLE_LOCAL_TEMP ?= $(CURDIR)/.ansible/tmp
+export ANSIBLE_REMOTE_TMP ?= $(CURDIR)/.ansible/tmp
+export ANSIBLE_COLLECTIONS_PATH ?= $(CURDIR)/.ansible/collections:$(CURDIR)
+
 help:
 	@echo "Available targets:"
-	@echo "  venv       Create virtual environment and install dependencies"
-	@echo "  test       Run unit tests"
-	@echo "  lint       Run ruff and ansible-lint"
-	@echo "  format     Run ruff format"
-	@echo "  clean      Remove virtual environment and cache files"
-	@echo "  build      Build the Ansible collection tarball"
-	@echo "  publish    Publish the collection to Ansible Galaxy"
+	@echo "  venv        Create virtual environment and install dependencies"
+	@echo "  test        Run unit tests"
+	@echo "  lint        Run ruff and ansible-lint"
+	@echo "  format      Run ruff format"
+	@echo "  clean       Remove virtual environment and cache files"
+	@echo "  build       Build the Ansible collection tarball"
+	@echo "  smoke-test  Build and test installation into clean location"
+	@echo "  publish     Publish the collection to Ansible Galaxy"
 
 $(VENV):
 	python3 -m venv $(VENV)
@@ -43,7 +49,7 @@ test: venv setup-structure
 
 lint: venv setup-structure
 	$(RUFF) check .
-	$(ANSIBLE_LINT) .
+	ANSIBLE_HOME=.ansible ANSIBLE_LOCAL_TEMP=.ansible/tmp $(ANSIBLE_LINT) .
 
 format: venv
 	$(RUFF) format .
@@ -61,10 +67,14 @@ build: venv
 	@mkdir -p releases
 	$(VENV)/bin/ansible-galaxy collection build --force --output-path releases/
 
+smoke-test: build
+	@echo "Testing collection installation from build artifact..."
+	$(VENV)/bin/ansible-galaxy collection install releases/$(NAMESPACE)-$(COLLECTION_NAME)-$(VERSION).tar.gz --force
+
 publish: build
-	@if [ -z "$(GALAXY_API_KEY)" ]; then \
+	@if [ -z "$(GALAXY_API_KEY)" ] && [ -z "$$ANSIBLE_GALAXY_API_KEY" ]; then \
 		echo "Error: GALAXY_API_KEY environment variable is not set."; \
 		echo "Usage: make publish GALAXY_API_KEY=your_api_key [VERSION=0.0.3]"; \
 		exit 1; \
 	fi
-	$(VENV)/bin/ansible-galaxy collection publish releases/$(NAMESPACE)-$(COLLECTION_NAME)-$(VERSION).tar.gz --api-key $(GALAXY_API_KEY)
+	ANSIBLE_GALAXY_API_KEY=$${ANSIBLE_GALAXY_API_KEY:-$(GALAXY_API_KEY)} $(VENV)/bin/ansible-galaxy collection publish releases/$(NAMESPACE)-$(COLLECTION_NAME)-$(VERSION).tar.gz

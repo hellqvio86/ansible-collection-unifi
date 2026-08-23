@@ -57,6 +57,8 @@ def test_info_wifi_subset_default():
         assert "wifi" in info
         assert len(info["wifi"]) == 1
         assert info["wifi"][0]["network"] == "Default"
+        assert "passphrase" not in info["wifi"][0]
+        assert "x_passphrase" not in info["wifi"][0]
 
 
 def test_info_networks():

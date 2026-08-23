@@ -29,8 +29,12 @@ options:
         type: str
     validate_certs:
         description: Verify SSL certificates.
-        default: false
+        default: true
         type: bool
+    ca_path:
+        description: Path to CA bundle file for TLS verification.
+        required: false
+        type: path
     state:
         description: Whether the policy should be present or absent.
         choices: [ present, absent ]
@@ -119,7 +123,9 @@ def run_module():
         protocol=dict(type="str", choices=["all", "tcp", "udp", "tcp_udp", "icmp", "icmpv6"], default="all"),
         ip_version=dict(type="str", choices=["BOTH", "IPV4", "IPV6"], required=False),
         connection_state_type=dict(type="str", choices=["ALL", "RESPOND_ONLY", "CUSTOM"], default="ALL"),
-        connection_states=dict(type="list", elements="str", choices=["NEW", "ESTABLISHED", "RELATED", "INVALID"], default=[]),
+        connection_states=dict(
+            type="list", elements="str", choices=["NEW", "ESTABLISHED", "RELATED", "INVALID"], default=[]
+        ),
         create_allow_respond=dict(type="bool", required=False),
         index=dict(type="int", default=10000),
         enabled=dict(type="bool", default=True),
@@ -132,7 +138,8 @@ def run_module():
         username=dict(type="str", no_log=True),
         password=dict(type="str", no_log=True),
         site=dict(type="str", default="default"),
-        validate_certs=dict(type="bool", default=False),
+        validate_certs=dict(type="bool", default=True),
+        ca_path=dict(type="path", required=False),
         unifi_session_cookie=dict(type="str", no_log=True, required=False),
         unifi_csrf_token=dict(type="str", no_log=True, required=False),
         policies=dict(type="list", elements="dict", options=policy_spec),
@@ -142,7 +149,9 @@ def run_module():
         protocol=dict(type="str", choices=["all", "tcp", "udp", "tcp_udp", "icmp", "icmpv6"], default="all"),
         ip_version=dict(type="str", choices=["BOTH", "IPV4", "IPV6"], required=False),
         connection_state_type=dict(type="str", choices=["ALL", "RESPOND_ONLY", "CUSTOM"], default="ALL"),
-        connection_states=dict(type="list", elements="str", choices=["NEW", "ESTABLISHED", "RELATED", "INVALID"], default=[]),
+        connection_states=dict(
+            type="list", elements="str", choices=["NEW", "ESTABLISHED", "RELATED", "INVALID"], default=[]
+        ),
         create_allow_respond=dict(type="bool", required=False),
         index=dict(type="int", default=10000),
         enabled=dict(type="bool", default=True),
@@ -168,6 +177,7 @@ def run_module():
         validate_certs,
         module.params.get("unifi_session_cookie"),
         module.params.get("unifi_csrf_token"),
+        ca_path=module.params.get("ca_path"),
     )
     api.login()
 
@@ -245,7 +255,7 @@ def apply_policy(module, api, site, zone_map, network_map, policies, desired):
             available_zones=list(zone_map.keys()),
         )
 
-    existing = None
+    matches = []
     for policy in policies:
         if not isinstance(policy, dict):
             continue
@@ -254,8 +264,14 @@ def apply_policy(module, api, site, zone_map, network_map, policies, desired):
             and policy.get("source", {}).get("zone_id") == src_zone_id
             and policy.get("destination", {}).get("zone_id") == dst_zone_id
         ):
-            existing = policy
-            break
+            matches.append(policy)
+
+    if len(matches) > 1:
+        module.fail_json(
+            msg=f"Ambiguous resource: multiple firewall policies match name '{desired['name']}' with source zone '{src_params['zone']}' and destination zone '{dst_params['zone']}'",
+            name=desired["name"],
+        )
+    existing = matches[0] if matches else None
 
     connection_state_type = desired.get("connection_state_type", "ALL")
     connection_states = desired.get("connection_states", [])
@@ -387,7 +403,16 @@ def policy_needs_update(existing, desired_payload):
             return "ips"
         return None
 
-    for key in ["action", "protocol", "ip_version", "index", "enabled", "logging", "connection_state_type", "create_allow_respond"]:
+    for key in [
+        "action",
+        "protocol",
+        "ip_version",
+        "index",
+        "enabled",
+        "logging",
+        "connection_state_type",
+        "create_allow_respond",
+    ]:
         if existing.get(key) != desired_payload[key]:
             return True
 

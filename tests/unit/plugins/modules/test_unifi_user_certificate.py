@@ -118,7 +118,17 @@ def test_cert_no_change():
         )
 
         mock_api.request.side_effect = [
-            ([{"id": "cert1", "name": "mycert", "active": True, "fingerprint": "8F:CA:BE:9D:1E:82:41:04:27:6C:67:AE:EB:A2:B9:52:0D:34:E5:9C"}], {"status": 200}),
+            (
+                [
+                    {
+                        "id": "cert1",
+                        "name": "mycert",
+                        "active": True,
+                        "fingerprint": "8F:CA:BE:9D:1E:82:41:04:27:6C:67:AE:EB:A2:B9:52:0D:34:E5:9C",
+                    }
+                ],
+                {"status": 200},
+            ),
         ]
 
         run_module()
@@ -162,7 +172,17 @@ def test_cert_activate_existing():
         )
 
         mock_api.request.side_effect = [
-            ([{"id": "cert1", "name": "mycert", "active": False, "fingerprint": "8F:CA:BE:9D:1E:82:41:04:27:6C:67:AE:EB:A2:B9:52:0D:34:E5:9C"}], {"status": 200}),
+            (
+                [
+                    {
+                        "id": "cert1",
+                        "name": "mycert",
+                        "active": False,
+                        "fingerprint": "8F:CA:BE:9D:1E:82:41:04:27:6C:67:AE:EB:A2:B9:52:0D:34:E5:9C",
+                    }
+                ],
+                {"status": 200},
+            ),
             ({"id": "cert1", "name": "mycert", "active": True}, {"status": 200}),
         ]
 
@@ -347,3 +367,53 @@ def test_cert_check_mode():
         mock_module.exit_json.assert_called_once()
         kwargs = mock_module.exit_json.call_args[1]
         assert kwargs["changed"] is True
+
+
+def test_cert_absent_does_not_delete_prefix_matches():
+    params = {
+        "host": "192.0.2.1",
+        "username": "admin",
+        "password": "password",
+        "site": "default",
+        "validate_certs": False,
+        "state": "absent",
+        "name": "prod",
+    }
+
+    with (
+        patch(
+            "ansible_collections.hellqvio86.unifi.plugins.modules.unifi_user_certificate.AnsibleModule"
+        ) as mock_module_class,
+        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_user_certificate.UnifiAPI") as mock_api_class,
+    ):
+        mock_module = mock_module_class.return_value
+        mock_module.params = params
+        mock_module.check_mode = False
+        mock_module.fail_json.side_effect = Exception("fail_json")
+
+        mock_api = mock_api_class.return_value
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
+
+        # existing certificates have "production", "prod-backup", "prod-old"
+        mock_api.request.side_effect = [
+            (
+                [
+                    {"id": "cert-prod1", "name": "production"},
+                    {"id": "cert-prod2", "name": "prod-backup"},
+                    {"id": "cert-prod3", "name": "prod-old"},
+                ],
+                {"status": 200},
+            ),
+        ]
+
+        run_module()
+
+        # Should only fetch /api/userCertificates and NOT issue DELETE calls
+        assert mock_api.request.call_count == 1
+        mock_module.exit_json.assert_called_once()
+        kwargs = mock_module.exit_json.call_args[1]
+        assert kwargs["changed"] is False

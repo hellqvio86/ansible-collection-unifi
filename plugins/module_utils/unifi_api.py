@@ -1,18 +1,19 @@
 import base64
 import json
 import os
+import re
+import time
+from http.cookies import SimpleCookie
+from typing import Any
 
 from ansible.module_utils.urls import fetch_url
 
 try:
-    import jwt  # noqa: F401
+    import jwt
 
     HAS_JWT = True
 except ImportError:
     HAS_JWT = False
-
-
-from typing import Any
 
 
 class UnifiAPI:
@@ -25,6 +26,7 @@ class UnifiAPI:
         validate_certs: bool | None = None,
         session_cookie: str | None = None,
         csrf_token: str | None = None,
+        ca_path: str | None = None,
     ) -> None:
         self.module = module
 
@@ -33,13 +35,14 @@ class UnifiAPI:
         self.username = username or os.environ.get("UNIFI_USERNAME")
         self.password = password or os.environ.get("UNIFI_PASSWORD")
 
-        # Handle validate_certs fallback
+        # Handle validate_certs fallback (defaults to True for security)
         if validate_certs is not None:
             self.validate_certs = validate_certs
         else:
-            env_val = os.environ.get("UNIFI_VALIDATE_CERTS", "false").lower()
+            env_val = os.environ.get("UNIFI_VALIDATE_CERTS", "true").lower()
             self.validate_certs = env_val in ["true", "1", "yes", "on"]
 
+        self.ca_path = ca_path or os.environ.get("UNIFI_CA_PATH")
         self.session_cookie = session_cookie
         self.csrf_token = csrf_token
 
@@ -50,31 +53,32 @@ class UnifiAPI:
 
         self.base_url = f"https://{self.host}"
 
-        # Ensure the module has the validate_certs parameter set as expected by fetch_url
+        # Ensure the module has the validate_certs and ca_path parameters set as expected by fetch_url
         if hasattr(self.module, "params"):
             self.module.params["validate_certs"] = self.validate_certs
+            if self.ca_path:
+                self.module.params["ca_path"] = self.ca_path
 
     def _fetch_with_retry(self, url: str, method: str, headers: dict[str, str], payload: str | None):
-        import fcntl
-        import time
-
         retries = 5
         backoff = 2
 
-        lock_file = "/tmp/ansible_unifi_api.lock"
-        with open(lock_file, "w") as lock_fd:
-            fcntl.flock(lock_fd, fcntl.LOCK_EX)
-            try:
-                for attempt in range(retries + 1):
-                    response, info = fetch_url(self.module, url, data=payload, method=method, headers=headers, timeout=30)
-                    if info.get("status") != 429:
-                        return response, info
-                    if attempt < retries:
-                        time.sleep(backoff)
-                        backoff *= 2
+        for attempt in range(retries + 1):
+            response, info = fetch_url(
+                self.module,
+                url,
+                data=payload,
+                method=method,
+                headers=headers,
+                timeout=30,
+                ca_path=self.ca_path,
+            )
+            if info.get("status") != 429:
                 return response, info
-            finally:
-                fcntl.flock(lock_fd, fcntl.LOCK_UN)
+            if attempt < retries:
+                time.sleep(backoff)
+                backoff *= 2
+        return response, info
 
     def login(self) -> bool:
         if self.session_cookie and self.csrf_token:
@@ -94,7 +98,7 @@ class UnifiAPI:
             login_payload,
         )
 
-        if info["status"] != 200:
+        if info.get("status") != 200:
             status = info.get("status")
             if status == 429:
                 self.module.fail_json(
@@ -112,21 +116,50 @@ class UnifiAPI:
             self.module.fail_json(msg=f"Login failed: {info.get('msg', 'Unknown error')}", info=info)
 
         # Extract Cookies
-        cookies = info.get("set-cookie", "")
-        self.session_cookie = cookies
+        set_cookie_raw = info.get("set-cookie") or info.get("Set-Cookie") or ""
+        if isinstance(set_cookie_raw, list):
+            cookie_str = "; ".join(set_cookie_raw)
+        else:
+            cookie_str = str(set_cookie_raw)
+        self.session_cookie = cookie_str
 
         # Extract CSRF Token from JWT in TOKEN cookie
-        token_cookie = [c for c in cookies.split(",") if "TOKEN=" in c]
-        if token_cookie:
-            token_val = token_cookie[0].split("TOKEN=")[1].split(";")[0]
-            try:
-                # We don't verify the signature here as we just need the payload for CSRF
-                payload_b64 = token_val.split(".")[1]
-                padding = "=" * (4 - len(payload_b64) % 4)
-                payload = json.loads(base64.b64decode(payload_b64 + padding).decode("utf-8"))
-                self.csrf_token = payload.get("csrfToken")
-            except Exception as e:
-                self.module.fail_json(msg=f"Failed to decode JWT for CSRF: {str(e)}")
+        token_val = None
+        cookie_jar = SimpleCookie()
+        try:
+            cookie_jar.load(cookie_str)
+            if "TOKEN" in cookie_jar:
+                token_val = cookie_jar["TOKEN"].value
+        except Exception:
+            pass
+
+        if not token_val:
+            m = re.search(r"(?:^|;\s*|\b)TOKEN=([^;]+)", cookie_str)
+            if m:
+                token_val = m.group(1)
+
+        if token_val:
+            decoded = False
+            if HAS_JWT:
+                try:
+                    payload = jwt.decode(token_val, options={"verify_signature": False})
+                    self.csrf_token = payload.get("csrfToken")
+                    decoded = True
+                except Exception:
+                    pass
+
+            if not decoded:
+                try:
+                    parts = token_val.split(".")
+                    if len(parts) >= 2:
+                        payload_b64 = parts[1]
+                        padding = "=" * ((4 - len(payload_b64) % 4) % 4)
+                        payload_bytes = base64.urlsafe_b64decode(payload_b64 + padding)
+                        payload = json.loads(payload_bytes.decode("utf-8"))
+                        self.csrf_token = payload.get("csrfToken")
+                        decoded = True
+                except Exception as e:
+                    self.module.fail_json(msg=f"Failed to decode JWT for CSRF: {str(e)}")
 
         return True
 
@@ -150,7 +183,7 @@ class UnifiAPI:
             }
             response, info = self._fetch_with_retry(url, method, headers, payload)
 
-        if info["status"] not in [200, 201, 204]:
+        if info.get("status") not in [200, 201, 204]:
             return None, info
 
         if response is None:

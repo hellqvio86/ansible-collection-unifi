@@ -15,7 +15,8 @@ options:
     username: {type: str, required: false}
     password: {type: str, required: false}
     site: {type: str, default: default}
-    validate_certs: {type: bool, default: false}
+    validate_certs: {type: bool, default: true}
+    ca_path: {type: path, required: false}
     state: {type: str, choices: [present, absent], default: present}
     switch_name: {type: str}
     switch_mac: {type: str}
@@ -77,7 +78,8 @@ def run_module():
             username=dict(type="str", no_log=True),
             password=dict(type="str", no_log=True),
             site=dict(type="str", default="default"),
-            validate_certs=dict(type="bool", default=False),
+            validate_certs=dict(type="bool", default=True),
+            ca_path=dict(type="path", required=False),
             unifi_session_cookie=dict(type="str", no_log=True, required=False),
             unifi_csrf_token=dict(type="str", no_log=True, required=False),
             state=dict(type="str", choices=["present", "absent"], default="present"),
@@ -100,6 +102,7 @@ def run_module():
         module.params["validate_certs"],
         module.params.get("unifi_session_cookie"),
         module.params.get("unifi_csrf_token"),
+        ca_path=module.params.get("ca_path"),
     )
     api.login()
     site = module.params["site"]
@@ -127,6 +130,7 @@ def run_module():
 
         for item in desired_items:
             profile_name = item.get("profile_name")
+            desired_state = item.get("state", "present")
             # Find the profile definition
             prof_def = next((p for p in desired_profiles if p.get("name") == profile_name), None)
             if not prof_def:
@@ -158,45 +162,59 @@ def run_module():
             overrides_changed = False
             desired_overrides = prof_def.get("port_profile_overrides") or {}
 
-            for port_idx_str, port_prof_name in desired_overrides.items():
-                port_idx = int(port_idx_str)
-                # Resolve port profile name to ID
-                if port_prof_name not in portconf_map:
-                    module.fail_json(
-                        msg=f"Port profile '{port_prof_name}' not found for port {port_idx} in switch profile '{profile_name}'"
-                    )
-                profile_id = portconf_map[port_prof_name]
-
-                # Find if there is an existing override for this port_idx
-                existing_override = next((o for o in updated_overrides if o.get("port_idx") == port_idx), None)
-                if existing_override:
-                    desired_poe = "auto" if port_idx in [1, 12] else existing_override.get("poe_mode", "auto")
-
-                    # Clean up keys that would conflict with the assigned profile's network settings.
-                    # If these keys exist in the port override, they will override the profile configuration.
-                    conflicting_keys = ["tagged_vlan_mgmt", "forward", "native_networkconf_id", "voice_networkconf_id"]
-                    has_conflicting = any(k in existing_override for k in conflicting_keys)
-
-                    if (
-                        existing_override.get("portconf_id") != profile_id
-                        or existing_override.get("poe_mode") != desired_poe
-                        or has_conflicting
-                    ):
-                        existing_override["portconf_id"] = profile_id
-                        existing_override["poe_mode"] = desired_poe
-                        existing_override["setting_preference"] = "manual"
-                        for k in conflicting_keys:
-                            existing_override.pop(k, None)
+            if desired_state == "absent":
+                for port_idx_str, port_prof_name in desired_overrides.items():
+                    port_idx = int(port_idx_str)
+                    profile_id = portconf_map.get(port_prof_name)
+                    existing_override = next((o for o in updated_overrides if o.get("port_idx") == port_idx), None)
+                    if existing_override and (profile_id is None or existing_override.get("portconf_id") == profile_id):
+                        updated_overrides.remove(existing_override)
                         overrides_changed = True
-                else:
-                    new_override = {
-                        "port_idx": port_idx,
-                        "portconf_id": profile_id,
-                        "setting_preference": "manual",
-                        "poe_mode": "auto",
-                    }
-                    updated_overrides.append(new_override)
-                    overrides_changed = True
+            else:
+                for port_idx_str, port_prof_name in desired_overrides.items():
+                    port_idx = int(port_idx_str)
+                    # Resolve port profile name to ID
+                    if port_prof_name not in portconf_map:
+                        module.fail_json(
+                            msg=f"Port profile '{port_prof_name}' not found for port {port_idx} in switch profile '{profile_name}'"
+                        )
+                    profile_id = portconf_map[port_prof_name]
+
+                    # Find if there is an existing override for this port_idx
+                    existing_override = next((o for o in updated_overrides if o.get("port_idx") == port_idx), None)
+                    if existing_override:
+                        desired_poe = "auto" if port_idx in [1, 12] else existing_override.get("poe_mode", "auto")
+
+                        # Clean up keys that would conflict with the assigned profile's network settings.
+                        # If these keys exist in the port override, they will override the profile configuration.
+                        conflicting_keys = [
+                            "tagged_vlan_mgmt",
+                            "forward",
+                            "native_networkconf_id",
+                            "voice_networkconf_id",
+                        ]
+                        has_conflicting = any(k in existing_override for k in conflicting_keys)
+
+                        if (
+                            existing_override.get("portconf_id") != profile_id
+                            or existing_override.get("poe_mode") != desired_poe
+                            or has_conflicting
+                        ):
+                            existing_override["portconf_id"] = profile_id
+                            existing_override["poe_mode"] = desired_poe
+                            existing_override["setting_preference"] = "manual"
+                            for k in conflicting_keys:
+                                existing_override.pop(k, None)
+                            overrides_changed = True
+                    else:
+                        new_override = {
+                            "port_idx": port_idx,
+                            "portconf_id": profile_id,
+                            "setting_preference": "manual",
+                            "poe_mode": "auto",
+                        }
+                        updated_overrides.append(new_override)
+                        overrides_changed = True
 
             if overrides_changed:
                 changed = True

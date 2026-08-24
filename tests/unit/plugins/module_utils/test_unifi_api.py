@@ -29,7 +29,7 @@ def test_unifi_api_login_success():
         api.login()
 
     assert api.csrf_token == "fake-csrf-token"
-    assert api.session_cookie == f"TOKEN={jwt_token}; Path=/; HttpOnly"
+    assert api.session_cookie == f"TOKEN={jwt_token}"
 
 
 def test_unifi_api_request():
@@ -98,6 +98,15 @@ def test_unifi_api_cookie_list_parsing():
     assert api.csrf_token == "jwt-csrf-456"
     assert "TOKEN=" in api.session_cookie
     assert "SESSION=" in api.session_cookie
+    assert "Path=/" not in api.session_cookie
+    assert "Secure" not in api.session_cookie
+
+
+def test_unifi_api_host_lock():
+    from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import _host_lock
+
+    with _host_lock("192.0.2.1"):
+        pass
 
 
 def test_unifi_api_request_401_relogin_retry():

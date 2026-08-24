@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.0.25
+
+### Security Fixes
+- **`unifi_api`**: Implement secure host-scoped rate-limit locking (`/tmp/ansible_unifi_{sha256(host)[:12]}.lock` with `0o600` permissions) to protect against concurrent login 429 rate limits without world-writable symlink vulnerabilities or cross-controller lock starvation.
+- **`unifi_ssl_config`**: Validate PEM certificates and private keys before touching filesystem or restarting `unifi-core`, and perform atomic SFTP temporary-file writes before rename.
+
+### Bug Fixes
+- **`unifi_api`**: Clean `Cookie` request headers to send only RFC 6265 compliant `name=value` pairs rather than raw `Set-Cookie` directives.
+- **`unifi_ssh_key`**: Support `state: absent`, default `keys` to `[]`, and guarantee deterministic SSH key ordering.
+- **`unifi_firewall_policy`**: Fail fast with clear error message when top-level `name` is omitted in single-policy mode, and add drift checks for `match_ip_sec`, `match_opposite_protocol`, `icmp_typename`, `icmp_v6_typename`, and `schedule`.
+- **`unifi_ssl_config`**: Support independent certificate or private key updates without `None` write errors.
+
 ## 0.0.24
 
 ### Security Fixes

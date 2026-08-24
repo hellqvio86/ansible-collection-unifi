@@ -33,13 +33,14 @@ options:
         required: false
         type: path
     keys:
-        description: List of SSH public keys to ensure are present.
+        description: List of SSH public keys to ensure are present or absent.
         required: false
         type: list
         elements: str
+        default: []
     state:
         description: Whether the keys should be present or absent.
-        choices: [ present ]
+        choices: [ present, absent ]
         default: present
         type: str
 author:
@@ -61,8 +62,8 @@ def run_module():
         ca_path=dict(type="path", required=False),
         unifi_session_cookie=dict(type="str", no_log=True, required=False),
         unifi_csrf_token=dict(type="str", no_log=True, required=False),
-        keys=dict(type="list", elements="str", required=False),
-        state=dict(type="str", choices=["present"], default="present"),
+        keys=dict(type="list", elements="str", required=False, default=[]),
+        state=dict(type="str", choices=["present", "absent"], default="present"),
     )
 
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
@@ -71,7 +72,8 @@ def run_module():
     username = module.params["username"]
     password = module.params["password"]
     validate_certs = module.params["validate_certs"]
-    desired_keys = module.params["keys"]
+    desired_keys = module.params.get("keys") or []
+    state = module.params["state"]
 
     # 1. Initialize API and Login
     api = UnifiAPI(
@@ -92,23 +94,28 @@ def run_module():
         module.fail_json(msg="Failed to fetch user info", info=info)
 
     current_keys = user_info.get("sshKeys", [])
-
-    # 3. Check for differences
-    # We want to ensure all desired_keys are in current_keys
-    missing_keys = [k for k in desired_keys if k not in current_keys]
-
+    new_key_list = current_keys
     changed = False
-    if missing_keys:
-        changed = True
-        new_key_list = list(set(current_keys + desired_keys))
 
-        if not module.check_mode:
-            # Update via PATCH /api/users/self
-            res, info = api.request("/api/users/self", method="PATCH", data={"sshKeys": new_key_list})
-            if info["status"] != 200:
-                module.fail_json(msg="Failed to update SSH keys", info=info)
+    # 3. Check for differences and update deterministically
+    if state == "present":
+        missing_keys = [k for k in desired_keys if k not in current_keys]
+        if missing_keys:
+            changed = True
+            new_key_list = list(dict.fromkeys(current_keys + desired_keys))
+    elif state == "absent":
+        keys_to_remove = [k for k in desired_keys if k in current_keys]
+        if keys_to_remove:
+            changed = True
+            new_key_list = [k for k in current_keys if k not in desired_keys]
 
-    module.exit_json(changed=changed, keys_count=len(current_keys if not changed else new_key_list))
+    if changed and not module.check_mode:
+        # Update via PATCH /api/users/self
+        res, info = api.request("/api/users/self", method="PATCH", data={"sshKeys": new_key_list})
+        if info["status"] != 200:
+            module.fail_json(msg="Failed to update SSH keys", info=info)
+
+    module.exit_json(changed=changed, keys_count=len(new_key_list))
 
 
 if __name__ == "__main__":

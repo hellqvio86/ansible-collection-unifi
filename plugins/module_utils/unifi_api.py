@@ -1,12 +1,22 @@
 import base64
+import hashlib
 import json
 import os
 import re
+import tempfile
 import time
+from contextlib import contextmanager
 from http.cookies import SimpleCookie
 from typing import Any
 
 from ansible.module_utils.urls import fetch_url
+
+try:
+    import fcntl
+
+    HAS_FCNTL = True
+except ImportError:
+    HAS_FCNTL = False
 
 try:
     import jwt
@@ -14,6 +24,32 @@ try:
     HAS_JWT = True
 except ImportError:
     HAS_JWT = False
+
+
+@contextmanager
+def _host_lock(host: str | None):
+    if not HAS_FCNTL or not host:
+        yield
+        return
+
+    host_hash = hashlib.sha256(host.encode("utf-8")).hexdigest()[:12]
+    lock_path = os.path.join(tempfile.gettempdir(), f"ansible_unifi_{host_hash}.lock")
+    lock_fd = None
+    try:
+        lock_fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o600)
+        fcntl.flock(lock_fd, fcntl.LOCK_EX)
+    except Exception:
+        pass
+
+    try:
+        yield
+    finally:
+        if lock_fd is not None:
+            try:
+                fcntl.flock(lock_fd, fcntl.LOCK_UN)
+                os.close(lock_fd)
+            except Exception:
+                pass
 
 
 class UnifiAPI:
@@ -91,75 +127,81 @@ class UnifiAPI:
         login_url = f"{self.base_url}/api/auth/login"
         login_payload = json.dumps({"username": self.username, "password": self.password})
 
-        response, info = self._fetch_with_retry(
-            login_url,
-            "POST",
-            {"Content-Type": "application/json"},
-            login_payload,
-        )
+        with _host_lock(self.host):
+            response, info = self._fetch_with_retry(
+                login_url,
+                "POST",
+                {"Content-Type": "application/json"},
+                login_payload,
+            )
 
-        if info.get("status") != 200:
-            status = info.get("status")
-            if status == 429:
-                self.module.fail_json(
-                    msg=(
-                        "UniFi login rate limit reached. Wait a few minutes before retrying; "
-                        "the module stops after this single login attempt."
-                    ),
-                    info=info,
-                )
-            if status in [401, 403]:
-                self.module.fail_json(
-                    msg="UniFi login failed: invalid credentials or account not permitted for local API login.",
-                    info=info,
-                )
-            self.module.fail_json(msg=f"Login failed: {info.get('msg', 'Unknown error')}", info=info)
+            if info.get("status") != 200:
+                status = info.get("status")
+                if status == 429:
+                    self.module.fail_json(
+                        msg=(
+                            "UniFi login rate limit reached. Wait a few minutes before retrying; "
+                            "the module stops after this single login attempt."
+                        ),
+                        info=info,
+                    )
+                if status in [401, 403]:
+                    self.module.fail_json(
+                        msg="UniFi login failed: invalid credentials or account not permitted for local API login.",
+                        info=info,
+                    )
+                self.module.fail_json(msg=f"Login failed: {info.get('msg', 'Unknown error')}", info=info)
 
-        # Extract Cookies
-        set_cookie_raw = info.get("set-cookie") or info.get("Set-Cookie") or ""
-        if isinstance(set_cookie_raw, list):
-            cookie_str = "; ".join(set_cookie_raw)
-        else:
-            cookie_str = str(set_cookie_raw)
-        self.session_cookie = cookie_str
+            # Extract Cookies and construct clean RFC 6265 Request Cookie header
+            set_cookie_raw = info.get("set-cookie") or info.get("Set-Cookie") or ""
+            cookie_list = set_cookie_raw if isinstance(set_cookie_raw, list) else [str(set_cookie_raw)]
+            raw_cookie_str = "; ".join(cookie_list)
 
-        # Extract CSRF Token from JWT in TOKEN cookie
-        token_val = None
-        cookie_jar = SimpleCookie()
-        try:
-            cookie_jar.load(cookie_str)
+            cookie_jar = SimpleCookie()
+            for item in cookie_list:
+                if item:
+                    try:
+                        cookie_jar.load(item)
+                    except Exception:
+                        pass
+
+            if cookie_jar:
+                self.session_cookie = "; ".join(f"{k}={v.value}" for k, v in cookie_jar.items())
+            else:
+                self.session_cookie = raw_cookie_str
+
+            # Extract CSRF Token from JWT in TOKEN cookie
+            token_val = None
             if "TOKEN" in cookie_jar:
                 token_val = cookie_jar["TOKEN"].value
-        except Exception:
-            pass
 
-        if not token_val:
-            m = re.search(r"(?:^|;\s*|\b)TOKEN=([^;]+)", cookie_str)
-            if m:
-                token_val = m.group(1)
+            if not token_val:
+                m = re.search(r"(?:^|;\s*|\b)TOKEN=([^;]+)", raw_cookie_str)
+                if m:
+                    token_val = m.group(1)
 
-        if token_val:
-            decoded = False
-            if HAS_JWT:
-                try:
-                    payload = jwt.decode(token_val, options={"verify_signature": False})
-                    self.csrf_token = payload.get("csrfToken")
-                    decoded = True
-                except Exception:
-                    pass
-
-            if not decoded:
-                try:
-                    parts = token_val.split(".")
-                    if len(parts) >= 2:
-                        payload_b64 = parts[1]
-                        padding = "=" * ((4 - len(payload_b64) % 4) % 4)
-                        payload_bytes = base64.urlsafe_b64decode(payload_b64 + padding)
-                        payload = json.loads(payload_bytes.decode("utf-8"))
+            if token_val:
+                decoded = False
+                if HAS_JWT:
+                    try:
+                        payload = jwt.decode(token_val, options={"verify_signature": False})
                         self.csrf_token = payload.get("csrfToken")
                         decoded = True
-                except Exception as e:
-                    self.module.fail_json(msg=f"Failed to decode JWT for CSRF: {str(e)}")
+                    except Exception:
+                        pass
+
+                if not decoded:
+                    try:
+                        parts = token_val.split(".")
+                        if len(parts) >= 2:
+                            payload_b64 = parts[1]
+                            padding = "=" * ((4 - len(payload_b64) % 4) % 4)
+                            payload_bytes = base64.urlsafe_b64decode(payload_b64 + padding)
+                            payload = json.loads(payload_bytes.decode("utf-8"))
+                            self.csrf_token = payload.get("csrfToken")
+                            decoded = True
+                    except Exception as e:
+                        self.module.fail_json(msg=f"Failed to decode JWT for CSRF: {str(e)}")
 
         return True
 

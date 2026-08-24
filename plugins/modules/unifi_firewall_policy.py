@@ -162,6 +162,9 @@ def run_module():
 
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
 
+    if not module.params.get("policies") and not module.params.get("name"):
+        module.fail_json(msg="Either name or policies is required")
+
     host = module.params["host"]
     username = module.params["username"]
     password = module.params["password"]
@@ -218,9 +221,6 @@ def run_module():
             "destination": module.params["destination"],
         }
     ]
-
-    if not module.params["policies"] and not module.params["name"]:
-        module.fail_json(msg="Either name or policies is required")
 
     for desired in desired_policies:
         policy_changed, result_policy = apply_policy(module, api, site, zone_map, network_map, policies, desired)
@@ -412,9 +412,16 @@ def policy_needs_update(existing, desired_payload):
         "logging",
         "connection_state_type",
         "create_allow_respond",
+        "match_ip_sec",
+        "match_opposite_protocol",
+        "icmp_typename",
+        "icmp_v6_typename",
     ]:
-        if existing.get(key) != desired_payload[key]:
+        if existing.get(key) != desired_payload.get(key):
             return True
+
+    if existing.get("schedule") != desired_payload.get("schedule"):
+        return True
 
     if sorted(existing.get("connection_states", [])) != sorted(desired_payload.get("connection_states", [])):
         return True

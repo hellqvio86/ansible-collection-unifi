@@ -86,6 +86,10 @@ options:
             port:
                 description: Port or port range.
                 type: str
+            match_opposite_ports:
+                description: Whether to match ports opposite to the specified list.
+                type: bool
+                default: false
     destination:
         description: Destination configuration.
         type: dict
@@ -106,6 +110,10 @@ options:
             port:
                 description: Port or port range.
                 type: str
+            match_opposite_ports:
+                description: Whether to match ports opposite to the specified list.
+                type: bool
+                default: false
 author:
     - hellqvio86 (@hellqvio86)
 """
@@ -237,10 +245,10 @@ def run_module():
 def apply_policy(module, api, site, zone_map, network_map, policies, desired):
     state = desired.get("state", "present")
 
-    src_params = {"zone": "Internal", "matching_target": "ANY", "ips": [], "port": ""}
+    src_params = {"zone": "Internal", "matching_target": "ANY", "ips": [], "port": "", "match_opposite_ports": False}
     src_params.update(desired.get("source") or {})
 
-    dst_params = {"zone": "Internal", "matching_target": "ANY", "ips": [], "port": ""}
+    dst_params = {"zone": "Internal", "matching_target": "ANY", "ips": [], "port": "", "match_opposite_ports": False}
     dst_params.update(desired.get("destination") or {})
 
     src_zone_id = zone_map.get(src_params["zone"])
@@ -312,13 +320,13 @@ def apply_policy(module, api, site, zone_map, network_map, policies, desired):
         "source": {
             "zone_id": src_zone_id,
             "matching_target": src_params["matching_target"],
-            "match_opposite_ports": False,
+            "match_opposite_ports": src_params.get("match_opposite_ports", False),
             "port_matching_type": "SPECIFIC" if src_params["port"] else "ANY",
         },
         "destination": {
             "zone_id": dst_zone_id,
             "matching_target": dst_params["matching_target"],
-            "match_opposite_ports": False,
+            "match_opposite_ports": dst_params.get("match_opposite_ports", False),
             "port_matching_type": "SPECIFIC" if dst_params["port"] else "ANY",
         },
     }
@@ -437,6 +445,9 @@ def policy_needs_update(existing, desired_payload):
             return True
 
         if existing_side.get("port", "") != desired_side.get("port", ""):
+            return True
+
+        if existing_side.get("match_opposite_ports", False) != desired_side.get("match_opposite_ports", False):
             return True
 
     src_field = match_field(desired_payload["source"])

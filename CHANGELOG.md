@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.26
+
+### Bug Fixes
+- **`unifi_firewall_policy`**: Add `match_opposite_ports` configuration support and drift detection in `source` and `destination` specifications.
+
 ## 0.0.25
 
 ### Security Fixes

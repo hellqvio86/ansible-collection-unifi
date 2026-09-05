@@ -222,13 +222,7 @@ def run_module():
     try:
         ssh = paramiko.SSHClient()
         ssh.load_system_host_keys()
-
-        if host_key_policy == "auto_add":
-            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        elif host_key_policy == "warning":
-            ssh.set_missing_host_key_policy(paramiko.WarningPolicy())
-        else:
-            ssh.set_missing_host_key_policy(paramiko.RejectPolicy())
+        ssh.set_missing_host_key_policy(paramiko.RejectPolicy())
 
         connect_kwargs = {
             "hostname": host,

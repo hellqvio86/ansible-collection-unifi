@@ -31,6 +31,13 @@ options:
         description: Verify SSL certificates.
         default: true
         type: bool
+    api_key:
+        description:
+            - Token for direct API authentication (UniFi OS 3.x+ / Network 8.x+).
+            - Preferred over username/password.
+            - Can also be set via the C(UNIFI_API_KEY) or C(UNIFI_API_TOKEN) environment variables.
+        type: str
+        required: false
     ca_path:
         description: Path to CA bundle file for TLS verification.
         required: false
@@ -166,7 +173,7 @@ settings:
 
 from ansible.module_utils.basic import AnsibleModule
 
-from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI
+from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI, resource_has_drift
 
 NTP_FIELD_MAP = {
     "server_1": "ntp_server_1",
@@ -219,10 +226,7 @@ def _build_switch_payload(switch_params, key="global_switch"):
 
 
 def _check_changed(current, desired):
-    for key, value in desired.items():
-        if current.get(key) != value:
-            return True
-    return False
+    return resource_has_drift(current, desired)
 
 
 def run_module():
@@ -233,6 +237,7 @@ def run_module():
         site=dict(type="str", default="default"),
         validate_certs=dict(type="bool", default=True),
         ca_path=dict(type="path", required=False),
+        api_key=dict(type="str", no_log=True, required=False),
         unifi_session_cookie=dict(type="str", no_log=True, required=False),
         unifi_csrf_token=dict(type="str", no_log=True, required=False),
         ntp=dict(
@@ -279,6 +284,7 @@ def run_module():
         module.params.get("unifi_session_cookie"),
         module.params.get("unifi_csrf_token"),
         ca_path=module.params.get("ca_path"),
+        api_key=module.params.get("api_key"),
     )
     api.login()
 
@@ -299,10 +305,10 @@ def run_module():
 
     # Handle NTP settings
     if ntp_params is not None:
-        current_ntp = next(
-            (s for s in settings if isinstance(s, dict) and s.get("key") == "ntp"),
-            None,
-        )
+        ntp_matches = [s for s in settings if isinstance(s, dict) and s.get("key") == "ntp"]
+        if len(ntp_matches) > 1:
+            module.fail_json(msg="Ambiguous resource: multiple NTP settings found on controller")
+        current_ntp = ntp_matches[0] if ntp_matches else None
         if not current_ntp:
             module.fail_json(msg="NTP setting not found on controller")
 
@@ -324,10 +330,10 @@ def run_module():
 
     # Handle management (mgmt) settings
     if mgmt_params is not None:
-        current_mgmt = next(
-            (s for s in settings if isinstance(s, dict) and s.get("key") == "mgmt"),
-            None,
-        )
+        mgmt_matches = [s for s in settings if isinstance(s, dict) and s.get("key") == "mgmt"]
+        if len(mgmt_matches) > 1:
+            module.fail_json(msg="Ambiguous resource: multiple management settings found on controller")
+        current_mgmt = mgmt_matches[0] if mgmt_matches else None
         if not current_mgmt:
             module.fail_json(msg="Management setting not found on controller")
 
@@ -349,10 +355,12 @@ def run_module():
 
     # Handle global switch settings (DHCP snooping, STP, jumbo frames, etc.)
     if switch_params is not None:
-        current_switch = next(
-            (s for s in settings if isinstance(s, dict) and s.get("key") in ("global_switch", "switch")),
-            None,
-        )
+        switch_matches = [
+            s for s in settings if isinstance(s, dict) and s.get("key") in ("global_switch", "switch")
+        ]
+        if len(switch_matches) > 1:
+            module.fail_json(msg="Ambiguous resource: multiple switch settings found on controller")
+        current_switch = switch_matches[0] if switch_matches else None
         if not current_switch:
             module.fail_json(msg="Global switch setting not found on controller")
 

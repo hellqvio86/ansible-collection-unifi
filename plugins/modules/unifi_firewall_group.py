@@ -31,6 +31,13 @@ options:
         description: Verify SSL certificates.
         default: true
         type: bool
+    api_key:
+        description:
+            - Token for direct API authentication (UniFi OS 3.x+ / Network 8.x+).
+            - Preferred over username/password.
+            - Can also be set via the C(UNIFI_API_KEY) or C(UNIFI_API_TOKEN) environment variables.
+        type: str
+        required: false
     ca_path:
         description: Path to CA bundle file for TLS verification.
         required: false
@@ -80,7 +87,21 @@ EXAMPLES = r"""
 
 from ansible.module_utils.basic import AnsibleModule
 
-from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI
+from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import (
+    UnifiAPI,
+    find_resource,
+    make_diff,
+    resource_has_drift,
+)
+
+
+def _build_desired_payload(name: str, group_type: str, group_members: list | None) -> dict:
+    """Build the desired firewall group payload."""
+    return {
+        "name": name,
+        "group_type": group_type,
+        "group_members": group_members or [],
+    }
 
 
 def run_module():
@@ -91,10 +112,12 @@ def run_module():
         site=dict(type="str", default="default"),
         validate_certs=dict(type="bool", default=True),
         ca_path=dict(type="path", required=False),
+        api_key=dict(type="str", no_log=True, required=False),
         unifi_session_cookie=dict(type="str", no_log=True, required=False),
         unifi_csrf_token=dict(type="str", no_log=True, required=False),
         state=dict(type="str", choices=["present", "absent"], default="present"),
         name=dict(type="str", required=True),
+        id=dict(type="str", required=False),
         group_type=dict(type="str", choices=["address-group", "port-group"], default="address-group"),
         group_members=dict(type="list", elements="str", required=False),
     )
@@ -110,6 +133,7 @@ def run_module():
         module.params.get("unifi_session_cookie"),
         module.params.get("unifi_csrf_token"),
         ca_path=module.params.get("ca_path"),
+        api_key=module.params.get("api_key"),
     )
     api.login()
 
@@ -122,19 +146,14 @@ def run_module():
     res, info = api.request(f"/proxy/network/api/s/{site}/rest/firewallgroup")
     groups = api.as_list(res)
 
-    matches = [g for g in groups if isinstance(g, dict) and g.get("name") == name]
-    if len(matches) > 1:
-        module.fail_json(msg=f"Ambiguous resource: multiple firewall groups match name '{name}'")
-    existing = matches[0] if matches else None
+    existing = find_resource(
+        module, groups, "firewall group", name=name, resource_id=module.params.get("id")
+    )
 
     changed = False
     result_group = existing
 
-    desired_payload = {
-        "name": name,
-        "group_type": group_type,
-        "group_members": group_members,
-    }
+    desired_payload = _build_desired_payload(name, group_type, group_members)
 
     if module.params["state"] == "present":
         if not existing:
@@ -147,6 +166,8 @@ def run_module():
                 result_group = res_list[0] if res_list else res
                 if not result_group:
                     module.fail_json(msg="Failed to create firewall group", info=info)
+            else:
+                result_group = desired_payload
         else:
             # Check if group type matches (usually cannot change type after creation without recreate)
             if existing.get("group_type") != group_type:
@@ -154,8 +175,8 @@ def run_module():
                     msg=f"Group '{name}' already exists with different type '{existing.get('group_type')}'"
                 )
 
-            # Check if members match
-            if sorted(existing.get("group_members", [])) != sorted(group_members or []):
+            # Check if members match (resource_has_drift handles unordered list comparison)
+            if resource_has_drift(existing, desired_payload, ignored_keys={"group_type", "name"}):
                 changed = True
                 if not module.check_mode:
                     res, info = api.request(
@@ -167,6 +188,8 @@ def run_module():
                     result_group = res_list[0] if res_list else res
                     if not result_group:
                         module.fail_json(msg="Failed to update firewall group", info=info)
+                else:
+                    result_group = {**existing, **desired_payload}
 
     elif module.params["state"] == "absent":
         if existing:
@@ -179,7 +202,15 @@ def run_module():
                     module.fail_json(msg="Failed to delete firewall group", info=info)
             result_group = None
 
-    module.exit_json(changed=changed, group=result_group)
+    exit_kwargs = {"changed": changed, "group": result_group}
+    if getattr(module, "_diff", False) is True:
+        before = existing if existing else {}
+        after = result_group if result_group else {}
+        exit_kwargs["diff"] = make_diff(before, after)
+
+
+    module.exit_json(**exit_kwargs)
+
 
 
 if __name__ == "__main__":

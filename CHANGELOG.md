@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.0.27
+
+### Security Fixes
+- **`defaults`**: Enforce `validate_certs: true` by default across all modules and `UnifiAPI`, with warnings on explicit insecure opt-out.
+- **`unifi_api`**: Add API token authentication support (`api_key` parameter and `UNIFI_API_KEY`/`UNIFI_API_TOKEN` environment variables).
+- **`unifi_api`**: Strictly sanitize error payloads to redact secrets, tokens, passphrases, and private key content from error messages and play output.
+- **`unifi_user_certificate`**: Eliminate broad prefix matching to prevent accidental deletion of similarly named certificates.
+- **`unifi_ssl`**: Add pre-flight X.509 certificate and private key pairing validation, enforce safe filesystem permissions (`0o600`), and use atomic SFTP replacement.
+
+### New Features & Refactoring
+- **`unifi_api`**: Redesign shared API client into modular internal abstractions: `UnifiTransport`, `UnifiAuth`, `UnifiEndpoints`, and `UnifiAPI`.
+- **`unifi_api`**: Add host lock acquisition timeouts (30s) and smooth inter-request rate limiting (50ms) to protect UniFi controller hardware from overload.
+- **`unifi_api`**: Add retry backoff with jitter and respect controller `Retry-After` headers.
+- **`unifi_api`**: Protect non-idempotent `POST` mutations from blind retries on 5xx errors to prevent duplicate resource creation.
+- **`unifi_api`**: Add configurable request `timeout` parameter and `UNIFI_TIMEOUT` environment variable (default 30s).
+- **`compatibility`**: Add `UnifiCompatibility` layer with semantic version detection and actionable incompatibility errors.
+- **`diff_mode`**: Support Ansible diff mode (`--diff`) with recursive secret masking across all resource modules.
+- **`check_mode`**: Enforce zero-mutation check mode guarantee at the API client level.
+- **`resource_identity`**: Add deterministic resource lookup via `find_resource` with ambiguity errors on duplicate names.
+
 ## 0.0.26
 
 ### Bug Fixes

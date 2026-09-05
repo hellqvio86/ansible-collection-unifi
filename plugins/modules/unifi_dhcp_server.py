@@ -31,6 +31,13 @@ options:
         description: Verify SSL certificates.
         default: true
         type: bool
+    api_key:
+        description:
+            - Token for direct API authentication (UniFi OS 3.x+ / Network 8.x+).
+            - Preferred over username/password.
+            - Can also be set via the C(UNIFI_API_KEY) or C(UNIFI_API_TOKEN) environment variables.
+        type: str
+        required: false
     ca_path:
         description: Path to CA bundle file for TLS verification.
         required: false
@@ -143,7 +150,33 @@ network:
 
 from ansible.module_utils.basic import AnsibleModule
 
-from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI
+from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import (
+    UnifiAPI,
+    find_resource,
+    make_diff,
+    resource_has_drift,
+    validate_ip_address,
+)
+
+
+def _build_desired_payload(params: dict, enabled: bool) -> dict:
+    """Build the desired DHCP server payload from module parameters."""
+    payload: dict = {"dhcpd_enabled": enabled}
+    if params.get("dhcp_start") is not None:
+        payload["dhcpd_start"] = params["dhcp_start"]
+    if params.get("dhcp_stop") is not None:
+        payload["dhcpd_stop"] = params["dhcp_stop"]
+    if params.get("lease_time") is not None:
+        payload["dhcpd_leasetime"] = params["lease_time"]
+    if params.get("dns_1") is not None:
+        payload["dhcpd_dns_1"] = params["dns_1"]
+    if params.get("dns_2") is not None:
+        payload["dhcpd_dns_2"] = params["dns_2"]
+    if params.get("gateway") is not None:
+        payload["dhcpd_gateway"] = params["gateway"]
+    if params.get("domain") is not None:
+        payload["dhcpd_domain_name"] = params["domain"]
+    return payload
 
 
 def run_module():
@@ -154,8 +187,10 @@ def run_module():
         site=dict(type="str", default="default"),
         validate_certs=dict(type="bool", default=True),
         ca_path=dict(type="path", required=False),
+        api_key=dict(type="str", no_log=True, required=False),
         state=dict(type="str", choices=["present", "absent"], default="present"),
         network=dict(type="str", required=True),
+        id=dict(type="str", required=False),
         enabled=dict(type="bool", default=True),
         dhcp_start=dict(type="str", required=False),
         dhcp_stop=dict(type="str", required=False),
@@ -192,8 +227,22 @@ def run_module():
         module.params.get("unifi_session_cookie"),
         module.params.get("unifi_csrf_token"),
         ca_path=module.params.get("ca_path"),
+        api_key=module.params.get("api_key"),
     )
     api.login()
+
+    # Validate argument formats before making any API calls
+    if enabled:
+        if module.params.get("dhcp_start"):
+            validate_ip_address(module, module.params["dhcp_start"], "dhcp_start")
+        if module.params.get("dhcp_stop"):
+            validate_ip_address(module, module.params["dhcp_stop"], "dhcp_stop")
+    if module.params.get("dns_1"):
+        validate_ip_address(module, module.params["dns_1"], "dns_1")
+    if module.params.get("dns_2"):
+        validate_ip_address(module, module.params["dns_2"], "dns_2")
+    if module.params.get("gateway"):
+        validate_ip_address(module, module.params["gateway"], "gateway")
 
     site = module.params["site"]
 
@@ -202,54 +251,17 @@ def run_module():
         module.fail_json(msg="Failed to fetch network configurations", info=info)
 
     networks = api.as_list(res)
-    matches = [n for n in networks if isinstance(n, dict) and n.get("name") == network_name]
-    if len(matches) > 1:
-        module.fail_json(msg=f"Ambiguous resource: multiple networks match name '{network_name}'")
-    current = matches[0] if matches else None
+    current = find_resource(
+        module, networks, "network", name=network_name, resource_id=module.params.get("id")
+    )
     if not current:
         module.fail_json(msg=f"Network '{network_name}' not found")
 
-    desired_payload = {
-        "dhcpd_enabled": enabled,
-    }
+    desired_payload = _build_desired_payload(module.params, enabled)
 
-    if module.params["dhcp_start"] is not None:
-        desired_payload["dhcpd_start"] = module.params["dhcp_start"]
-    if module.params["dhcp_stop"] is not None:
-        desired_payload["dhcpd_stop"] = module.params["dhcp_stop"]
-    if module.params["lease_time"] is not None:
-        desired_payload["dhcpd_leasetime"] = module.params["lease_time"]
-    if module.params["dns_1"] is not None:
-        desired_payload["dhcpd_dns_1"] = module.params["dns_1"]
-    if module.params["dns_2"] is not None:
-        desired_payload["dhcpd_dns_2"] = module.params["dns_2"]
-    if module.params["gateway"] is not None:
-        desired_payload["dhcpd_gateway"] = module.params["gateway"]
-    if module.params["domain"] is not None:
-        desired_payload["dhcpd_domain_name"] = module.params["domain"]
+    changed = resource_has_drift(current, desired_payload)
 
-    dhcp_fields = [
-        "dhcpd_enabled",
-        "dhcpd_start",
-        "dhcpd_stop",
-        "dhcpd_leasetime",
-        "dhcpd_dns_1",
-        "dhcpd_dns_2",
-        "dhcpd_gateway",
-        "dhcpd_domain_name",
-    ]
-
-    changed = False
-    for field in dhcp_fields:
-        if field in desired_payload:
-            current_value = current.get(field)
-            desired_value = desired_payload[field]
-            if field == "dhcpd_enabled":
-                desired_value = bool(desired_value)
-            if current_value != desired_value:
-                changed = True
-                break
-
+    result_network = current
     if changed:
         if not module.check_mode:
             res, info = api.request(
@@ -261,9 +273,21 @@ def run_module():
                 module.fail_json(msg="Failed to update DHCP server settings", info=info)
             res_list = api.as_list(res)
             if res_list:
-                current = res_list[0]
+                result_network = res_list[0]
+            else:
+                result_network = {**current, **desired_payload}
+        else:
+            result_network = {**current, **desired_payload}
 
-    module.exit_json(changed=changed, network=current)
+    exit_kwargs = {"changed": changed, "network": result_network}
+    if getattr(module, "_diff", False) is True:
+        before = current if current else {}
+        after = result_network if result_network else {}
+        exit_kwargs["diff"] = make_diff(before, after)
+
+
+    module.exit_json(**exit_kwargs)
+
 
 
 if __name__ == "__main__":

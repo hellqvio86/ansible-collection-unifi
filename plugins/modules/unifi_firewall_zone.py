@@ -31,6 +31,13 @@ options:
         description: Verify SSL certificates.
         default: true
         type: bool
+    api_key:
+        description:
+            - Token for direct API authentication (UniFi OS 3.x+ / Network 8.x+).
+            - Preferred over username/password.
+            - Can also be set via the C(UNIFI_API_KEY) or C(UNIFI_API_TOKEN) environment variables.
+        type: str
+        required: false
     ca_path:
         description: Path to CA bundle file for TLS verification.
         required: false
@@ -63,7 +70,7 @@ EXAMPLES = r"""
     username: "admin"
     password: "secret"
     site: "default"
-    validate_certs: false
+    validate_certs: true
     name: "Internal"
     type: lan
     description: "Main LAN zone"
@@ -72,7 +79,15 @@ EXAMPLES = r"""
 
 from ansible.module_utils.basic import AnsibleModule
 
-from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI
+from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI, find_resource, make_diff
+
+
+def _build_desired_payload(name: str) -> dict:
+    """Build the desired firewall zone payload."""
+    return {
+        "name": name,
+        "network_ids": [],
+    }
 
 
 def run_module():
@@ -83,10 +98,12 @@ def run_module():
         site=dict(type="str", default="default"),
         validate_certs=dict(type="bool", default=True),
         ca_path=dict(type="path", required=False),
+        api_key=dict(type="str", no_log=True, required=False),
         unifi_session_cookie=dict(type="str", no_log=True, required=False),
         unifi_csrf_token=dict(type="str", no_log=True, required=False),
         state=dict(type="str", choices=["present", "absent"], default="present"),
         name=dict(type="str", required=True),
+        id=dict(type="str", required=False),
         type=dict(type="str", choices=["lan", "wan", "guest", "iot", "custom"], default="custom"),
         description=dict(type="str"),
     )
@@ -102,6 +119,7 @@ def run_module():
         module.params.get("unifi_session_cookie"),
         module.params.get("unifi_csrf_token"),
         ca_path=module.params.get("ca_path"),
+        api_key=module.params.get("api_key"),
     )
     api.login()
 
@@ -113,16 +131,12 @@ def run_module():
     if res is None:
         module.fail_json(msg="Failed to fetch firewall zones", info=info)
 
-    matches = [z for z in zones if isinstance(z, dict) and z.get("name") == module.params["name"]]
-    if len(matches) > 1:
-        module.fail_json(msg=f"Ambiguous resource: multiple firewall zones match name '{module.params['name']}'")
-    existing = matches[0] if matches else None
+    existing = find_resource(
+        module, zones, "firewall zone", name=module.params["name"], resource_id=module.params.get("id")
+    )
 
     # Build payload
-    desired_payload = {
-        "name": module.params["name"],
-        "network_ids": [],
-    }
+    desired_payload = _build_desired_payload(module.params["name"])
 
     changed = False
     result_zone = existing
@@ -138,6 +152,8 @@ def run_module():
                 result_zone = res_list[0] if res_list else res
                 if not result_zone:
                     module.fail_json(msg="Failed to create firewall zone", info=info)
+            else:
+                result_zone = desired_payload
         else:
             # The zone already exists with the same name. Since zone type/properties cannot be
             # updated in-place via PUT on the UniFi API, we treat existing zones as unchanged.
@@ -154,7 +170,15 @@ def run_module():
                     module.fail_json(msg="Failed to delete firewall zone", info=info)
             result_zone = None
 
-    module.exit_json(changed=changed, zone=result_zone)
+    exit_kwargs = {"changed": changed, "zone": result_zone}
+    if getattr(module, "_diff", False) is True:
+        before = existing if existing else {}
+        after = result_zone if result_zone else {}
+        exit_kwargs["diff"] = make_diff(before, after)
+
+
+    module.exit_json(**exit_kwargs)
+
 
 
 if __name__ == "__main__":

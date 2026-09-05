@@ -30,6 +30,13 @@ options:
         description: Verify SSL certificates.
         default: true
         type: bool
+    api_key:
+        description:
+            - Token for direct API authentication (UniFi OS 3.x+ / Network 8.x+).
+            - Preferred over username/password.
+            - Can also be set via the C(UNIFI_API_KEY) or C(UNIFI_API_TOKEN) environment variables.
+        type: str
+        required: false
     ca_path:
         description: Path to CA bundle file for TLS verification.
         required: false
@@ -59,7 +66,12 @@ author:
 
 from ansible.module_utils.basic import AnsibleModule
 
-from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI
+from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import (
+    UnifiAPI,
+    find_resource,
+    make_diff,
+    resource_has_drift,
+)
 
 
 def run_module():
@@ -70,10 +82,12 @@ def run_module():
         site=dict(type="str", default="default"),
         validate_certs=dict(type="bool", default=True),
         ca_path=dict(type="path", required=False),
+        api_key=dict(type="str", no_log=True, required=False),
         unifi_session_cookie=dict(type="str", no_log=True, required=False),
         unifi_csrf_token=dict(type="str", no_log=True, required=False),
         state=dict(type="str", choices=["present", "absent"], default="present"),
         name=dict(type="str", required=True),
+        id=dict(type="str", required=False),
         native_network_name=dict(type="str"),
         tagged_network_names=dict(type="list", elements="str"),
         autoneg=dict(type="bool"),
@@ -90,6 +104,7 @@ def run_module():
         module.params.get("unifi_session_cookie"),
         module.params.get("unifi_csrf_token"),
         ca_path=module.params.get("ca_path"),
+        api_key=module.params.get("api_key"),
     )
     api.login()
 
@@ -101,15 +116,19 @@ def run_module():
     if res is None:
         module.fail_json(msg="Failed to fetch port profiles", info=info)
 
-    matches = [p for p in profiles if isinstance(p, dict) and p.get("name") == module.params["name"]]
-    if len(matches) > 1:
-        module.fail_json(msg=f"Ambiguous resource: multiple port profiles match name '{module.params['name']}'")
-    existing = matches[0] if matches else None
+    existing = find_resource(
+        module, profiles, "port profile", name=module.params["name"], resource_id=module.params.get("id")
+    )
 
     # Fetch networks once for resolution
     networks_res, info = api.request(f"/proxy/network/api/s/{site}/rest/networkconf")
     networks = api.as_list(networks_res)
-    network_map = {n["name"]: n["_id"] for n in networks if isinstance(n, dict)}
+    network_map = {}
+    for n in networks:
+        if isinstance(n, dict) and "name" in n:
+            if n["name"] in network_map:
+                module.fail_json(msg=f"Ambiguous resource: multiple networks found with name '{n['name']}'")
+            network_map[n["name"]] = n["_id"]
 
     # Build payload
     desired_payload = {"name": module.params["name"]}
@@ -157,25 +176,22 @@ def run_module():
                 result_profile = res_list[0] if res_list else res
                 if not result_profile:
                     module.fail_json(msg="Failed to create port profile", info=info)
+            else:
+                result_profile = desired_payload
         else:
-            for key, value in desired_payload.items():
-                if key == "excluded_networkconf_ids":
-                    existing_list = existing.get(key) or []
-                    if sorted(existing_list) != sorted(value):
-                        changed = True
-                        break
-                elif existing.get(key) != value:
-                    changed = True
-                    break
+            changed = resource_has_drift(existing, desired_payload)
 
-            if changed and not module.check_mode:
-                res, info = api.request(
-                    f"/proxy/network/api/s/{site}/rest/portconf/{existing['_id']}", method="PUT", data=desired_payload
-                )
-                res_list = api.as_list(res)
-                result_profile = res_list[0] if res_list else res
-                if not result_profile:
-                    module.fail_json(msg="Failed to update port profile", info=info)
+            if changed:
+                if not module.check_mode:
+                    res, info = api.request(
+                        f"/proxy/network/api/s/{site}/rest/portconf/{existing['_id']}", method="PUT", data=desired_payload
+                    )
+                    res_list = api.as_list(res)
+                    result_profile = res_list[0] if res_list else res
+                    if not result_profile:
+                        module.fail_json(msg="Failed to update port profile", info=info)
+                else:
+                    result_profile = {**existing, **desired_payload}
 
     elif module.params["state"] == "absent":
         if existing:
@@ -186,7 +202,15 @@ def run_module():
                     module.fail_json(msg="Failed to delete port profile", info=info)
             result_profile = None
 
-    module.exit_json(changed=changed, profile=result_profile)
+    exit_kwargs = {"changed": changed, "profile": result_profile}
+    if getattr(module, "_diff", False) is True:
+        before = existing if existing else {}
+        after = result_profile if result_profile else {}
+        exit_kwargs["diff"] = make_diff(before, after)
+
+
+    module.exit_json(**exit_kwargs)
+
 
 
 if __name__ == "__main__":

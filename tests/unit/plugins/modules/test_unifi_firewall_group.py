@@ -1,6 +1,37 @@
 from unittest.mock import patch
 
-from ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_group import run_module
+from ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_group import (
+    _build_desired_payload,
+    run_module,
+)
+
+# ---------------------------------------------------------------------------
+# Desired-state builder tests (independent of HTTP/API)
+# ---------------------------------------------------------------------------
+
+
+def test_build_desired_payload_address_group():
+    result = _build_desired_payload("web-servers", "address-group", ["192.0.2.1", "192.0.2.2"])
+    assert result["name"] == "web-servers"
+    assert result["group_type"] == "address-group"
+    assert result["group_members"] == ["192.0.2.1", "192.0.2.2"]
+
+
+def test_build_desired_payload_port_group():
+    result = _build_desired_payload("http-ports", "port-group", ["80", "443"])
+    assert result["name"] == "http-ports"
+    assert result["group_type"] == "port-group"
+    assert result["group_members"] == ["80", "443"]
+
+
+def test_build_desired_payload_empty_members():
+    result = _build_desired_payload("empty-group", "address-group", None)
+    assert result["group_members"] == []
+
+
+def test_build_desired_payload_normalizes_none_members():
+    result = _build_desired_payload("my-group", "address-group", [])
+    assert result["group_members"] == []
 
 
 def test_firewall_group_create():
@@ -335,5 +366,57 @@ def test_firewall_group_check_mode():
 
         assert mock_api.request.call_count == 1
         mock_module.exit_json.assert_called_once()
-        kwargs = mock_module.exit_json.call_args[1]
-        assert kwargs["changed"] is True
+        assert mock_module.exit_json.call_args[1]["changed"] is True
+
+
+
+def test_firewall_group_duplicate_fails():
+    params = {
+        "host": "192.0.2.1",
+        "username": "admin",
+        "password": "password",
+        "site": "default",
+        "validate_certs": False,
+        "state": "present",
+        "name": "Duplicate Group",
+        "group_type": "address-group",
+        "group_members": ["192.168.1.0/24"],
+    }
+
+    with (
+        patch(
+            "ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_group.AnsibleModule"
+        ) as mock_module_class,
+        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_group.UnifiAPI") as mock_api_class,
+    ):
+        mock_module = mock_module_class.return_value
+        mock_module.params = params
+        mock_module.check_mode = False
+        mock_module.fail_json.side_effect = Exception("fail_json")
+
+        mock_api = mock_api_class.return_value
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
+
+        mock_api.request.side_effect = [
+            (
+                [
+                    {"_id": "g1", "name": "Duplicate Group"},
+                    {"_id": "g2", "name": "Duplicate Group"},
+                ],
+                {"status": 200},
+            ),
+        ]
+
+        import pytest
+
+        with pytest.raises(Exception, match="fail_json"):
+            run_module()
+
+        mock_module.fail_json.assert_called_once()
+        msg = mock_module.fail_json.call_args[1]["msg"]
+        assert "Ambiguous resource" in msg
+

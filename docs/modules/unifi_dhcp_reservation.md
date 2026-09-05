@@ -57,7 +57,7 @@ Typically used in a loop over a list of desired reservations (see intent-based e
     body:
       username: "{{ username }}"
       password: "{{ password }}"
-    validate_certs: false
+    validate_certs: true
     status_code: 200
   register: _login
 

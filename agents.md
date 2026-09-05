@@ -23,5 +23,8 @@ This document summarizes the standards and restrictions enforced during the deve
 - **Module Header Standard**: Python modules in `plugins/modules/` must use `# MIT License (see LICENSE.md)` in their file headers.
 - **No GPL Header Text**: Do not introduce GNU GPL header text in this collection unless the project license model is explicitly changed.
 
+## Working Directories
+- **Debug Directory**: `debug/` is a local working directory. It will not be committed to the repository, therefore it will not be a part of the next review.
+
 ## Project Vision
 - **Professional Grade**: The collection aims to be "Professional Grade" for public release on Ansible Galaxy, emphasizing reliability, documentation, and ease of use.

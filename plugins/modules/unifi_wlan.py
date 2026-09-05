@@ -31,6 +31,13 @@ options:
         description: Verify SSL certificates.
         default: true
         type: bool
+    api_key:
+        description:
+            - Token for direct API authentication (UniFi OS 3.x+ / Network 8.x+).
+            - Preferred over username/password.
+            - Can also be set via the C(UNIFI_API_KEY) or C(UNIFI_API_TOKEN) environment variables.
+        type: str
+        required: false
     ca_path:
         description: Path to CA bundle file for TLS verification.
         required: false
@@ -74,7 +81,7 @@ EXAMPLES = r"""
     username: "admin"
     password: "secret"
     site: "default"
-    validate_certs: false
+    validate_certs: true
     name: "Guest WLAN"
     enabled: true
     network_name: "Guest"
@@ -92,7 +99,12 @@ wlan:
 
 from ansible.module_utils.basic import AnsibleModule
 
-from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI
+from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import (
+    UnifiAPI,
+    find_resource,
+    make_diff,
+    resource_has_drift,
+)
 
 
 def run_module():
@@ -103,10 +115,12 @@ def run_module():
         site=dict(type="str", default="default"),
         validate_certs=dict(type="bool", default=True),
         ca_path=dict(type="path", required=False),
+        api_key=dict(type="str", no_log=True, required=False),
         unifi_session_cookie=dict(type="str", no_log=True, required=False),
         unifi_csrf_token=dict(type="str", no_log=True, required=False),
         state=dict(type="str", choices=["present", "absent"], default="present"),
         name=dict(type="str", required=True),
+        id=dict(type="str", required=False),
         enabled=dict(type="bool"),
         network_name=dict(type="str"),
         security=dict(type="str", choices=["open", "wpapsk", "wpa2", "wpa3"]),
@@ -125,6 +139,7 @@ def run_module():
         module.params.get("unifi_session_cookie"),
         module.params.get("unifi_csrf_token"),
         ca_path=module.params.get("ca_path"),
+        api_key=module.params.get("api_key"),
     )
     api.login()
 
@@ -136,10 +151,9 @@ def run_module():
     if wlans_res is None:
         module.fail_json(msg="Failed to fetch WLAN configurations", info=info)
 
-    matches = [w for w in wlans if isinstance(w, dict) and w.get("name") == module.params["name"]]
-    if len(matches) > 1:
-        module.fail_json(msg=f"Ambiguous resource: multiple WLAN networks match name '{module.params['name']}'")
-    existing = matches[0] if matches else None
+    existing = find_resource(
+        module, wlans, "WLAN network", name=module.params["name"], resource_id=module.params.get("id")
+    )
 
     # Build payload from provided parameters
     desired_payload = {"name": module.params["name"]}
@@ -149,9 +163,7 @@ def run_module():
         # Resolve network name to ID if possible
         networks_res, info = api.request(f"/proxy/network/api/s/{site}/rest/networkconf")
         networks = api.as_list(networks_res)
-        network = next(
-            (n for n in networks if isinstance(n, dict) and n.get("name") == module.params["network_name"]), None
-        )
+        network = find_resource(module, networks, "network", name=module.params["network_name"])
         if network:
             desired_payload["networkconf_id"] = network["_id"]
         else:
@@ -189,20 +201,22 @@ def run_module():
                 result_wlan = res_list[0] if res_list else res
                 if not result_wlan:
                     module.fail_json(msg="Failed to create WLAN configuration", info=info)
+            else:
+                result_wlan = desired_payload
         else:
-            for key, value in desired_payload.items():
-                if existing.get(key) != value:
-                    changed = True
-                    break
+            changed = resource_has_drift(existing, desired_payload)
 
-            if changed and not module.check_mode:
-                res, info = api.request(
-                    f"/proxy/network/api/s/{site}/rest/wlanconf/{existing['_id']}", method="PUT", data=desired_payload
-                )
-                res_list = api.as_list(res)
-                result_wlan = res_list[0] if res_list else res
-                if not result_wlan:
-                    module.fail_json(msg="Failed to update WLAN configuration", info=info)
+            if changed:
+                if not module.check_mode:
+                    res, info = api.request(
+                        f"/proxy/network/api/s/{site}/rest/wlanconf/{existing['_id']}", method="PUT", data=desired_payload
+                    )
+                    res_list = api.as_list(res)
+                    result_wlan = res_list[0] if res_list else res
+                    if not result_wlan:
+                        module.fail_json(msg="Failed to update WLAN configuration", info=info)
+                else:
+                    result_wlan = {**existing, **desired_payload}
 
     elif module.params["state"] == "absent":
         if existing:
@@ -213,7 +227,15 @@ def run_module():
                     module.fail_json(msg="Failed to delete WLAN configuration", info=info)
             result_wlan = None
 
-    module.exit_json(changed=changed, wlan=result_wlan)
+    exit_kwargs = {"changed": changed, "wlan": result_wlan}
+    if getattr(module, "_diff", False) is True:
+        before = existing if existing else {}
+        after = result_wlan if result_wlan else {}
+        exit_kwargs["diff"] = make_diff(before, after)
+
+
+    module.exit_json(**exit_kwargs)
+
 
 
 if __name__ == "__main__":

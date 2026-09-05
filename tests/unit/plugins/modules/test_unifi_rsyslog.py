@@ -1,6 +1,47 @@
 from unittest.mock import patch
 
-from ansible_collections.hellqvio86.unifi.plugins.modules.unifi_rsyslog import run_module
+from ansible_collections.hellqvio86.unifi.plugins.modules.unifi_rsyslog import (
+    _build_desired_payload,
+    run_module,
+)
+
+# ---------------------------------------------------------------------------
+# Desired-state builder tests (independent of HTTP/API)
+# ---------------------------------------------------------------------------
+
+
+def test_build_desired_payload_defaults():
+    params = {
+        "enabled": True,
+        "ip": "192.0.2.100",
+        "port": 10516,
+        "log_all_contents": True,
+        "debug": False,
+        "netconsole_enabled": False,
+    }
+    result = _build_desired_payload(params)
+    assert result["key"] == "rsyslogd"
+    assert result["enabled"] is True
+    assert result["ip"] == "192.0.2.100"
+    assert result["port"] == 10516
+    assert result["this_controller"] is False
+    assert result["this_controller_encrypted_only"] is False
+
+
+def test_build_desired_payload_debug_mode():
+    params = {
+        "enabled": True,
+        "ip": "10.0.0.1",
+        "port": 514,
+        "log_all_contents": False,
+        "debug": True,
+        "netconsole_enabled": True,
+    }
+    result = _build_desired_payload(params)
+    assert result["debug"] is True
+    assert result["netconsole_enabled"] is True
+    assert result["log_all_contents"] is False
+
 
 
 def test_rsyslog_create():

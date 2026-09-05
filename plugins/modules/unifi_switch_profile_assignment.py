@@ -32,7 +32,11 @@ author:
 
 from ansible.module_utils.basic import AnsibleModule
 
-from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI
+from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import (
+    UnifiAPI,
+    validate_ip_address,
+    validate_mac_address,
+)
 
 
 def _normalize_desired(module):
@@ -80,6 +84,7 @@ def run_module():
             site=dict(type="str", default="default"),
             validate_certs=dict(type="bool", default=True),
             ca_path=dict(type="path", required=False),
+            api_key=dict(type="str", no_log=True, required=False),
             unifi_session_cookie=dict(type="str", no_log=True, required=False),
             unifi_csrf_token=dict(type="str", no_log=True, required=False),
             state=dict(type="str", choices=["present", "absent"], default="present"),
@@ -103,8 +108,17 @@ def run_module():
         module.params.get("unifi_session_cookie"),
         module.params.get("unifi_csrf_token"),
         ca_path=module.params.get("ca_path"),
+        api_key=module.params.get("api_key"),
     )
     api.login()
+
+    # Validate argument formats before making any API calls
+    for item in desired_items:
+        if item.get("switch_mac"):
+            validate_mac_address(module, item["switch_mac"], "switch_mac")
+        if item.get("switch_ip"):
+            validate_ip_address(module, item["switch_ip"], "switch_ip")
+
     site = module.params["site"]
 
     switch_profiles, switchprofile_supported = _fetch_switch_profiles(api, site)
@@ -132,23 +146,34 @@ def run_module():
             profile_name = item.get("profile_name")
             desired_state = item.get("state", "present")
             # Find the profile definition
-            prof_def = next((p for p in desired_profiles if p.get("name") == profile_name), None)
+            matching_defs = [p for p in desired_profiles if p.get("name") == profile_name]
+            if len(matching_defs) > 1:
+                module.fail_json(
+                    msg=f"Ambiguous switch profile definition: multiple definitions for '{profile_name}'",
+                    assignment=item,
+                )
+            prof_def = matching_defs[0] if matching_defs else None
             if not prof_def:
                 module.fail_json(
                     msg=f"Switch profile definition for '{profile_name}' not found in switch_profiles", assignment=item
                 )
 
-            target = None
+            matching_switches = []
             for sw in switches:
+                if not isinstance(sw, dict):
+                    continue
                 if item.get("switch_name") and sw.get("name") == item["switch_name"]:
-                    target = sw
-                    break
-                if item.get("switch_mac") and sw.get("mac") == item["switch_mac"]:
-                    target = sw
-                    break
-                if item.get("switch_ip") and sw.get("ip") == item["switch_ip"]:
-                    target = sw
-                    break
+                    matching_switches.append(sw)
+                elif item.get("switch_mac") and sw.get("mac", "").lower() == str(item["switch_mac"]).lower():
+                    matching_switches.append(sw)
+                elif item.get("switch_ip") and sw.get("ip") == item["switch_ip"]:
+                    matching_switches.append(sw)
+
+            if len(matching_switches) > 1:
+                module.fail_json(
+                    msg="Ambiguous resource: multiple switches match provided identifiers", assignment=item
+                )
+            target = matching_switches[0] if matching_switches else None
 
             if not target:
                 module.fail_json(msg="Switch not found with provided identifiers", assignment=item)

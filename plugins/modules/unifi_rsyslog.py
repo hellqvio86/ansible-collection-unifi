@@ -30,6 +30,13 @@ options:
         description: Verify SSL certificates.
         default: true
         type: bool
+    api_key:
+        description:
+            - Token for direct API authentication (UniFi OS 3.x+ / Network 8.x+).
+            - Preferred over username/password.
+            - Can also be set via the C(UNIFI_API_KEY) or C(UNIFI_API_TOKEN) environment variables.
+        type: str
+        required: false
     ca_path:
         description: Path to CA bundle file for TLS verification.
         required: false
@@ -64,7 +71,28 @@ author:
 
 from ansible.module_utils.basic import AnsibleModule
 
-from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI
+from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import (
+    UnifiAPI,
+    make_diff,
+    resource_has_drift,
+    validate_ip_address,
+    validate_port,
+)
+
+
+def _build_desired_payload(params: dict) -> dict:
+    """Build the desired rsyslogd setting payload from module parameters."""
+    return {
+        "key": "rsyslogd",
+        "enabled": params["enabled"],
+        "ip": params.get("ip"),
+        "port": params["port"],
+        "log_all_contents": params["log_all_contents"],
+        "debug": params["debug"],
+        "netconsole_enabled": params["netconsole_enabled"],
+        "this_controller": False,
+        "this_controller_encrypted_only": False,
+    }
 
 
 def run_module():
@@ -75,6 +103,7 @@ def run_module():
         site=dict(type="str", default="default"),
         validate_certs=dict(type="bool", default=True),
         ca_path=dict(type="path", required=False),
+        api_key=dict(type="str", no_log=True, required=False),
         unifi_session_cookie=dict(type="str", no_log=True, required=False),
         unifi_csrf_token=dict(type="str", no_log=True, required=False),
         enabled=dict(type="bool", default=True),
@@ -96,38 +125,33 @@ def run_module():
         module.params.get("unifi_session_cookie"),
         module.params.get("unifi_csrf_token"),
         ca_path=module.params.get("ca_path"),
+        api_key=module.params.get("api_key"),
     )
     api.login()
+
+    # Validate argument formats before making any API calls
+    if module.params.get("ip"):
+        validate_ip_address(module, module.params["ip"], "ip")
+    validate_port(module, module.params["port"], "port")
 
     site = module.params["site"]
 
     # Fetch current settings
     res, info = api.request(f"/proxy/network/api/s/{site}/get/setting")
     settings = api.as_list(res)
-
-    current = next((s for s in settings if isinstance(s, dict) and s.get("key") == "rsyslogd"), None)
+    matches = [s for s in settings if isinstance(s, dict) and s.get("key") == "rsyslogd"]
+    if len(matches) > 1:
+        module.fail_json(msg="Ambiguous resource: multiple rsyslogd settings found on controller")
+    current = matches[0] if matches else None
 
     if not current:
         module.fail_json(msg="rsyslogd setting not found on controller")
 
-    desired_payload = {
-        "key": "rsyslogd",
-        "enabled": module.params["enabled"],
-        "ip": module.params["ip"],
-        "port": module.params["port"],
-        "log_all_contents": module.params["log_all_contents"],
-        "debug": module.params["debug"],
-        "netconsole_enabled": module.params["netconsole_enabled"],
-        "this_controller": False,
-        "this_controller_encrypted_only": False,
-    }
+    desired_payload = _build_desired_payload(module.params)
 
-    changed = False
-    for key, value in desired_payload.items():
-        if current.get(key) != value:
-            changed = True
-            break
+    changed = resource_has_drift(current, desired_payload)
 
+    result_setting = current
     if changed:
         if not module.check_mode:
             res, info = api.request(
@@ -135,9 +159,19 @@ def run_module():
             )
             if not res:
                 module.fail_json(msg="Failed to update rsyslogd settings", info=info)
-            current = api.as_list(res)[0] if api.as_list(res) else res
+            result_setting = api.as_list(res)[0] if api.as_list(res) else res
+        else:
+            result_setting = {**current, **desired_payload}
 
-    module.exit_json(changed=changed, setting=current)
+    exit_kwargs = {"changed": changed, "setting": result_setting}
+    if getattr(module, "_diff", False) is True:
+        before = current if current else {}
+        after = result_setting if result_setting else {}
+        exit_kwargs["diff"] = make_diff(before, after)
+
+
+    module.exit_json(**exit_kwargs)
+
 
 
 if __name__ == "__main__":

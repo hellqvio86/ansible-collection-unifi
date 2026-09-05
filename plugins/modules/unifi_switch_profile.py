@@ -30,6 +30,13 @@ options:
         description: Verify SSL certificates.
         default: true
         type: bool
+    api_key:
+        description:
+            - Token for direct API authentication (UniFi OS 3.x+ / Network 8.x+).
+            - Preferred over username/password.
+            - Can also be set via the C(UNIFI_API_KEY) or C(UNIFI_API_TOKEN) environment variables.
+        type: str
+        required: false
     ca_path:
         description: Path to CA bundle file for TLS verification.
         required: false
@@ -59,7 +66,12 @@ author:
 
 from ansible.module_utils.basic import AnsibleModule
 
-from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI
+from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import (
+    UnifiAPI,
+    find_resource,
+    make_diff,
+    resource_has_drift,
+)
 
 
 def _build_desired_payload(module):
@@ -76,10 +88,7 @@ def _build_desired_payload(module):
 
 
 def _needs_update(existing, desired):
-    for key in ("model", "description", "port_profile_overrides"):
-        if key in desired and existing.get(key) != desired[key]:
-            return True
-    return False
+    return resource_has_drift(existing, desired)
 
 
 def run_module():
@@ -90,10 +99,12 @@ def run_module():
         site=dict(type="str", default="default"),
         validate_certs=dict(type="bool", default=True),
         ca_path=dict(type="path", required=False),
+        api_key=dict(type="str", no_log=True, required=False),
         unifi_session_cookie=dict(type="str", no_log=True, required=False),
         unifi_csrf_token=dict(type="str", no_log=True, required=False),
         state=dict(type="str", choices=["present", "absent"], default="present"),
         name=dict(type="str", required=True),
+        id=dict(type="str", required=False),
         model=dict(type="str", required=False),
         description=dict(type="str"),
         port_profile_overrides=dict(type="dict"),
@@ -110,6 +121,7 @@ def run_module():
         module.params.get("unifi_session_cookie"),
         module.params.get("unifi_csrf_token"),
         ca_path=module.params.get("ca_path"),
+        api_key=module.params.get("api_key"),
     )
     api.login()
 
@@ -126,10 +138,9 @@ def run_module():
         )
     profiles = api.as_list(res)
 
-    matches = [p for p in profiles if isinstance(p, dict) and p.get("name") == name]
-    if len(matches) > 1:
-        module.fail_json(msg=f"Ambiguous resource: multiple switch profiles match name '{name}'")
-    existing = matches[0] if matches else None
+    existing = find_resource(
+        module, profiles, "switch profile", name=name, resource_id=module.params.get("id")
+    )
 
     changed = False
     result_profile = existing
@@ -147,6 +158,8 @@ def run_module():
                 result_profile = res_list[0] if res_list else res
                 if not result_profile:
                     module.fail_json(msg="Failed to create switch profile", info=info)
+            else:
+                result_profile = desired_payload
         else:
             if _needs_update(existing, desired_payload):
                 changed = True
@@ -160,6 +173,8 @@ def run_module():
                     result_profile = res_list[0] if res_list else res
                     if not result_profile:
                         module.fail_json(msg="Failed to update switch profile", info=info)
+                else:
+                    result_profile = {**existing, **desired_payload}
 
     elif module.params["state"] == "absent":
         if existing:
@@ -172,7 +187,15 @@ def run_module():
                     module.fail_json(msg="Failed to delete switch profile", info=info)
             result_profile = None
 
-    module.exit_json(changed=changed, profile=result_profile)
+    exit_kwargs = {"changed": changed, "profile": result_profile}
+    if getattr(module, "_diff", False) is True:
+        before = existing if existing else {}
+        after = result_profile if result_profile else {}
+        exit_kwargs["diff"] = make_diff(before, after)
+
+
+    module.exit_json(**exit_kwargs)
+
 
 
 if __name__ == "__main__":

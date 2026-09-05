@@ -415,5 +415,53 @@ def test_cert_absent_does_not_delete_prefix_matches():
         # Should only fetch /api/userCertificates and NOT issue DELETE calls
         assert mock_api.request.call_count == 1
         mock_module.exit_json.assert_called_once()
+        assert mock_module.exit_json.call_args[1]["changed"] is False
+
+
+
+def test_cert_diff_mode_masks_sensitive_material():
+    params = {
+        "host": "192.0.2.1",
+        "username": "admin",
+        "password": "password",
+        "site": "default",
+        "validate_certs": False,
+        "state": "present",
+        "name": "mycert",
+        "cert": TEST_CERT,
+        "key": TEST_KEY,
+        "active": True,
+    }
+
+    with (
+        patch(
+            "ansible_collections.hellqvio86.unifi.plugins.modules.unifi_user_certificate.AnsibleModule"
+        ) as mock_module_class,
+        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_user_certificate.UnifiAPI") as mock_api_class,
+    ):
+        mock_module = mock_module_class.return_value
+        mock_module.params = params
+        mock_module.check_mode = True
+        mock_module._diff = True
+        mock_module.fail_json.side_effect = Exception("fail_json")
+
+        mock_api = mock_api_class.return_value
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
+
+        mock_api.request.side_effect = [
+            ([], {"status": 200}),
+        ]
+
+        run_module()
+
+        mock_module.exit_json.assert_called_once()
         kwargs = mock_module.exit_json.call_args[1]
-        assert kwargs["changed"] is False
+        assert kwargs["changed"] is True
+        assert "diff" in kwargs
+        diff_str = str(kwargs["diff"])
+        assert TEST_KEY not in diff_str
+

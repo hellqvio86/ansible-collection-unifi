@@ -12,6 +12,17 @@
 
 An Ansible collection for managing UniFi Network (v8.x+) and UniFi OS (v3.x+) with a focus on modern API-driven infrastructure.
 
+## Compatibility Matrix
+
+| Component | Supported Versions | Tested Versions | Modules / Capabilities |
+| :--- | :--- | :--- | :--- |
+| **UniFi Network** | **8.0.0+** (Recommended) | 8.0.28, 8.1.113, 8.2.93 | **Full**: Policy Engine v2 (`unifi_firewall_policy`, `unifi_firewall_zone`, `unifi_nat_rule`), REST modules (`unifi_wlan`, `unifi_port_profile`, `unifi_switch_profile`, `unifi_firewall_group`, `unifi_dhcp_*`, `unifi_rsyslog`) |
+| **UniFi Network** | **7.0.0 - 7.5.x** | 7.4.156, 7.5.176 | **Partial**: REST modules supported. Policy Engine v2 modules unsupported. |
+| **UniFi OS** | **3.0.0+** (Recommended) | 3.1.16, 3.2.12, 4.0.6 | **Full**: API Key auth (`api_key`), `unifi_user_certificate`, `unifi_ssh_key`, `unifi_ssl_config` |
+| **UniFi OS** | **< 3.0.0** | 1.12.x, 2.5.x | **Legacy**: Username/password auth only. User certificates unsupported. |
+
+See [Compatibility Guide](docs/compatibility.md) for detailed architecture, endpoint families, and version requirements.
+
 ## Included Modules
 
 ### Network Management

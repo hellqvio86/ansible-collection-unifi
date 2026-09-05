@@ -2,6 +2,7 @@
 
 import base64
 import hashlib
+import ipaddress as _ipaddress
 import json
 import os
 import random
@@ -1120,3 +1121,101 @@ def unifi_argument_spec() -> dict[str, dict[str, Any]]:
         unifi_csrf_token=dict(type="str", no_log=True, required=False),
         timeout=dict(type="int", default=30),
     )
+
+
+# ---------------------------------------------------------------------------
+# Argument validation helpers (8.x)
+# ---------------------------------------------------------------------------
+
+def validate_ip_address(module: Any, value: str, param_name: str) -> str:
+    """Validate that *value* is a well-formed IPv4 or IPv6 address.
+
+    Returns the normalized (compressed) string form.
+    Calls ``module.fail_json`` with a clear message on failure.
+    """
+    if not value:
+        return value
+    try:
+        return str(_ipaddress.ip_address(value))
+    except ValueError:
+        module.fail_json(msg=f"Invalid IP address for '{param_name}': {value!r}")
+
+
+def validate_cidr(module: Any, value: str, param_name: str) -> str:
+    """Validate that *value* is a well-formed IP address or CIDR network.
+
+    Accepts plain IPs (host addresses) as well as CIDR notation.
+    Returns the normalized string form.
+    Calls ``module.fail_json`` with a clear message on failure.
+    """
+    if not value:
+        return value
+    try:
+        # Try plain IP first
+        return str(_ipaddress.ip_address(value))
+    except ValueError:
+        pass
+    try:
+        # Try CIDR network (strict=False allows host bits to be set)
+        net = _ipaddress.ip_network(value, strict=False)
+        return str(net)
+    except ValueError:
+        module.fail_json(msg=f"Invalid IP address or CIDR for '{param_name}': {value!r}")
+
+
+def validate_port(module: Any, value: Any, param_name: str) -> int:
+    """Validate that *value* is a valid TCP/UDP port number (1–65535).
+
+    Returns the port as an integer.
+    Calls ``module.fail_json`` with a clear message on failure.
+    """
+    try:
+        port = int(value)
+    except (TypeError, ValueError):
+        module.fail_json(msg=f"Invalid port for '{param_name}': {value!r} — must be an integer")
+        return 0  # unreachable but satisfies type checkers
+    if not 1 <= port <= 65535:
+        module.fail_json(msg=f"Invalid port for '{param_name}': {value!r} — must be 1–65535")
+    return port
+
+
+def validate_port_range(module: Any, value: str, param_name: str) -> str:
+    """Validate that *value* is a valid port or port range string (e.g. '80', '8000-8080').
+
+    Returns the value unchanged if valid.
+    Calls ``module.fail_json`` with a clear message on failure.
+    """
+    if not value:
+        return value
+    parts = str(value).split("-")
+    if len(parts) == 1:
+        validate_port(module, parts[0].strip(), param_name)
+    elif len(parts) == 2:
+        lo = validate_port(module, parts[0].strip(), param_name)
+        hi = validate_port(module, parts[1].strip(), param_name)
+        if lo > hi:
+            module.fail_json(
+                msg=f"Invalid port range for '{param_name}': {value!r} — start port must be ≤ end port"
+            )
+    else:
+        module.fail_json(msg=f"Invalid port range for '{param_name}': {value!r}")
+    return value
+
+
+def validate_mac_address(module: Any, value: str, param_name: str) -> str:
+    """Validate and normalize a MAC address to lowercase colon-separated form.
+
+    Accepts common formats: ``aa:bb:cc:dd:ee:ff``, ``aa-bb-cc-dd-ee-ff``, ``aabbccddeeff``.
+    Returns the normalized ``aa:bb:cc:dd:ee:ff`` form.
+    Calls ``module.fail_json`` with a clear message on failure.
+    """
+    if not value:
+        return value
+    # Normalize separators
+    normalized = re.sub(r"[-.]", ":", value.strip().lower())
+    # Remove separators to validate hex digits
+    hex_only = normalized.replace(":", "")
+    if len(hex_only) != 12 or not all(c in "0123456789abcdef" for c in hex_only):
+        module.fail_json(msg=f"Invalid MAC address for '{param_name}': {value!r}")
+    # Rebuild as colon-separated pairs
+    return ":".join(hex_only[i : i + 2] for i in range(0, 12, 2))

@@ -151,6 +151,9 @@ from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import 
     find_resource,
     make_diff,
     resource_has_drift,
+    validate_cidr,
+    validate_ip_address,
+    validate_port_range,
 )
 
 
@@ -224,6 +227,14 @@ def run_module():
         api_key=module.params.get("api_key"),
     )
     api.login()
+
+    # Validate argument formats before making any API calls
+    validate_ip_address(module, module.params["fwd_ip"], "fwd_ip")
+    validate_port_range(module, module.params["dst_port"], "dst_port")
+    if module.params.get("fwd_port"):
+        validate_port_range(module, module.params["fwd_port"], "fwd_port")
+    if module.params.get("src"):
+        validate_cidr(module, module.params["src"], "src")
 
     site = module.params["site"]
     name = module.params["name"]

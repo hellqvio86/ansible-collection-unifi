@@ -155,6 +155,7 @@ from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import 
     find_resource,
     make_diff,
     resource_has_drift,
+    validate_ip_address,
 )
 
 
@@ -229,6 +230,19 @@ def run_module():
         api_key=module.params.get("api_key"),
     )
     api.login()
+
+    # Validate argument formats before making any API calls
+    if enabled:
+        if module.params.get("dhcp_start"):
+            validate_ip_address(module, module.params["dhcp_start"], "dhcp_start")
+        if module.params.get("dhcp_stop"):
+            validate_ip_address(module, module.params["dhcp_stop"], "dhcp_stop")
+    if module.params.get("dns_1"):
+        validate_ip_address(module, module.params["dns_1"], "dns_1")
+    if module.params.get("dns_2"):
+        validate_ip_address(module, module.params["dns_2"], "dns_2")
+    if module.params.get("gateway"):
+        validate_ip_address(module, module.params["gateway"], "gateway")
 
     site = module.params["site"]
 

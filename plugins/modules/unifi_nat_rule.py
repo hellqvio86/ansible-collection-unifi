@@ -157,6 +157,8 @@ from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import 
     find_resource,
     make_diff,
     resource_has_drift,
+    validate_cidr,
+    validate_ip_address,
 )
 
 _NAT_PATH = "/proxy/network/v2/api/site/{site}/firewall/nat"
@@ -252,6 +254,13 @@ def run_module() -> None:
         api_key=module.params.get("api_key"),
     )
     api.login()
+
+    # Validate argument formats before making any API calls
+    validate_cidr(module, module.params["src_address"], "src_address")
+    if module.params.get("dst_address"):
+        validate_cidr(module, module.params["dst_address"], "dst_address")
+    if module.params.get("translated_src"):
+        validate_ip_address(module, module.params["translated_src"], "translated_src")
 
     site: str = module.params["site"]
     name: str = module.params["name"]

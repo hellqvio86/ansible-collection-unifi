@@ -75,6 +75,8 @@ from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import 
     UnifiAPI,
     make_diff,
     resource_has_drift,
+    validate_ip_address,
+    validate_port,
 )
 
 
@@ -126,6 +128,11 @@ def run_module():
         api_key=module.params.get("api_key"),
     )
     api.login()
+
+    # Validate argument formats before making any API calls
+    if module.params.get("ip"):
+        validate_ip_address(module, module.params["ip"], "ip")
+    validate_port(module, module.params["port"], "port")
 
     site = module.params["site"]
 

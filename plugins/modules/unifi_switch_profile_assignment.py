@@ -32,7 +32,11 @@ author:
 
 from ansible.module_utils.basic import AnsibleModule
 
-from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI
+from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import (
+    UnifiAPI,
+    validate_ip_address,
+    validate_mac_address,
+)
 
 
 def _normalize_desired(module):
@@ -107,6 +111,14 @@ def run_module():
         api_key=module.params.get("api_key"),
     )
     api.login()
+
+    # Validate argument formats before making any API calls
+    for item in desired_items:
+        if item.get("switch_mac"):
+            validate_mac_address(module, item["switch_mac"], "switch_mac")
+        if item.get("switch_ip"):
+            validate_ip_address(module, item["switch_ip"], "switch_ip")
+
     site = module.params["site"]
 
     switch_profiles, switchprofile_supported = _fetch_switch_profiles(api, site)

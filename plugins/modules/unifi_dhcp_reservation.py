@@ -122,6 +122,8 @@ from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import 
     UnifiAPI,
     find_resource,
     resource_has_drift,
+    validate_ip_address,
+    validate_mac_address,
 )
 
 
@@ -148,6 +150,11 @@ def run_module():
     # Validate fixed_ip is provided when state=present
     if module.params["state"] == "present" and not module.params["fixed_ip"]:
         module.fail_json(msg="'fixed_ip' is required when state=present")
+
+    # Validate argument formats before making any API calls
+    validate_mac_address(module, module.params["mac"], "mac")
+    if module.params.get("fixed_ip"):
+        validate_ip_address(module, module.params["fixed_ip"], "fixed_ip")
 
     api = UnifiAPI(
         module,

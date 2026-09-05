@@ -71,7 +71,26 @@ author:
 
 from ansible.module_utils.basic import AnsibleModule
 
-from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI, make_diff
+from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import (
+    UnifiAPI,
+    make_diff,
+    resource_has_drift,
+)
+
+
+def _build_desired_payload(params: dict) -> dict:
+    """Build the desired rsyslogd setting payload from module parameters."""
+    return {
+        "key": "rsyslogd",
+        "enabled": params["enabled"],
+        "ip": params.get("ip"),
+        "port": params["port"],
+        "log_all_contents": params["log_all_contents"],
+        "debug": params["debug"],
+        "netconsole_enabled": params["netconsole_enabled"],
+        "this_controller": False,
+        "this_controller_encrypted_only": False,
+    }
 
 
 def run_module():
@@ -121,23 +140,9 @@ def run_module():
     if not current:
         module.fail_json(msg="rsyslogd setting not found on controller")
 
-    desired_payload = {
-        "key": "rsyslogd",
-        "enabled": module.params["enabled"],
-        "ip": module.params["ip"],
-        "port": module.params["port"],
-        "log_all_contents": module.params["log_all_contents"],
-        "debug": module.params["debug"],
-        "netconsole_enabled": module.params["netconsole_enabled"],
-        "this_controller": False,
-        "this_controller_encrypted_only": False,
-    }
+    desired_payload = _build_desired_payload(module.params)
 
-    changed = False
-    for key, value in desired_payload.items():
-        if current.get(key) != value:
-            changed = True
-            break
+    changed = resource_has_drift(current, desired_payload)
 
     result_setting = current
     if changed:

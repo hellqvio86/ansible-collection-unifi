@@ -146,7 +146,44 @@ rule:
 
 from ansible.module_utils.basic import AnsibleModule
 
-from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI, find_resource, make_diff
+from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import (
+    UnifiAPI,
+    find_resource,
+    make_diff,
+    resource_has_drift,
+)
+
+
+def _build_desired_payload(
+    name: str,
+    params: dict,
+    dst_port: str,
+    fwd_port: str,
+    fwd_network_id: str = "",
+) -> dict:
+    """Build the desired port forwarding rule payload.
+
+    Args:
+        name: Rule name.
+        params: Module params dict.
+        dst_port: Destination port (normalized from params).
+        fwd_port: Forward port (normalized from params, defaults to dst_port).
+        fwd_network_id: Resolved network ID for the forward network (empty string if not set).
+    """
+    payload = {
+        "name": name,
+        "enabled": params["enabled"],
+        "proto": params["protocol"],
+        "dst_port": dst_port,
+        "fwd_port": fwd_port,
+        "fwd_ip": params["fwd_ip"],
+        "log": params["log"],
+    }
+    if params.get("src"):
+        payload["src"] = params["src"]
+    if fwd_network_id:
+        payload["fwd_network_id"] = fwd_network_id
+    return payload
 
 
 def run_module():
@@ -234,39 +271,10 @@ def run_module():
         module.exit_json(**exit_kwargs)
         return
 
-    desired_payload = {
-        "name": name,
-        "enabled": module.params["enabled"],
-        "proto": module.params["protocol"],
-        "dst_port": dst_port,
-        "fwd_port": fwd_port,
-        "fwd_ip": module.params["fwd_ip"],
-        "log": module.params["log"],
-    }
-
-    if module.params["src"]:
-        desired_payload["src"] = module.params["src"]
-    if fwd_network_id:
-        desired_payload["fwd_network_id"] = fwd_network_id
+    desired_payload = _build_desired_payload(name, module.params, dst_port, fwd_port, fwd_network_id)
 
     if current:
-        changed = False
-        if current.get("enabled") != desired_payload["enabled"]:
-            changed = True
-        elif current.get("proto") != desired_payload["proto"]:
-            changed = True
-        elif current.get("src", "") != (desired_payload.get("src") or ""):
-            changed = True
-        elif current.get("dst_port") != desired_payload["dst_port"]:
-            changed = True
-        elif current.get("fwd_port") != desired_payload["fwd_port"]:
-            changed = True
-        elif current.get("fwd_ip") != desired_payload["fwd_ip"]:
-            changed = True
-        elif current.get("fwd_network_id", "") != (desired_payload.get("fwd_network_id") or ""):
-            changed = True
-        elif current.get("log", False) != desired_payload["log"]:
-            changed = True
+        changed = resource_has_drift(current, desired_payload)
 
         if changed:
             if not module.check_mode:

@@ -1,6 +1,60 @@
 from unittest.mock import patch
 
-from ansible_collections.hellqvio86.unifi.plugins.modules.unifi_port_forward import run_module
+from ansible_collections.hellqvio86.unifi.plugins.modules.unifi_port_forward import (
+    _build_desired_payload,
+    run_module,
+)
+
+# ---------------------------------------------------------------------------
+# Desired-state builder tests (independent of HTTP/API)
+# ---------------------------------------------------------------------------
+
+
+def test_build_desired_payload_basic():
+    params = {
+        "enabled": True,
+        "protocol": "tcp",
+        "fwd_ip": "192.168.1.10",
+        "log": False,
+        "src": None,
+    }
+    result = _build_desired_payload("web", params, "80", "8080")
+    assert result["name"] == "web"
+    assert result["enabled"] is True
+    assert result["proto"] == "tcp"
+    assert result["dst_port"] == "80"
+    assert result["fwd_port"] == "8080"
+    assert result["fwd_ip"] == "192.168.1.10"
+    assert result["log"] is False
+    assert "src" not in result
+    assert "fwd_network_id" not in result
+
+
+def test_build_desired_payload_with_src_and_network():
+    params = {
+        "enabled": True,
+        "protocol": "udp",
+        "fwd_ip": "10.0.0.5",
+        "log": True,
+        "src": "203.0.113.0/24",
+    }
+    result = _build_desired_payload("vpn", params, "1194", "1194", fwd_network_id="net-abc123")
+    assert result["src"] == "203.0.113.0/24"
+    assert result["fwd_network_id"] == "net-abc123"
+    assert result["log"] is True
+
+
+def test_build_desired_payload_empty_src_excluded():
+    params = {
+        "enabled": True,
+        "protocol": "tcp",
+        "fwd_ip": "192.168.1.1",
+        "log": False,
+        "src": "",
+    }
+    result = _build_desired_payload("ssh", params, "22", "22")
+    # empty string is falsy, src should not be in payload
+    assert "src" not in result
 
 
 def test_port_forward_create():

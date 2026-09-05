@@ -150,7 +150,32 @@ network:
 
 from ansible.module_utils.basic import AnsibleModule
 
-from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI, find_resource, make_diff
+from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import (
+    UnifiAPI,
+    find_resource,
+    make_diff,
+    resource_has_drift,
+)
+
+
+def _build_desired_payload(params: dict, enabled: bool) -> dict:
+    """Build the desired DHCP server payload from module parameters."""
+    payload: dict = {"dhcpd_enabled": enabled}
+    if params.get("dhcp_start") is not None:
+        payload["dhcpd_start"] = params["dhcp_start"]
+    if params.get("dhcp_stop") is not None:
+        payload["dhcpd_stop"] = params["dhcp_stop"]
+    if params.get("lease_time") is not None:
+        payload["dhcpd_leasetime"] = params["lease_time"]
+    if params.get("dns_1") is not None:
+        payload["dhcpd_dns_1"] = params["dns_1"]
+    if params.get("dns_2") is not None:
+        payload["dhcpd_dns_2"] = params["dns_2"]
+    if params.get("gateway") is not None:
+        payload["dhcpd_gateway"] = params["gateway"]
+    if params.get("domain") is not None:
+        payload["dhcpd_domain_name"] = params["domain"]
+    return payload
 
 
 def run_module():
@@ -218,46 +243,9 @@ def run_module():
     if not current:
         module.fail_json(msg=f"Network '{network_name}' not found")
 
-    desired_payload = {
-        "dhcpd_enabled": enabled,
-    }
+    desired_payload = _build_desired_payload(module.params, enabled)
 
-    if module.params["dhcp_start"] is not None:
-        desired_payload["dhcpd_start"] = module.params["dhcp_start"]
-    if module.params["dhcp_stop"] is not None:
-        desired_payload["dhcpd_stop"] = module.params["dhcp_stop"]
-    if module.params["lease_time"] is not None:
-        desired_payload["dhcpd_leasetime"] = module.params["lease_time"]
-    if module.params["dns_1"] is not None:
-        desired_payload["dhcpd_dns_1"] = module.params["dns_1"]
-    if module.params["dns_2"] is not None:
-        desired_payload["dhcpd_dns_2"] = module.params["dns_2"]
-    if module.params["gateway"] is not None:
-        desired_payload["dhcpd_gateway"] = module.params["gateway"]
-    if module.params["domain"] is not None:
-        desired_payload["dhcpd_domain_name"] = module.params["domain"]
-
-    dhcp_fields = [
-        "dhcpd_enabled",
-        "dhcpd_start",
-        "dhcpd_stop",
-        "dhcpd_leasetime",
-        "dhcpd_dns_1",
-        "dhcpd_dns_2",
-        "dhcpd_gateway",
-        "dhcpd_domain_name",
-    ]
-
-    changed = False
-    for field in dhcp_fields:
-        if field in desired_payload:
-            current_value = current.get(field)
-            desired_value = desired_payload[field]
-            if field == "dhcpd_enabled":
-                desired_value = bool(desired_value)
-            if current_value != desired_value:
-                changed = True
-                break
+    changed = resource_has_drift(current, desired_payload)
 
     result_network = current
     if changed:

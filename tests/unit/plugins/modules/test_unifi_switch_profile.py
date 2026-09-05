@@ -1,6 +1,38 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
-from ansible_collections.hellqvio86.unifi.plugins.modules.unifi_switch_profile import run_module
+from ansible_collections.hellqvio86.unifi.plugins.modules.unifi_switch_profile import (
+    _build_desired_payload,
+    run_module,
+)
+
+# ---------------------------------------------------------------------------
+# Desired-state builder tests (independent of HTTP/API)
+# ---------------------------------------------------------------------------
+
+
+def test_build_desired_payload_name_only():
+    mock_module = MagicMock()
+    mock_module.params = {"name": "MyProfile", "model": None, "description": None, "port_profile_overrides": None}
+    result = _build_desired_payload(mock_module)
+    assert result["name"] == "MyProfile"
+    assert "model" not in result
+    assert "description" not in result
+    assert "port_profile_overrides" not in result
+
+
+def test_build_desired_payload_all_fields():
+    mock_module = MagicMock()
+    mock_module.params = {
+        "name": "FullProfile",
+        "model": "US-8-60W",
+        "description": "Test switch profile",
+        "port_profile_overrides": {"1": "LAN", "2": "VLAN10"},
+    }
+    result = _build_desired_payload(mock_module)
+    assert result["name"] == "FullProfile"
+    assert result["model"] == "US-8-60W"
+    assert result["description"] == "Test switch profile"
+    assert result["port_profile_overrides"] == {"1": "LAN", "2": "VLAN10"}
 
 
 def test_switch_profile_create():

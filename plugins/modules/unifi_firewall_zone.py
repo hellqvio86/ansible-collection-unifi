@@ -82,6 +82,14 @@ from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI, find_resource, make_diff
 
 
+def _build_desired_payload(name: str) -> dict:
+    """Build the desired firewall zone payload."""
+    return {
+        "name": name,
+        "network_ids": [],
+    }
+
+
 def run_module():
     module_args = dict(
         host=dict(type="str"),
@@ -128,10 +136,7 @@ def run_module():
     )
 
     # Build payload
-    desired_payload = {
-        "name": module.params["name"],
-        "network_ids": [],
-    }
+    desired_payload = _build_desired_payload(module.params["name"])
 
     changed = False
     result_zone = existing

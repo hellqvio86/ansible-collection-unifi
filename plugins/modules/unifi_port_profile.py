@@ -66,7 +66,12 @@ author:
 
 from ansible.module_utils.basic import AnsibleModule
 
-from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI, find_resource, make_diff
+from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import (
+    UnifiAPI,
+    find_resource,
+    make_diff,
+    resource_has_drift,
+)
 
 
 def run_module():
@@ -174,15 +179,7 @@ def run_module():
             else:
                 result_profile = desired_payload
         else:
-            for key, value in desired_payload.items():
-                if key == "excluded_networkconf_ids":
-                    existing_list = existing.get(key) or []
-                    if sorted(existing_list) != sorted(value):
-                        changed = True
-                        break
-                elif existing.get(key) != value:
-                    changed = True
-                    break
+            changed = resource_has_drift(existing, desired_payload)
 
             if changed:
                 if not module.check_mode:

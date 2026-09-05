@@ -1,6 +1,37 @@
 from unittest.mock import patch
 
-from ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_group import run_module
+from ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_group import (
+    _build_desired_payload,
+    run_module,
+)
+
+# ---------------------------------------------------------------------------
+# Desired-state builder tests (independent of HTTP/API)
+# ---------------------------------------------------------------------------
+
+
+def test_build_desired_payload_address_group():
+    result = _build_desired_payload("web-servers", "address-group", ["192.0.2.1", "192.0.2.2"])
+    assert result["name"] == "web-servers"
+    assert result["group_type"] == "address-group"
+    assert result["group_members"] == ["192.0.2.1", "192.0.2.2"]
+
+
+def test_build_desired_payload_port_group():
+    result = _build_desired_payload("http-ports", "port-group", ["80", "443"])
+    assert result["name"] == "http-ports"
+    assert result["group_type"] == "port-group"
+    assert result["group_members"] == ["80", "443"]
+
+
+def test_build_desired_payload_empty_members():
+    result = _build_desired_payload("empty-group", "address-group", None)
+    assert result["group_members"] == []
+
+
+def test_build_desired_payload_normalizes_none_members():
+    result = _build_desired_payload("my-group", "address-group", [])
+    assert result["group_members"] == []
 
 
 def test_firewall_group_create():

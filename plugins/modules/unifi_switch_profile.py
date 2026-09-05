@@ -66,7 +66,12 @@ author:
 
 from ansible.module_utils.basic import AnsibleModule
 
-from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI, find_resource, make_diff
+from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import (
+    UnifiAPI,
+    find_resource,
+    make_diff,
+    resource_has_drift,
+)
 
 
 def _build_desired_payload(module):
@@ -83,10 +88,7 @@ def _build_desired_payload(module):
 
 
 def _needs_update(existing, desired):
-    for key in ("model", "description", "port_profile_overrides"):
-        if key in desired and existing.get(key) != desired[key]:
-            return True
-    return False
+    return resource_has_drift(existing, desired)
 
 
 def run_module():

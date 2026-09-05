@@ -118,7 +118,11 @@ client:
 
 from ansible.module_utils.basic import AnsibleModule
 
-from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI, find_resource
+from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import (
+    UnifiAPI,
+    find_resource,
+    resource_has_drift,
+)
 
 
 def run_module():
@@ -210,16 +214,7 @@ def run_module():
         if module.params["name"]:
             desired_payload["name"] = module.params["name"]
 
-        needs_update = False
-
-        if not client.get("use_fixedip"):
-            needs_update = True
-        elif client.get("fixed_ip") != module.params["fixed_ip"]:
-            needs_update = True
-        elif network_id and client.get("network_id") != network_id:
-            needs_update = True
-        elif module.params["name"] and client.get("name") != module.params["name"]:
-            needs_update = True
+        needs_update = resource_has_drift(client, desired_payload)
 
         if needs_update:
             changed = True

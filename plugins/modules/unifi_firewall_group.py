@@ -87,7 +87,21 @@ EXAMPLES = r"""
 
 from ansible.module_utils.basic import AnsibleModule
 
-from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI, find_resource, make_diff
+from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import (
+    UnifiAPI,
+    find_resource,
+    make_diff,
+    resource_has_drift,
+)
+
+
+def _build_desired_payload(name: str, group_type: str, group_members: list | None) -> dict:
+    """Build the desired firewall group payload."""
+    return {
+        "name": name,
+        "group_type": group_type,
+        "group_members": group_members or [],
+    }
 
 
 def run_module():
@@ -139,11 +153,7 @@ def run_module():
     changed = False
     result_group = existing
 
-    desired_payload = {
-        "name": name,
-        "group_type": group_type,
-        "group_members": group_members,
-    }
+    desired_payload = _build_desired_payload(name, group_type, group_members)
 
     if module.params["state"] == "present":
         if not existing:
@@ -165,8 +175,8 @@ def run_module():
                     msg=f"Group '{name}' already exists with different type '{existing.get('group_type')}'"
                 )
 
-            # Check if members match
-            if sorted(existing.get("group_members", [])) != sorted(group_members or []):
+            # Check if members match (resource_has_drift handles unordered list comparison)
+            if resource_has_drift(existing, desired_payload, ignored_keys={"group_type", "name"}):
                 changed = True
                 if not module.check_mode:
                     res, info = api.request(

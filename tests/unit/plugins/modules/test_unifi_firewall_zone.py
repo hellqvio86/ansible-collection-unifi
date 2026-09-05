@@ -1,6 +1,33 @@
 from unittest.mock import patch
 
-from ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_zone import run_module
+from ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_zone import (
+    _build_desired_payload,
+    run_module,
+)
+
+# ---------------------------------------------------------------------------
+# Desired-state builder tests (independent of HTTP/API)
+# ---------------------------------------------------------------------------
+
+
+def test_build_desired_payload_basic():
+    result = _build_desired_payload("LAN")
+    assert result["name"] == "LAN"
+    assert result["network_ids"] == []
+
+
+def test_build_desired_payload_special_chars():
+    result = _build_desired_payload("Guest WiFi Zone")
+    assert result["name"] == "Guest WiFi Zone"
+    assert result["network_ids"] == []
+
+
+def test_build_desired_payload_returns_fresh_list():
+    """Each call must return an independent list to prevent mutation aliasing."""
+    r1 = _build_desired_payload("Z1")
+    r2 = _build_desired_payload("Z2")
+    r1["network_ids"].append("net-1")
+    assert r2["network_ids"] == []
 
 
 def test_zone_create():

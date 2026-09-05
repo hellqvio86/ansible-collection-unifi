@@ -1,6 +1,68 @@
 from unittest.mock import patch
 
-from ansible_collections.hellqvio86.unifi.plugins.modules.unifi_dhcp_server import run_module
+from ansible_collections.hellqvio86.unifi.plugins.modules.unifi_dhcp_server import (
+    _build_desired_payload,
+    run_module,
+)
+
+# ---------------------------------------------------------------------------
+# Desired-state builder tests (independent of HTTP/API)
+# ---------------------------------------------------------------------------
+
+
+def test_build_desired_payload_enabled_with_all_fields():
+    params = {
+        "dhcp_start": "192.168.1.100",
+        "dhcp_stop": "192.168.1.200",
+        "lease_time": 86400,
+        "dns_1": "8.8.8.8",
+        "dns_2": "8.8.4.4",
+        "gateway": "192.168.1.1",
+        "domain": "example.com",
+    }
+    result = _build_desired_payload(params, enabled=True)
+    assert result["dhcpd_enabled"] is True
+    assert result["dhcpd_start"] == "192.168.1.100"
+    assert result["dhcpd_stop"] == "192.168.1.200"
+    assert result["dhcpd_leasetime"] == 86400
+    assert result["dhcpd_dns_1"] == "8.8.8.8"
+    assert result["dhcpd_dns_2"] == "8.8.4.4"
+    assert result["dhcpd_gateway"] == "192.168.1.1"
+    assert result["dhcpd_domain_name"] == "example.com"
+
+
+def test_build_desired_payload_disabled():
+    params = {
+        "dhcp_start": None,
+        "dhcp_stop": None,
+        "lease_time": None,
+        "dns_1": None,
+        "dns_2": None,
+        "gateway": None,
+        "domain": None,
+    }
+    result = _build_desired_payload(params, enabled=False)
+    assert result["dhcpd_enabled"] is False
+    assert "dhcpd_start" not in result
+    assert "dhcpd_stop" not in result
+
+
+def test_build_desired_payload_partial_fields():
+    params = {
+        "dhcp_start": "10.0.0.10",
+        "dhcp_stop": "10.0.0.50",
+        "lease_time": None,
+        "dns_1": "1.1.1.1",
+        "dns_2": None,
+        "gateway": None,
+        "domain": None,
+    }
+    result = _build_desired_payload(params, enabled=True)
+    assert result["dhcpd_enabled"] is True
+    assert result["dhcpd_start"] == "10.0.0.10"
+    assert result["dhcpd_dns_1"] == "1.1.1.1"
+    assert "dhcpd_leasetime" not in result
+    assert "dhcpd_dns_2" not in result
 
 
 def test_dhcp_server_create():

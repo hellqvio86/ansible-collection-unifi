@@ -255,6 +255,152 @@ def find_resource(
             )
         return matches[0] if matches else None
 
+    return None
+
+
+SERVER_GENERATED_KEYS: frozenset[str] = frozenset(
+    {
+        "_id",
+        "id",
+        "site_id",
+        "attr_no_delete",
+        "attr_hidden_id",
+        "setting_preference",
+        "version",
+        "datetime",
+        "_uptime",
+        "uptime",
+        "last_seen",
+        "stat",
+        "meta",
+    }
+)
+
+
+def normalize_ports(val: Any) -> set[str] | None:
+    """Parse port or comma-separated ports into a normalized set of strings."""
+    if val is None:
+        return None
+    if isinstance(val, (int, float)):
+        return {str(int(val))}
+    if isinstance(val, str):
+        parts = [p.strip() for p in val.split(",") if p.strip()]
+        return set(parts) if parts else {""}
+    if isinstance(val, (list, set, tuple)):
+        return {str(p).strip() for p in val if p is not None}
+    return None
+
+
+def canonical_compare(existing: Any, desired: Any, sort_lists: bool = True) -> bool:
+    """Compare an existing controller attribute with a desired attribute.
+
+    Returns True if the values are considered equivalent (no drift).
+    Handles:
+    - Type coercions (int vs string number, e.g. 514 vs '514')
+    - None vs empty string equivalence
+    - Port lists / comma-separated port normalization ('80, 443' == '443,80')
+    - Unordered list equivalence (['2g', '5g'] == ['5g', '2g'])
+    - Recursive dictionary comparison ignoring server-generated metadata
+    """
+    if existing is desired:
+        return True
+
+    # Empty string vs None equivalence for optional text fields
+    if existing in (None, "") and desired in (None, ""):
+        return True
+
+    # Boolean vs exact type
+    if isinstance(desired, bool) or isinstance(existing, bool):
+        if isinstance(desired, bool) and isinstance(existing, bool):
+            return desired == existing
+        if isinstance(existing, str):
+            existing_bool = existing.lower() in ("true", "1", "yes", "on")
+            return existing_bool == desired
+        if isinstance(desired, str):
+            desired_bool = desired.lower() in ("true", "1", "yes", "on")
+            return desired_bool == existing
+
+    # Numeric coercion (e.g. 86400 vs '86400', 514 vs '514')
+    if isinstance(desired, (int, float)) and isinstance(existing, str):
+        try:
+            return float(existing) == float(desired)
+        except (ValueError, TypeError):
+            pass
+    if isinstance(existing, (int, float)) and isinstance(desired, str):
+        try:
+            return float(desired) == float(existing)
+        except (ValueError, TypeError):
+            pass
+
+    # Comma-separated strings or port normalization
+    if isinstance(desired, str) and isinstance(existing, str):
+        if "," in desired or "," in existing:
+            set_des = {s.strip() for s in desired.split(",") if s.strip()}
+            set_exist = {s.strip() for s in existing.split(",") if s.strip()}
+            if set_des == set_exist:
+                return True
+        return existing.strip() == desired.strip()
+
+    # Lists
+    if isinstance(existing, list) and isinstance(desired, list):
+        if len(existing) != len(desired):
+            return False
+        if sort_lists:
+            try:
+                sorted_exist = sorted(existing)
+                sorted_des = sorted(desired)
+                return all(canonical_compare(e, d, sort_lists=True) for e, d in zip(sorted_exist, sorted_des, strict=False))
+            except TypeError:
+                unmatched_des = list(desired)
+                for e in existing:
+                    found = False
+                    for i, d in enumerate(unmatched_des):
+                        if canonical_compare(e, d, sort_lists=True):
+                            unmatched_des.pop(i)
+                            found = True
+                            break
+                    if not found:
+                        return False
+                return len(unmatched_des) == 0
+        else:
+            return all(canonical_compare(e, d, sort_lists=False) for e, d in zip(existing, desired, strict=False))
+
+    # Dictionaries
+    if isinstance(existing, dict) and isinstance(desired, dict):
+        for k, v in desired.items():
+            if k in SERVER_GENERATED_KEYS:
+                continue
+            if not canonical_compare(existing.get(k), v, sort_lists=sort_lists):
+                return False
+        return True
+
+    return existing == desired
+
+
+def resource_has_drift(
+    existing: dict[str, Any] | None,
+    desired: dict[str, Any],
+    ignored_keys: set[str] | None = None,
+    sort_lists: bool = True,
+) -> bool:
+    """Return True if desired state differs from existing controller state.
+
+    Ignores server-generated keys and accounts for list ordering and type conversions.
+    """
+    if not existing:
+        return True
+
+    ignored = SERVER_GENERATED_KEYS | (ignored_keys or set())
+    for key, desired_val in desired.items():
+        if key in ignored:
+            continue
+        existing_val = existing.get(key)
+        if not canonical_compare(existing_val, desired_val, sort_lists=sort_lists):
+            return True
+
+    return False
+
+
 class ControllerVersion:
     """Represents a parsed semantic version for UniFi controllers."""
 

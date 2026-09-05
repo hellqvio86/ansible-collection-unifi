@@ -173,7 +173,7 @@ settings:
 
 from ansible.module_utils.basic import AnsibleModule
 
-from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI
+from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI, resource_has_drift
 
 NTP_FIELD_MAP = {
     "server_1": "ntp_server_1",
@@ -226,10 +226,7 @@ def _build_switch_payload(switch_params, key="global_switch"):
 
 
 def _check_changed(current, desired):
-    for key, value in desired.items():
-        if current.get(key) != value:
-            return True
-    return False
+    return resource_has_drift(current, desired)
 
 
 def run_module():

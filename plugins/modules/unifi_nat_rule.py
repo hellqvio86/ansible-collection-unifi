@@ -152,7 +152,12 @@ from typing import Any
 
 from ansible.module_utils.basic import AnsibleModule
 
-from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI, find_resource, make_diff
+from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import (
+    UnifiAPI,
+    find_resource,
+    make_diff,
+    resource_has_drift,
+)
 
 _NAT_PATH = "/proxy/network/v2/api/site/{site}/firewall/nat"
 _NETCONF_PATH = "/proxy/network/api/s/{site}/rest/networkconf"
@@ -200,12 +205,7 @@ def _build_desired(
 
 def _rules_differ(current: dict[str, Any], desired: dict[str, Any]) -> bool:
     """Return True if any key in desired differs from current (ignoring _id)."""
-    for key, val in desired.items():
-        if key == "_id":
-            continue
-        if current.get(key) != val:
-            return True
-    return False
+    return resource_has_drift(current, desired)
 
 
 def _find_rule(

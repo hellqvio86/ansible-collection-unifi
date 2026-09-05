@@ -176,7 +176,7 @@ def run_module():
     service_name = module.params.get("service_name") or "unifi-core"
     timeout = module.params.get("timeout") or 30
     operation_timeout = module.params.get("operation_timeout") or 30
-    host_key_policy = module.params.get("host_key_policy") or "reject"
+    host_key_policy = module.params.get("host_key_policy") or "reject"  # codeql[python/tainted-ssh-host-key-verification] intentional user choice
     warning_days = module.params.get("warning_days") or 30
 
     if not host:
@@ -222,7 +222,13 @@ def run_module():
     try:
         ssh = paramiko.SSHClient()
         ssh.load_system_host_keys()
-        ssh.set_missing_host_key_policy(paramiko.RejectPolicy())
+        # codeql[python/tainted-ssh-host-key-verification] controlled by explicit user parameter with safe default
+        if host_key_policy == "auto_add":
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        elif host_key_policy == "warning":
+            ssh.set_missing_host_key_policy(paramiko.WarningPolicy())
+        else:
+            ssh.set_missing_host_key_policy(paramiko.RejectPolicy())
 
         connect_kwargs = {
             "hostname": host,

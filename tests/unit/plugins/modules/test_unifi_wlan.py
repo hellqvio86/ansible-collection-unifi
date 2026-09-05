@@ -404,3 +404,156 @@ def test_wlan_create_with_band():
         mock_module.exit_json.assert_called_once()
         kwargs = mock_module.exit_json.call_args[1]
         assert kwargs["changed"] is True
+
+
+def test_wlan_create_with_api_key():
+    params = {
+        "host": "192.0.2.1",
+        "username": None,
+        "password": None,
+        "api_key": "my-api-key",
+        "site": "default",
+        "validate_certs": True,
+        "ca_path": None,
+        "unifi_session_cookie": None,
+        "unifi_csrf_token": None,
+        "state": "present",
+        "name": "Token WLAN",
+        "enabled": True,
+        "network_name": None,
+        "security": "wpapsk",
+        "passphrase": "secret123",
+        "band": "both",
+    }
+
+    with (
+        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_wlan.AnsibleModule") as mock_module_class,
+        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_wlan.UnifiAPI") as mock_api_class,
+    ):
+        mock_module = mock_module_class.return_value
+        mock_module.params = params
+        mock_module.check_mode = False
+        mock_module.fail_json.side_effect = Exception("fail_json")
+
+        mock_api = mock_api_class.return_value
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
+
+        mock_api.request.side_effect = [
+            ([], {"status": 200}),
+            ([{"_id": "wlan2", "name": "Token WLAN", "enabled": True, "security": "wpapsk"}], {"status": 201}),
+        ]
+
+        run_module()
+
+        mock_api_class.assert_called_once()
+        call_kwargs = mock_api_class.call_args[1]
+        assert call_kwargs["api_key"] == "my-api-key"
+        mock_api.login.assert_called_once()
+        assert mock_module.exit_json.call_args[1]["changed"] is True
+
+
+def test_wlan_duplicate_fails():
+    params = {
+        "host": "192.0.2.1",
+        "username": "admin",
+        "password": "password",
+        "site": "default",
+        "validate_certs": False,
+        "state": "present",
+        "name": "Duplicate WLAN",
+        "enabled": True,
+        "network_name": None,
+        "security": "wpapsk",
+        "passphrase": "secret123",
+        "band": "both",
+    }
+
+    with (
+        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_wlan.AnsibleModule") as mock_module_class,
+        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_wlan.UnifiAPI") as mock_api_class,
+    ):
+        mock_module = mock_module_class.return_value
+        mock_module.params = params
+        mock_module.check_mode = False
+        mock_module.fail_json.side_effect = Exception("fail_json")
+
+        mock_api = mock_api_class.return_value
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
+
+        mock_api.request.side_effect = [
+            (
+                [
+                    {"_id": "wlan1", "name": "Duplicate WLAN"},
+                    {"_id": "wlan2", "name": "Duplicate WLAN"},
+                ],
+                {"status": 200},
+            ),
+        ]
+
+        import pytest
+
+        with pytest.raises(Exception, match="fail_json"):
+            run_module()
+
+        mock_module.fail_json.assert_called_once()
+        msg = mock_module.fail_json.call_args[1]["msg"]
+        assert "Ambiguous resource" in msg
+        assert "Duplicate WLAN" in msg
+
+
+def test_wlan_diff_mode_masks_passphrase():
+    params = {
+        "host": "192.0.2.1",
+        "username": "admin",
+        "password": "password",
+        "site": "default",
+        "validate_certs": False,
+        "state": "present",
+        "name": "Secure WLAN",
+        "enabled": True,
+        "network_name": None,
+        "security": "wpapsk",
+        "passphrase": "super_secret_wifi_password",
+        "band": "both",
+    }
+
+    with (
+        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_wlan.AnsibleModule") as mock_module_class,
+        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_wlan.UnifiAPI") as mock_api_class,
+    ):
+        mock_module = mock_module_class.return_value
+        mock_module.params = params
+        mock_module.check_mode = True
+        mock_module._diff = True
+        mock_module.fail_json.side_effect = Exception("fail_json")
+
+        mock_api = mock_api_class.return_value
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
+
+        mock_api.request.side_effect = [
+            ([], {"status": 200}),
+        ]
+
+        run_module()
+
+        mock_module.exit_json.assert_called_once()
+        kwargs = mock_module.exit_json.call_args[1]
+        assert kwargs["changed"] is True
+        assert "diff" in kwargs
+        diff = kwargs["diff"]
+        assert diff["after"]["x_passphrase"] == "********"
+        assert "super_secret" not in str(diff)
+
+

@@ -22,6 +22,13 @@ options:
     validate_certs:
         type: bool
         default: true
+    api_key:
+        description:
+            - Token for direct API authentication (UniFi OS 3.x+ / Network 8.x+).
+            - Preferred over username/password.
+            - Can also be set via the C(UNIFI_API_KEY) or C(UNIFI_API_TOKEN) environment variables.
+        type: str
+        required: false
     ca_path:
         type: path
         required: false
@@ -43,19 +50,40 @@ author:
     - hellqvio86 (@hellqvio86)
 """
 
+from typing import Any
+
 from ansible.module_utils.basic import AnsibleModule
 
-from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI
+from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI, make_diff
 
 
-def _is_matching_cert(cert_name: str, resource_name: str) -> bool:
-    """Check if certificate name strictly matches the resource name or its managed fingerprint format."""
-    if cert_name == resource_name:
-        return True
-    prefix = f"{resource_name}-"
-    if cert_name.startswith(prefix) and len(cert_name) == len(prefix) + 8:
-        suffix = cert_name[len(prefix) :]
-        return all(ch in "0123456789abcdefABCDEF" for ch in suffix)
+def _is_matching_cert(cert_obj: Any, resource_name: str) -> bool:
+    """Check if certificate strictly matches resource_name or proves deterministic module ownership.
+
+    A certificate is owned if:
+      1. Its name strictly equals resource_name.
+      2. Its name strictly equals {resource_name}-{short_fingerprint} AND the short_fingerprint
+         matches the certificate's actual fingerprint on the controller.
+    Unrelated certificates (e.g. 'homeassistant', 'home-old' when managing 'home') will never match.
+    """
+    if isinstance(cert_obj, dict):
+        c_name = cert_obj.get("name", "")
+        if c_name == resource_name:
+            return True
+        c_fp = cert_obj.get("fingerprint", "").replace(":", "").lower()[:8]
+        if c_fp and c_name == f"{resource_name}-{c_fp}":
+            return True
+        return False
+
+    if isinstance(cert_obj, str):
+        if cert_obj == resource_name:
+            return True
+        prefix = f"{resource_name}-"
+        if cert_obj.startswith(prefix) and len(cert_obj) == len(prefix) + 8:
+            suffix = cert_obj[len(prefix) :]
+            return all(ch in "0123456789abcdefABCDEF" for ch in suffix)
+        return False
+
     return False
 
 
@@ -68,10 +96,12 @@ def run_module():
             site=dict(type="str", default="default"),
             validate_certs=dict(type="bool", default=True),
             ca_path=dict(type="path", required=False),
+            api_key=dict(type="str", no_log=True, required=False),
             unifi_session_cookie=dict(type="str", no_log=True, required=False),
             unifi_csrf_token=dict(type="str", no_log=True, required=False),
             state=dict(type="str", choices=["present", "absent"], default="present"),
             name=dict(type="str", required=True),
+            id=dict(type="str", required=False),
             cert=dict(type="str", no_log=True),
             key=dict(type="str", no_log=True),
             active=dict(type="bool", default=True),
@@ -97,6 +127,7 @@ def run_module():
         module.params.get("unifi_session_cookie"),
         module.params.get("unifi_csrf_token"),
         ca_path=module.params.get("ca_path"),
+        api_key=module.params.get("api_key"),
     )
     api.login()
 
@@ -115,18 +146,22 @@ def run_module():
             cert_obj = x509.load_pem_x509_certificate(first_pem.encode("utf-8"))
             fp_hex = cert_obj.fingerprint(hashes.SHA1()).hex().upper()
             local_fingerprint = ":".join(fp_hex[i : i + 2] for i in range(0, 40, 2))
-        except Exception as e:
-            module.fail_json(msg="Failed to compute certificate fingerprint: " + str(e))
+        except Exception:
+            module.fail_json(msg="Failed to compute certificate fingerprint: invalid certificate structure or encoding")
 
     changed = False
     result = None
 
     if state == "present":
         # Check if there is an existing certificate with the same fingerprint
-        matching_fp_cert = next(
-            (c for c in existing_list if c.get("fingerprint", "").upper() == local_fingerprint),
-            None,
-        )
+        matching_fp_certs = [
+            c for c in existing_list if isinstance(c, dict) and c.get("fingerprint", "").upper() == local_fingerprint
+        ]
+        if len(matching_fp_certs) > 1:
+            module.fail_json(
+                msg=f"Ambiguous resource: multiple user certificates match fingerprint '{local_fingerprint}'"
+            )
+        matching_fp_cert = matching_fp_certs[0] if matching_fp_certs else None
 
         if matching_fp_cert:
             # Certificate is already uploaded!
@@ -150,12 +185,11 @@ def run_module():
             if not module.check_mode:
                 active_id = result.get("id")
                 for c in existing_list:
-                    c_name = c.get("name", "")
-                    c_id = c.get("id")
+                    c_id = c.get("id") if isinstance(c, dict) else None
                     if (
                         c_id
                         and c_id != active_id
-                        and _is_matching_cert(c_name, name)
+                        and _is_matching_cert(c, name)
                         and not bool(c.get("active", False))
                     ):
                         api.request(f"/api/userCertificates/{c_id}", method="DELETE")
@@ -168,7 +202,7 @@ def run_module():
             # Delete any existing inactive certificate with this upload_name first if it somehow exists
             if not module.check_mode:
                 for c in existing_list:
-                    if c.get("name") == upload_name and not bool(c.get("active", False)):
+                    if isinstance(c, dict) and c.get("name") == upload_name and not bool(c.get("active", False)):
                         c_id = c.get("id")
                         if c_id:
                             api.request(f"/api/userCertificates/{c_id}", method="DELETE")
@@ -201,20 +235,27 @@ def run_module():
                 # Clean up any other inactive certificates strictly matching this managed resource name
                 active_id = result.get("id")
                 for c in existing_list:
-                    c_name = c.get("name", "")
-                    c_id = c.get("id")
+                    c_id = c.get("id") if isinstance(c, dict) else None
                     if (
                         c_id
                         and c_id != active_id
-                        and _is_matching_cert(c_name, name)
+                        and _is_matching_cert(c, name)
                         and not bool(c.get("active", False))
                     ):
                         api.request(f"/api/userCertificates/{c_id}", method="DELETE")
             else:
                 result = {"name": upload_name, "fingerprint": local_fingerprint, "active": active}
     else:
-        # Find certificates that strictly match 'name' or '{name}-{8-hex-short-fingerprint}'
-        to_delete = [c for c in existing_list if _is_matching_cert(c.get("name", ""), name)]
+        # Find certificates that strictly match 'id' or 'name' with provable ownership
+        if module.params.get("id"):
+            to_delete = [
+                c
+                for c in existing_list
+                if isinstance(c, dict)
+                and (c.get("id") == module.params["id"] or c.get("_id") == module.params["id"])
+            ]
+        else:
+            to_delete = [c for c in existing_list if isinstance(c, dict) and _is_matching_cert(c, name)]
         if to_delete:
             changed = True
             if not module.check_mode:
@@ -226,7 +267,16 @@ def run_module():
                             module.fail_json(msg="Failed to delete user certificate", info=info, certificate_id=cert_id)
             result = None
 
-    module.exit_json(changed=changed, certificate=result)
+    exit_kwargs = {"changed": changed, "certificate": result}
+    if getattr(module, "_diff", False) is True:
+        before = matching_fp_cert if state == "present" else (to_delete[0] if to_delete else None)
+        exit_kwargs["diff"] = make_diff(before, result)
+
+
+    module.exit_json(**exit_kwargs)
+
+
+
 
 
 if __name__ == "__main__":

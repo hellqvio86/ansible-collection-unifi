@@ -473,4 +473,3 @@ def test_firewall_policy_drift_update_match_opposite_ports():
         mock_module.exit_json.assert_called_once()
         kwargs = mock_module.exit_json.call_args[1]
         assert kwargs["changed"] is True
-

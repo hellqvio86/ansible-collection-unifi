@@ -10,7 +10,8 @@
       host: "192.0.2.1"
       username: "admin"
       password: "password"
-      validate_certs: false
+      # Set validate_certs: false only if using self-signed certs in test/lab environments
+      validate_certs: true
 
   tasks:
     - name: "--- Section 1: Wireless Networks ---"

@@ -28,7 +28,7 @@ direct iptables access are never used.
 | `username` | str | No | | Admin username (or `UNIFI_USERNAME` env var). |
 | `password` | str | No | | Admin password (or `UNIFI_PASSWORD` env var). |
 | `site` | str | No | `default` | UniFi site name. |
-| `validate_certs` | bool | No | `false` | Validate controller TLS certificate. |
+| `validate_certs` | bool | No | `true` | Validate controller TLS certificate. |
 | `unifi_session_cookie` | str | No | | Pre-authenticated session cookie. |
 | `unifi_csrf_token` | str | No | | Pre-authenticated CSRF token. |
 

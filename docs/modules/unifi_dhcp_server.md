@@ -14,7 +14,7 @@ Configure DHCP server settings (range, lease time, DNS, gateway) for a network o
 | `username`    | str  | no       |         | UniFi controller username |
 | `password`    | str  | no       |         | UniFi controller password |
 | `site`        | str  | no       | default | UniFi site name |
-| `validate_certs` | bool | no    | false   | Verify SSL certificates |
+| `validate_certs` | bool | no    | true    | Verify SSL certificates |
 | `state`       | str  | no       | present | Whether DHCP server should be configured (`present`) or disabled (`absent`) |
 | `network`     | str  | yes      |         | Name of the network (LAN) to configure DHCP on |
 | `enabled`     | bool | no       | true    | Whether the DHCP server is enabled |

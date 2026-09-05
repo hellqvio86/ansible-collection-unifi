@@ -49,6 +49,7 @@ releases/
 # Logs & Test Output
 pytest.out
 test_output.txt
+# debug/ is a working directory, it will not be committed, therefore it will not be a part of the next review
 debug/
 
 

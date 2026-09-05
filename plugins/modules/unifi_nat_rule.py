@@ -152,27 +152,24 @@ from typing import Any
 
 from ansible.module_utils.basic import AnsibleModule
 
-from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI
+from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI, find_resource, make_diff
 
 _NAT_PATH = "/proxy/network/v2/api/site/{site}/firewall/nat"
 _NETCONF_PATH = "/proxy/network/api/s/{site}/rest/networkconf"
 
 
-def _resolve_network_id(api: UnifiAPI, site: str, name: str) -> str:
+def _resolve_network_id(module: AnsibleModule, api: UnifiAPI, site: str, name: str) -> str:
     """Resolve a UniFi network name to its internal _id string."""
     if not name:
         return ""
     res, info = api.request(_NETCONF_PATH.format(site=site))
     if info["status"] != 200:
-        api.module.fail_json(msg="Failed to fetch networkconf", info=info)
+        module.fail_json(msg="Failed to fetch networkconf", info=info)
     networks = api.as_list(res)
-    match = next(
-        (n for n in networks if isinstance(n, dict) and n.get("name") == name),
-        None,
-    )
-    if match is None:
-        api.module.fail_json(msg=f"Network '{name}' not found in networkconf — check the outbound_interface value")
-    return str(match["_id"])
+    network = find_resource(module, networks, "network", name=name)
+    if network is None:
+        module.fail_json(msg=f"Network '{name}' not found in networkconf — check the outbound_interface value")
+    return str(network["_id"])
 
 
 def _build_desired(
@@ -211,12 +208,11 @@ def _rules_differ(current: dict[str, Any], desired: dict[str, Any]) -> bool:
     return False
 
 
-def _find_rule(module: AnsibleModule, rules: list[Any], name: str) -> dict[str, Any] | None:
-    """Return the rule dict whose name matches, failing if multiple rules match."""
-    matches = [r for r in rules if isinstance(r, dict) and r.get("name") == name]
-    if len(matches) > 1:
-        module.fail_json(msg=f"Ambiguous resource: multiple NAT rules match name '{name}'")
-    return matches[0] if matches else None
+def _find_rule(
+    module: AnsibleModule, rules: list[Any], name: str, rule_id: str | None = None
+) -> dict[str, Any] | None:
+    """Return the rule dict whose id or name matches, failing if multiple rules match."""
+    return find_resource(module, rules, "NAT rule", name=name, resource_id=rule_id)
 
 
 def run_module() -> None:
@@ -227,12 +223,14 @@ def run_module() -> None:
         site=dict(type="str", default="default"),
         validate_certs=dict(type="bool", default=True),
         ca_path=dict(type="path", required=False),
+        api_key=dict(type="str", no_log=True, required=False),
         unifi_session_cookie=dict(type="str", no_log=True, required=False),
         unifi_csrf_token=dict(type="str", no_log=True, required=False),
         state=dict(type="str", choices=["present", "absent"], default="present"),
         name=dict(type="str", required=True),
-        type=dict(type="str", choices=["masquerade", "source"], default="masquerade"),
-        src_address=dict(type="str", required=True),
+        id=dict(type="str", required=False),
+        type=dict(type="str", choices=["masquerade", "snat", "dnat"], default="masquerade"),
+        src_address=dict(type="str", default=""),
         dst_address=dict(type="str", default=""),
         outbound_interface=dict(type="str", default=""),
         translated_src=dict(type="str", default=""),
@@ -251,6 +249,7 @@ def run_module() -> None:
         module.params.get("unifi_session_cookie"),
         module.params.get("unifi_csrf_token"),
         ca_path=module.params.get("ca_path"),
+        api_key=module.params.get("api_key"),
     )
     api.login()
 
@@ -259,25 +258,31 @@ def run_module() -> None:
     state: str = module.params["state"]
     nat_path: str = _NAT_PATH.format(site=site)
 
-    outbound_network_id = _resolve_network_id(api, site, module.params["outbound_interface"])
+    outbound_network_id = _resolve_network_id(module, api, site, module.params["outbound_interface"])
 
     res, info = api.request(nat_path)
     if info["status"] not in [200, 204]:
         module.fail_json(msg="Failed to fetch NAT rules", info=info)
 
-    current = _find_rule(module, api.as_list(res), name)
+    current = _find_rule(module, api.as_list(res), name, module.params.get("id"))
 
     # --- absent ---
     if state == "absent":
         if current is None:
-            module.exit_json(changed=False, rule=None)
+            exit_kwargs = {"changed": False, "rule": None}
+            if getattr(module, "_diff", False) is True:
+                exit_kwargs["diff"] = make_diff({}, {})
+            module.exit_json(**exit_kwargs)
             return
         if not module.check_mode:
             _, del_info = api.request(f"{nat_path}/{current['_id']}", method="DELETE")
             if del_info["status"] not in [200, 204]:
                 module.fail_json(msg="Failed to delete NAT rule", info=del_info, name=name)
                 return
-        module.exit_json(changed=True, rule=None)
+        exit_kwargs = {"changed": True, "rule": None}
+        if getattr(module, "_diff", False) is True:
+            exit_kwargs["diff"] = make_diff(current, {})
+        module.exit_json(**exit_kwargs)
         return
 
     # --- present ---
@@ -294,17 +299,25 @@ def run_module() -> None:
 
     if current is not None:
         if not _rules_differ(current, desired):
-            module.exit_json(changed=False, rule=current)
+            exit_kwargs = {"changed": False, "rule": current}
+            if getattr(module, "_diff", False) is True:
+                exit_kwargs["diff"] = make_diff(current, current)
+            module.exit_json(**exit_kwargs)
             return
+        payload = {**current, **desired}
         if not module.check_mode:
-            payload = {**current, **desired}
             res, upd_info = api.request(f"{nat_path}/{current['_id']}", method="PUT", data=payload)
             if upd_info["status"] not in [200, 201]:
                 module.fail_json(msg="Failed to update NAT rule", info=upd_info, name=name)
                 return
             updated = api.as_list(res)
-            current = updated[0] if updated else payload
-        module.exit_json(changed=True, rule=current)
+            result_rule = updated[0] if updated else payload
+        else:
+            result_rule = payload
+        exit_kwargs = {"changed": True, "rule": result_rule}
+        if getattr(module, "_diff", False) is True:
+            exit_kwargs["diff"] = make_diff(current, result_rule)
+        module.exit_json(**exit_kwargs)
         return
 
     # create
@@ -314,8 +327,15 @@ def run_module() -> None:
             module.fail_json(msg="Failed to create NAT rule", info=crt_info, name=name)
             return
         created = api.as_list(res)
-        current = created[0] if created else desired
-    module.exit_json(changed=True, rule=current)
+        result_rule = created[0] if created else desired
+    else:
+        result_rule = desired
+    exit_kwargs = {"changed": True, "rule": result_rule}
+    if getattr(module, "_diff", False) is True:
+        exit_kwargs["diff"] = make_diff({}, result_rule)
+    module.exit_json(**exit_kwargs)
+
+
 
 
 if __name__ == "__main__":

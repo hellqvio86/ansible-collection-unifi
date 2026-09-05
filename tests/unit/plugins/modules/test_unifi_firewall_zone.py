@@ -270,3 +270,55 @@ def test_zone_check_mode():
         mock_module.exit_json.assert_called_once()
         kwargs = mock_module.exit_json.call_args[1]
         assert kwargs["changed"] is True
+
+
+
+def test_zone_duplicate_fails():
+    params = {
+        "host": "192.0.2.1",
+        "username": "admin",
+        "password": "password",
+        "site": "default",
+        "validate_certs": False,
+        "state": "present",
+        "name": "Duplicate Zone",
+        "type": "custom",
+    }
+
+    with (
+        patch(
+            "ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_zone.AnsibleModule"
+        ) as mock_module_class,
+        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_zone.UnifiAPI") as mock_api_class,
+    ):
+        mock_module = mock_module_class.return_value
+        mock_module.params = params
+        mock_module.check_mode = False
+        mock_module.fail_json.side_effect = Exception("fail_json")
+
+        mock_api = mock_api_class.return_value
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
+
+        mock_api.request.side_effect = [
+            (
+                [
+                    {"_id": "z1", "name": "Duplicate Zone"},
+                    {"_id": "z2", "name": "Duplicate Zone"},
+                ],
+                {"status": 200},
+            ),
+        ]
+
+        import pytest
+
+        with pytest.raises(Exception, match="fail_json"):
+            run_module()
+
+        mock_module.fail_json.assert_called_once()
+        msg = mock_module.fail_json.call_args[1]["msg"]
+        assert "Ambiguous resource" in msg
+

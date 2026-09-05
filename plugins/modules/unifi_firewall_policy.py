@@ -31,6 +31,13 @@ options:
         description: Verify SSL certificates.
         default: true
         type: bool
+    api_key:
+        description:
+            - Token for direct API authentication (UniFi OS 3.x+ / Network 8.x+).
+            - Preferred over username/password.
+            - Can also be set via the C(UNIFI_API_KEY) or C(UNIFI_API_TOKEN) environment variables.
+        type: str
+        required: false
     ca_path:
         description: Path to CA bundle file for TLS verification.
         required: false
@@ -120,7 +127,7 @@ author:
 
 from ansible.module_utils.basic import AnsibleModule
 
-from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI
+from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI, make_diff
 
 
 def run_module():
@@ -140,6 +147,7 @@ def run_module():
         logging=dict(type="bool", default=False),
         source=dict(type="dict", default={}),
         destination=dict(type="dict", default={}),
+        id=dict(type="str", required=False),
     )
     module_args = dict(
         host=dict(type="str"),
@@ -148,11 +156,13 @@ def run_module():
         site=dict(type="str", default="default"),
         validate_certs=dict(type="bool", default=True),
         ca_path=dict(type="path", required=False),
+        api_key=dict(type="str", no_log=True, required=False),
         unifi_session_cookie=dict(type="str", no_log=True, required=False),
         unifi_csrf_token=dict(type="str", no_log=True, required=False),
         policies=dict(type="list", elements="dict", options=policy_spec),
         state=dict(type="str", choices=["present", "absent"], default="present"),
         name=dict(type="str"),
+        id=dict(type="str", required=False),
         action=dict(type="str", choices=["ALLOW", "BLOCK", "REJECT", "ISOLATE"], default="ALLOW"),
         protocol=dict(type="str", choices=["all", "tcp", "udp", "tcp_udp", "icmp", "icmpv6"], default="all"),
         ip_version=dict(type="str", choices=["BOTH", "IPV4", "IPV6"], required=False),
@@ -170,7 +180,9 @@ def run_module():
 
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
 
-    if not module.params.get("policies") and not module.params.get("name"):
+    # Validate arguments: either policies list or single policy parameters
+    policies_input = module.params.get("policies")
+    if not policies_input and not module.params.get("name"):
         module.fail_json(msg="Either name or policies is required")
 
     host = module.params["host"]
@@ -189,6 +201,7 @@ def run_module():
         module.params.get("unifi_session_cookie"),
         module.params.get("unifi_csrf_token"),
         ca_path=module.params.get("ca_path"),
+        api_key=module.params.get("api_key"),
     )
     api.login()
 
@@ -198,7 +211,12 @@ def run_module():
         module.fail_json(msg="Failed to fetch zones", info=info)
     zones = api.as_list(zones_res)
 
-    zone_map = {z["name"]: z["_id"] for z in zones if isinstance(z, dict)}
+    zone_map = {}
+    for z in zones:
+        if isinstance(z, dict) and "name" in z:
+            if z["name"] in zone_map:
+                module.fail_json(msg=f"Ambiguous resource: multiple zones found with name '{z['name']}'")
+            zone_map[z["name"]] = z["_id"]
 
     # 3. Resolve network names to IDs for NETWORK matching.
     networks_res, info = api.request(f"/proxy/network/api/s/{site}/rest/networkconf")
@@ -206,7 +224,12 @@ def run_module():
         module.fail_json(msg="Failed to fetch networks", info=info)
     networks = api.as_list(networks_res)
 
-    network_map = {n["name"]: n["_id"] for n in networks if isinstance(n, dict)}
+    network_map = {}
+    for n in networks:
+        if isinstance(n, dict) and "name" in n:
+            if n["name"] in network_map:
+                module.fail_json(msg=f"Ambiguous resource: multiple networks found with name '{n['name']}'")
+            network_map[n["name"]] = n["_id"]
 
     # 4. Fetch existing policies once.
     policies_res, info = api.request(f"/proxy/network/v2/api/site/{site}/firewall-policies")
@@ -230,16 +253,33 @@ def run_module():
         }
     ]
 
+    diffs = []
     for desired in desired_policies:
         policy_changed, result_policy = apply_policy(module, api, site, zone_map, network_map, policies, desired)
         changed = changed or policy_changed
         results.append(result_policy)
 
-        if not module.check_mode and result_policy:
+        if result_policy:
             policies = [p for p in policies if isinstance(p, dict) and p.get("_id") != result_policy.get("_id")]
             policies.append(result_policy)
+        elif desired.get("state") == "absent" and desired.get("name"):
+            policies = [p for p in policies if isinstance(p, dict) and p.get("name") != desired.get("name")]
 
-    module.exit_json(changed=changed, policies=results, policy=results[0] if len(results) == 1 else None)
+        if getattr(module, "_diff", False) is True:
+            before = next((p for p in policies if isinstance(p, dict) and p.get("name") == desired.get("name")), {})
+            diffs.append(make_diff(before, result_policy or {}))
+
+    exit_kwargs = {
+        "changed": changed,
+        "policies": results,
+        "policy": results[0] if len(results) == 1 else None,
+    }
+    if getattr(module, "_diff", False) is True:
+        exit_kwargs["diff"] = diffs[0] if len(diffs) == 1 else diffs
+
+    module.exit_json(**exit_kwargs)
+
+
 
 
 def apply_policy(module, api, site, zone_map, network_map, policies, desired):
@@ -264,21 +304,33 @@ def apply_policy(module, api, site, zone_map, network_map, policies, desired):
         )
 
     matches = []
-    for policy in policies:
-        if not isinstance(policy, dict):
-            continue
-        if (
-            policy.get("name") == desired["name"]
-            and policy.get("source", {}).get("zone_id") == src_zone_id
-            and policy.get("destination", {}).get("zone_id") == dst_zone_id
-        ):
-            matches.append(policy)
+    if desired.get("id"):
+        matches = [
+            p
+            for p in policies
+            if isinstance(p, dict) and (p.get("_id") == desired["id"] or p.get("id") == desired["id"])
+        ]
+        if len(matches) > 1:
+            module.fail_json(
+                msg=f"Ambiguous resource: multiple firewall policies match id '{desired['id']}'",
+                id=desired["id"],
+            )
+    else:
+        for policy in policies:
+            if not isinstance(policy, dict):
+                continue
+            if (
+                policy.get("name") == desired["name"]
+                and policy.get("source", {}).get("zone_id") == src_zone_id
+                and policy.get("destination", {}).get("zone_id") == dst_zone_id
+            ):
+                matches.append(policy)
 
-    if len(matches) > 1:
-        module.fail_json(
-            msg=f"Ambiguous resource: multiple firewall policies match name '{desired['name']}' with source zone '{src_params['zone']}' and destination zone '{dst_params['zone']}'",
-            name=desired["name"],
-        )
+        if len(matches) > 1:
+            module.fail_json(
+                msg=f"Ambiguous resource: multiple firewall policies match name '{desired['name']}' with source zone '{src_params['zone']}' and destination zone '{dst_params['zone']}'",
+                name=desired["name"],
+            )
     existing = matches[0] if matches else None
 
     connection_state_type = desired.get("connection_state_type", "ALL")
@@ -386,7 +438,10 @@ def apply_policy(module, api, site, zone_map, network_map, policies, desired):
             res_list = api.as_list(result_policy_res)
             result_policy = res_list[0] if res_list else result_policy_res
             return True, result_policy
+        if changed and module.check_mode:
+            return True, {**existing, **desired_payload}
         return changed, existing
+
 
     if state == "absent" and existing:
         if not module.check_mode:

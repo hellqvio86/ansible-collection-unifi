@@ -31,6 +31,13 @@ options:
         description: Verify SSL certificates.
         default: true
         type: bool
+    api_key:
+        description:
+            - Token for direct API authentication (UniFi OS 3.x+ / Network 8.x+).
+            - Preferred over username/password.
+            - Can also be set via the C(UNIFI_API_KEY) or C(UNIFI_API_TOKEN) environment variables.
+        type: str
+        required: false
     ca_path:
         description: Path to CA bundle file for TLS verification.
         required: false
@@ -143,7 +150,7 @@ network:
 
 from ansible.module_utils.basic import AnsibleModule
 
-from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI
+from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI, find_resource, make_diff
 
 
 def run_module():
@@ -154,8 +161,10 @@ def run_module():
         site=dict(type="str", default="default"),
         validate_certs=dict(type="bool", default=True),
         ca_path=dict(type="path", required=False),
+        api_key=dict(type="str", no_log=True, required=False),
         state=dict(type="str", choices=["present", "absent"], default="present"),
         network=dict(type="str", required=True),
+        id=dict(type="str", required=False),
         enabled=dict(type="bool", default=True),
         dhcp_start=dict(type="str", required=False),
         dhcp_stop=dict(type="str", required=False),
@@ -192,6 +201,7 @@ def run_module():
         module.params.get("unifi_session_cookie"),
         module.params.get("unifi_csrf_token"),
         ca_path=module.params.get("ca_path"),
+        api_key=module.params.get("api_key"),
     )
     api.login()
 
@@ -202,10 +212,9 @@ def run_module():
         module.fail_json(msg="Failed to fetch network configurations", info=info)
 
     networks = api.as_list(res)
-    matches = [n for n in networks if isinstance(n, dict) and n.get("name") == network_name]
-    if len(matches) > 1:
-        module.fail_json(msg=f"Ambiguous resource: multiple networks match name '{network_name}'")
-    current = matches[0] if matches else None
+    current = find_resource(
+        module, networks, "network", name=network_name, resource_id=module.params.get("id")
+    )
     if not current:
         module.fail_json(msg=f"Network '{network_name}' not found")
 
@@ -250,6 +259,7 @@ def run_module():
                 changed = True
                 break
 
+    result_network = current
     if changed:
         if not module.check_mode:
             res, info = api.request(
@@ -261,9 +271,21 @@ def run_module():
                 module.fail_json(msg="Failed to update DHCP server settings", info=info)
             res_list = api.as_list(res)
             if res_list:
-                current = res_list[0]
+                result_network = res_list[0]
+            else:
+                result_network = {**current, **desired_payload}
+        else:
+            result_network = {**current, **desired_payload}
 
-    module.exit_json(changed=changed, network=current)
+    exit_kwargs = {"changed": changed, "network": result_network}
+    if getattr(module, "_diff", False) is True:
+        before = current if current else {}
+        after = result_network if result_network else {}
+        exit_kwargs["diff"] = make_diff(before, after)
+
+
+    module.exit_json(**exit_kwargs)
+
 
 
 if __name__ == "__main__":

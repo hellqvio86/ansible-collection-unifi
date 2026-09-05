@@ -30,6 +30,13 @@ options:
         description: Verify SSL certificates.
         default: true
         type: bool
+    api_key:
+        description:
+            - Token for direct API authentication (UniFi OS 3.x+ / Network 8.x+).
+            - Preferred over username/password.
+            - Can also be set via the C(UNIFI_API_KEY) or C(UNIFI_API_TOKEN) environment variables.
+        type: str
+        required: false
     ca_path:
         description: Path to CA bundle file for TLS verification.
         required: false
@@ -64,7 +71,7 @@ author:
 
 from ansible.module_utils.basic import AnsibleModule
 
-from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI
+from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI, make_diff
 
 
 def run_module():
@@ -75,6 +82,7 @@ def run_module():
         site=dict(type="str", default="default"),
         validate_certs=dict(type="bool", default=True),
         ca_path=dict(type="path", required=False),
+        api_key=dict(type="str", no_log=True, required=False),
         unifi_session_cookie=dict(type="str", no_log=True, required=False),
         unifi_csrf_token=dict(type="str", no_log=True, required=False),
         enabled=dict(type="bool", default=True),
@@ -96,6 +104,7 @@ def run_module():
         module.params.get("unifi_session_cookie"),
         module.params.get("unifi_csrf_token"),
         ca_path=module.params.get("ca_path"),
+        api_key=module.params.get("api_key"),
     )
     api.login()
 
@@ -104,8 +113,10 @@ def run_module():
     # Fetch current settings
     res, info = api.request(f"/proxy/network/api/s/{site}/get/setting")
     settings = api.as_list(res)
-
-    current = next((s for s in settings if isinstance(s, dict) and s.get("key") == "rsyslogd"), None)
+    matches = [s for s in settings if isinstance(s, dict) and s.get("key") == "rsyslogd"]
+    if len(matches) > 1:
+        module.fail_json(msg="Ambiguous resource: multiple rsyslogd settings found on controller")
+    current = matches[0] if matches else None
 
     if not current:
         module.fail_json(msg="rsyslogd setting not found on controller")
@@ -128,6 +139,7 @@ def run_module():
             changed = True
             break
 
+    result_setting = current
     if changed:
         if not module.check_mode:
             res, info = api.request(
@@ -135,9 +147,19 @@ def run_module():
             )
             if not res:
                 module.fail_json(msg="Failed to update rsyslogd settings", info=info)
-            current = api.as_list(res)[0] if api.as_list(res) else res
+            result_setting = api.as_list(res)[0] if api.as_list(res) else res
+        else:
+            result_setting = {**current, **desired_payload}
 
-    module.exit_json(changed=changed, setting=current)
+    exit_kwargs = {"changed": changed, "setting": result_setting}
+    if getattr(module, "_diff", False) is True:
+        before = current if current else {}
+        after = result_setting if result_setting else {}
+        exit_kwargs["diff"] = make_diff(before, after)
+
+
+    module.exit_json(**exit_kwargs)
+
 
 
 if __name__ == "__main__":

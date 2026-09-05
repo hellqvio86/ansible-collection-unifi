@@ -33,6 +33,13 @@ options:
         description: Verify SSL certificates.
         default: true
         type: bool
+    api_key:
+        description:
+            - Token for direct API authentication (UniFi OS 3.x+ / Network 8.x+).
+            - Preferred over username/password.
+            - Can also be set via the C(UNIFI_API_KEY) or C(UNIFI_API_TOKEN) environment variables.
+        type: str
+        required: false
     ca_path:
         description: Path to CA bundle file for TLS verification.
         required: false
@@ -111,7 +118,7 @@ client:
 
 from ansible.module_utils.basic import AnsibleModule
 
-from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI
+from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI, find_resource
 
 
 def run_module():
@@ -122,6 +129,7 @@ def run_module():
         site=dict(type="str", default="default"),
         validate_certs=dict(type="bool", default=True),
         ca_path=dict(type="path", required=False),
+        api_key=dict(type="str", no_log=True, required=False),
         state=dict(type="str", choices=["present", "absent"], default="present"),
         mac=dict(type="str", required=True),
         name=dict(type="str", required=False),
@@ -146,6 +154,7 @@ def run_module():
         module.params.get("unifi_session_cookie"),
         module.params.get("unifi_csrf_token"),
         ca_path=module.params.get("ca_path"),
+        api_key=module.params.get("api_key"),
     )
     api.login()
 
@@ -159,10 +168,10 @@ def run_module():
     if info["status"] != 200:
         module.fail_json(msg="Failed to fetch known clients", info=info)
 
-    client = next(
-        (c for c in all_clients if isinstance(c, dict) and c.get("mac", "").lower() == mac),
-        None,
-    )
+    matching_clients = [c for c in all_clients if isinstance(c, dict) and c.get("mac", "").lower() == mac]
+    if len(matching_clients) > 1:
+        module.fail_json(msg=f"Ambiguous resource: multiple clients match MAC '{mac}'")
+    client = matching_clients[0] if matching_clients else None
     if not client:
         module.fail_json(
             msg=f"Client with MAC '{mac}' not found among known devices. "
@@ -179,10 +188,7 @@ def run_module():
         if networks_res is None:
             module.fail_json(msg="Failed to fetch networks", info=net_info)
         networks = api.as_list(networks_res)
-        network = next(
-            (n for n in networks if isinstance(n, dict) and n.get("name") == module.params["network_name"]),
-            None,
-        )
+        network = find_resource(module, networks, "network", name=module.params["network_name"])
         if not network:
             module.fail_json(msg=f"Network '{module.params['network_name']}' not found")
         network_id = network["_id"]
@@ -227,6 +233,9 @@ def run_module():
                     module.fail_json(msg="Failed to update DHCP reservation", info=info)
                 res_list = api.as_list(res)
                 result_client = res_list[0] if res_list else res
+            else:
+                result_client = {**client, **desired_payload}
+
 
         module.exit_json(
             changed=changed,
@@ -279,6 +288,9 @@ def run_module():
                     module.fail_json(msg="Failed to remove DHCP reservation", info=info)
                 res_list = api.as_list(res)
                 result_client = res_list[0] if res_list else res
+            else:
+                result_client = {**client, "use_fixedip": False, "fixed_ip": ""}
+
 
         module.exit_json(
             changed=changed,

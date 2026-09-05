@@ -31,6 +31,13 @@ options:
         description: Verify SSL certificates.
         default: true
         type: bool
+    api_key:
+        description:
+            - Token for direct API authentication (UniFi OS 3.x+ / Network 8.x+).
+            - Preferred over username/password.
+            - Can also be set via the C(UNIFI_API_KEY) or C(UNIFI_API_TOKEN) environment variables.
+        type: str
+        required: false
     ca_path:
         description: Path to CA bundle file for TLS verification.
         required: false
@@ -139,7 +146,7 @@ rule:
 
 from ansible.module_utils.basic import AnsibleModule
 
-from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI
+from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI, find_resource, make_diff
 
 
 def run_module():
@@ -150,10 +157,12 @@ def run_module():
         site=dict(type="str", default="default"),
         validate_certs=dict(type="bool", default=True),
         ca_path=dict(type="path", required=False),
+        api_key=dict(type="str", no_log=True, required=False),
         unifi_session_cookie=dict(type="str", no_log=True, required=False),
         unifi_csrf_token=dict(type="str", no_log=True, required=False),
         state=dict(type="str", choices=["present", "absent"], default="present"),
         name=dict(type="str", required=True),
+        id=dict(type="str", required=False),
         enabled=dict(type="bool", default=True),
         protocol=dict(type="str", choices=["tcp", "udp", "tcp_udp"], default="tcp_udp"),
         src=dict(type="str", default=""),
@@ -175,6 +184,7 @@ def run_module():
         module.params.get("unifi_session_cookie"),
         module.params.get("unifi_csrf_token"),
         ca_path=module.params.get("ca_path"),
+        api_key=module.params.get("api_key"),
     )
     api.login()
 
@@ -190,23 +200,19 @@ def run_module():
         if net_info["status"] != 200:
             module.fail_json(msg="Failed to fetch networks", info=net_info)
         networks = api.as_list(net_res)
-        match = next(
-            (n for n in networks if isinstance(n, dict) and n.get("name") == module.params["fwd_network"]),
-            None,
-        )
-        if not match:
+        network = find_resource(module, networks, "network", name=module.params["fwd_network"])
+        if not network:
             module.fail_json(msg=f"Network '{module.params['fwd_network']}' not found")
-        fwd_network_id = match["_id"]
+        fwd_network_id = network["_id"]
 
     res, info = api.request(f"/proxy/network/api/s/{site}/rest/portforward")
     if info["status"] != 200:
         module.fail_json(msg="Failed to fetch port forwarding rules", info=info)
 
     rules = api.as_list(res)
-    matches = [r for r in rules if isinstance(r, dict) and r.get("name") == name]
-    if len(matches) > 1:
-        module.fail_json(msg=f"Ambiguous resource: multiple port forward rules match name '{name}'")
-    current = matches[0] if matches else None
+    current = find_resource(
+        module, rules, "port forward rule", name=name, resource_id=module.params.get("id")
+    )
 
     if state == "absent":
         if current:
@@ -217,9 +223,15 @@ def run_module():
                 )
                 if info["status"] not in [200, 204]:
                     module.fail_json(msg="Failed to delete port forwarding rule", info=info)
-            module.exit_json(changed=True, rule=None)
+            exit_kwargs = {"changed": True, "rule": None}
+            if getattr(module, "_diff", False) is True:
+                exit_kwargs["diff"] = make_diff(current, {})
+            module.exit_json(**exit_kwargs)
             return
-        module.exit_json(changed=False, rule=None)
+        exit_kwargs = {"changed": False, "rule": None}
+        if getattr(module, "_diff", False) is True:
+            exit_kwargs["diff"] = make_diff({}, {})
+        module.exit_json(**exit_kwargs)
         return
 
     desired_payload = {
@@ -267,10 +279,20 @@ def run_module():
                     module.fail_json(msg="Failed to update port forwarding rule", info=info)
                 res_list = api.as_list(res)
                 if res_list:
-                    current = res_list[0]
-            module.exit_json(changed=True, rule=current)
+                    result_rule = res_list[0]
+                else:
+                    result_rule = {**current, **desired_payload}
+            else:
+                result_rule = {**current, **desired_payload}
+            exit_kwargs = {"changed": True, "rule": result_rule}
+            if getattr(module, "_diff", False) is True:
+                exit_kwargs["diff"] = make_diff(current, result_rule)
+            module.exit_json(**exit_kwargs)
             return
-        module.exit_json(changed=False, rule=current)
+        exit_kwargs = {"changed": False, "rule": current}
+        if getattr(module, "_diff", False) is True:
+            exit_kwargs["diff"] = make_diff(current, current)
+        module.exit_json(**exit_kwargs)
         return
 
     if not module.check_mode:
@@ -283,8 +305,17 @@ def run_module():
             module.fail_json(msg="Failed to create port forwarding rule", info=info)
         res_list = api.as_list(res)
         if res_list:
-            current = res_list[0]
-    module.exit_json(changed=True, rule=current)
+            result_rule = res_list[0]
+        else:
+            result_rule = desired_payload
+    else:
+        result_rule = desired_payload
+    exit_kwargs = {"changed": True, "rule": result_rule}
+    if getattr(module, "_diff", False) is True:
+        exit_kwargs["diff"] = make_diff({}, result_rule)
+    module.exit_json(**exit_kwargs)
+
+
 
 
 if __name__ == "__main__":

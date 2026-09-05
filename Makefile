@@ -32,7 +32,7 @@ help:
 $(VENV):
 	python3 -m venv $(VENV)
 	$(PIP) install --upgrade pip
-	$(PIP) install ruff ansible-lint pytest pytest-mock pyjwt paramiko ansible-core
+	$(PIP) install ruff ansible-lint pytest pytest-mock paramiko ansible-core
 	if [ -f requirements.txt ]; then $(PIP) install -r requirements.txt; fi
 	if [ -f tests/requirements.txt ]; then $(PIP) install -r tests/requirements.txt; fi
 

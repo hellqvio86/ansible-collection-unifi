@@ -19,7 +19,7 @@
         username: "{{ lookup('env', 'UNIFI_USERNAME') }}"
         password: "{{ lookup('env', 'UNIFI_PASSWORD') }}"
         site: "{{ lookup('env', 'UNIFI_SITE') | default('default', true) }}"
-        validate_certs: "{{ lookup('env', 'UNIFI_VALIDATE_CERTS') | default('false', true) | bool }}"
+        validate_certs: "{{ lookup('env', 'UNIFI_VALIDATE_CERTS') | default('true', true) | bool }}"
         gather_subset:
           - wifi
           - firewall_groups

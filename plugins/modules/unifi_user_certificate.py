@@ -11,15 +11,23 @@ description:
     - Uploads and manages certificates in UniFi OS at /api/userCertificates.
 options:
     host:
+        description: The host of the UniFi controller.
         type: str
         required: false
     username:
+        description: UniFi controller administrator username.
         type: str
         required: false
     password:
+        description: UniFi controller administrator password.
         type: str
         required: false
+    site:
+        description: UniFi site name.
+        type: str
+        default: default
     validate_certs:
+        description: Verify SSL certificates.
         type: bool
         default: true
     api_key:
@@ -30,24 +38,59 @@ options:
         type: str
         required: false
     ca_path:
+        description: Path to CA bundle file for TLS verification.
         type: path
         required: false
+    unifi_session_cookie:
+        description: Pre-authenticated session cookie string.
+        type: str
+        required: false
+    unifi_csrf_token:
+        description: Pre-authenticated CSRF token.
+        type: str
+        required: false
     state:
+        description: Whether the user certificate should be present or absent.
         type: str
         choices: [present, absent]
         default: present
     name:
+        description: Friendly name of the user certificate.
+        type: str
+        required: true
+    id:
+        description: ID of the user certificate.
         type: str
         required: false
     cert:
+        description: The PEM-encoded certificate string.
         type: str
+        required: false
     key:
+        description: The PEM-encoded private key string.
         type: str
+        required: false
     active:
+        description: Whether the certificate is marked active.
         type: bool
         default: true
 author:
     - hellqvio86 (@hellqvio86)
+"""
+
+EXAMPLES = r"""
+- name: Update User Certificate
+  hellqvio86.unifi.unifi_user_certificate:
+    certificate: "{{ lookup('file', 'cert.pem') }}"
+    private_key: "{{ lookup('file', 'key.pem') }}"
+    state: present
+"""
+
+RETURN = r"""
+certificate:
+    description: Details of the updated user certificate.
+    type: dict
+    returned: always
 """
 
 from typing import Any
@@ -186,12 +229,7 @@ def run_module():
                 active_id = result.get("id")
                 for c in existing_list:
                     c_id = c.get("id") if isinstance(c, dict) else None
-                    if (
-                        c_id
-                        and c_id != active_id
-                        and _is_matching_cert(c, name)
-                        and not bool(c.get("active", False))
-                    ):
+                    if c_id and c_id != active_id and _is_matching_cert(c, name) and not bool(c.get("active", False)):
                         api.request(f"/api/userCertificates/{c_id}", method="DELETE")
         else:
             # Certificate is NOT on the UDM. We need to upload it.
@@ -236,12 +274,7 @@ def run_module():
                 active_id = result.get("id")
                 for c in existing_list:
                     c_id = c.get("id") if isinstance(c, dict) else None
-                    if (
-                        c_id
-                        and c_id != active_id
-                        and _is_matching_cert(c, name)
-                        and not bool(c.get("active", False))
-                    ):
+                    if c_id and c_id != active_id and _is_matching_cert(c, name) and not bool(c.get("active", False)):
                         api.request(f"/api/userCertificates/{c_id}", method="DELETE")
             else:
                 result = {"name": upload_name, "fingerprint": local_fingerprint, "active": active}
@@ -251,8 +284,7 @@ def run_module():
             to_delete = [
                 c
                 for c in existing_list
-                if isinstance(c, dict)
-                and (c.get("id") == module.params["id"] or c.get("_id") == module.params["id"])
+                if isinstance(c, dict) and (c.get("id") == module.params["id"] or c.get("_id") == module.params["id"])
             ]
         else:
             to_delete = [c for c in existing_list if isinstance(c, dict) and _is_matching_cert(c, name)]
@@ -262,7 +294,7 @@ def run_module():
                 for c in to_delete:
                     cert_id = c.get("id")
                     if cert_id:
-                        _, info = api.request(f"/api/userCertificates/{cert_id}", method="DELETE")
+                        del_res, info = api.request(f"/api/userCertificates/{cert_id}", method="DELETE")
                         if info.get("status") not in [200, 204]:
                             module.fail_json(msg="Failed to delete user certificate", info=info, certificate_id=cert_id)
             result = None
@@ -272,11 +304,7 @@ def run_module():
         before = matching_fp_cert if state == "present" else (to_delete[0] if to_delete else None)
         exit_kwargs["diff"] = make_diff(before, result)
 
-
     module.exit_json(**exit_kwargs)
-
-
-
 
 
 if __name__ == "__main__":

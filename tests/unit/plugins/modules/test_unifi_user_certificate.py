@@ -308,7 +308,7 @@ def test_cert_missing_params():
         patch(
             "ansible_collections.hellqvio86.unifi.plugins.modules.unifi_user_certificate.AnsibleModule"
         ) as mock_module_class,
-        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_user_certificate.UnifiAPI") as _,
+        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_user_certificate.UnifiAPI"),
     ):
         mock_module = mock_module_class.return_value
         mock_module.params = params
@@ -418,7 +418,6 @@ def test_cert_absent_does_not_delete_prefix_matches():
         assert mock_module.exit_json.call_args[1]["changed"] is False
 
 
-
 def test_cert_diff_mode_masks_sensitive_material():
     params = {
         "host": "192.0.2.1",
@@ -464,4 +463,3 @@ def test_cert_diff_mode_masks_sensitive_material():
         assert "diff" in kwargs
         diff_str = str(kwargs["diff"])
         assert TEST_KEY not in diff_str
-

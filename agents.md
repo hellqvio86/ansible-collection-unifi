@@ -26,5 +26,9 @@ This document summarizes the standards and restrictions enforced during the deve
 ## Working Directories
 - **Debug Directory**: `debug/` is a local working directory. It will not be committed to the repository, therefore it will not be a part of the next review.
 
-## Project Vision
+## Project Vision & Versioning
 - **Professional Grade**: The collection aims to be "Professional Grade" for public release on Ansible Galaxy, emphasizing reliability, documentation, and ease of use.
+- **Versioning Strategy**:
+  - `0.0.x`: Rapid iteration, API hardening, and alpha stabilization.
+  - `0.1.0` (Beta milestone): Requires comprehensive integration tests with local mock HTTP server, strict allow-listing across all info subsets, enforced documentation parity, and security policy.
+  - `1.0.0`: Full backwards compatibility and SemVer stability guarantees for public production use.

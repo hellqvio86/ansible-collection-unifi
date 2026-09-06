@@ -8,7 +8,8 @@ module: unifi_firewall_policy
 short_description: Manage UniFi v8.3+ Policy Engine Firewall Rules
 version_added: "0.0.1"
 description:
-    - Create, update, or delete firewall policies in a UniFi controller using the modern Policy Engine (Zone-Based Firewall).
+    - Create, update, or delete firewall policies in a UniFi controller using the modern Policy Engine
+      (Zone-Based Firewall).
     - This module targets the v2 API introduced in UniFi Network 8.x.
 options:
     host:
@@ -42,6 +43,18 @@ options:
         description: Path to CA bundle file for TLS verification.
         required: false
         type: path
+    unifi_session_cookie:
+        description: Pre-authenticated session cookie string.
+        type: str
+        required: false
+    unifi_csrf_token:
+        description: Pre-authenticated CSRF token.
+        type: str
+        required: false
+    id:
+        description: ID of the firewall policy.
+        type: str
+        required: false
     state:
         description: Whether the policy should be present or absent.
         choices: [ present, absent ]
@@ -61,6 +74,26 @@ options:
         choices: [ all, tcp, udp, tcp_udp, icmp, icmpv6 ]
         default: all
         type: str
+    ip_version:
+        description: IP version to apply policy to.
+        choices: [ BOTH, IPV4, IPV6 ]
+        type: str
+        required: false
+    connection_state_type:
+        description: Connection state type.
+        choices: [ ALL, RESPOND_ONLY, CUSTOM ]
+        default: ALL
+        type: str
+    connection_states:
+        description: List of connection states when connection_state_type is CUSTOM.
+        type: list
+        elements: str
+        choices: [ NEW, ESTABLISHED, RELATED, INVALID ]
+        default: []
+    create_allow_respond:
+        description: Automatically create a return rule to allow response traffic.
+        type: bool
+        required: false
     index:
         description: Rule index (order).
         type: int
@@ -121,8 +154,94 @@ options:
                 description: Whether to match ports opposite to the specified list.
                 type: bool
                 default: false
+    policies:
+        description: List of firewall policies to create, update, or remove in batch.
+        type: list
+        elements: dict
+        suboptions:
+            id:
+                description: ID of the firewall policy.
+                type: str
+                required: false
+            state:
+                description: Whether the policy should be present or absent.
+                choices: [ present, absent ]
+                default: present
+                type: str
+            name:
+                description: Name of the firewall policy.
+                type: str
+                required: true
+            action:
+                description: Action to take.
+                choices: [ ALLOW, BLOCK, REJECT, ISOLATE ]
+                default: ALLOW
+                type: str
+            protocol:
+                description: Protocol to match.
+                choices: [ all, tcp, udp, tcp_udp, icmp, icmpv6 ]
+                default: all
+                type: str
+            ip_version:
+                description: IP version to apply policy to.
+                choices: [ BOTH, IPV4, IPV6 ]
+                type: str
+                required: false
+            connection_state_type:
+                description: Connection state type.
+                choices: [ ALL, RESPOND_ONLY, CUSTOM ]
+                default: ALL
+                type: str
+            connection_states:
+                description: List of connection states when connection_state_type is CUSTOM.
+                type: list
+                elements: str
+                choices: [ NEW, ESTABLISHED, RELATED, INVALID ]
+                default: []
+            create_allow_respond:
+                description: Automatically create a return rule to allow response traffic.
+                type: bool
+                required: false
+            index:
+                description: Rule index (order).
+                type: int
+                default: 10000
+            enabled:
+                description: Whether the rule is enabled.
+                type: bool
+                default: true
+            logging:
+                description: Whether to log matches.
+                type: bool
+                default: false
+            source:
+                description: Source configuration.
+                type: dict
+            destination:
+                description: Destination configuration.
+                type: dict
 author:
     - hellqvio86 (@hellqvio86)
+"""
+
+EXAMPLES = r"""
+- name: Block IoT to Gateway
+  hellqvio86.unifi.unifi_firewall_policy:
+    name: "Block IoT to Gateway"
+    action: BLOCK
+    source:
+      zone: "Internal"
+      ips: ["203.0.113.0/24"]
+    destination:
+      zone: "External"
+    protocol: all
+"""
+
+RETURN = r"""
+firewall_policy:
+    description: Details of the firewall policy.
+    type: dict
+    returned: always
 """
 
 from ansible.module_utils.basic import AnsibleModule
@@ -145,8 +264,8 @@ def run_module():
         index=dict(type="int", default=10000),
         enabled=dict(type="bool", default=True),
         logging=dict(type="bool", default=False),
-        source=dict(type="dict", default={}),
-        destination=dict(type="dict", default={}),
+        source=dict(type="dict"),
+        destination=dict(type="dict"),
         id=dict(type="str", required=False),
     )
     module_args = dict(
@@ -174,8 +293,8 @@ def run_module():
         index=dict(type="int", default=10000),
         enabled=dict(type="bool", default=True),
         logging=dict(type="bool", default=False),
-        source=dict(type="dict", default={}),
-        destination=dict(type="dict", default={}),
+        source=dict(type="dict"),
+        destination=dict(type="dict"),
     )
 
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
@@ -280,8 +399,6 @@ def run_module():
     module.exit_json(**exit_kwargs)
 
 
-
-
 def apply_policy(module, api, site, zone_map, network_map, policies, desired):
     state = desired.get("state", "present")
 
@@ -328,7 +445,10 @@ def apply_policy(module, api, site, zone_map, network_map, policies, desired):
 
         if len(matches) > 1:
             module.fail_json(
-                msg=f"Ambiguous resource: multiple firewall policies match name '{desired['name']}' with source zone '{src_params['zone']}' and destination zone '{dst_params['zone']}'",
+                msg=(
+                    f"Ambiguous resource: multiple firewall policies match name '{desired['name']}' "
+                    f"with source zone '{src_params['zone']}' and destination zone '{dst_params['zone']}'"
+                ),
                 name=desired["name"],
             )
     existing = matches[0] if matches else None
@@ -442,10 +562,9 @@ def apply_policy(module, api, site, zone_map, network_map, policies, desired):
             return True, {**existing, **desired_payload}
         return changed, existing
 
-
     if state == "absent" and existing:
         if not module.check_mode:
-            _, info = api.request(
+            del_res, info = api.request(
                 f"/proxy/network/v2/api/site/{site}/firewall-policies/{existing['_id']}", method="DELETE"
             )
             if info["status"] not in [200, 204]:

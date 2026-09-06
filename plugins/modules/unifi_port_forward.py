@@ -42,6 +42,18 @@ options:
         description: Path to CA bundle file for TLS verification.
         required: false
         type: path
+    unifi_session_cookie:
+        description: Pre-authenticated session cookie string.
+        type: str
+        required: false
+    unifi_csrf_token:
+        description: Pre-authenticated CSRF token.
+        type: str
+        required: false
+    id:
+        description: ID of the port forwarding rule.
+        type: str
+        required: false
     state:
         description:
             - Whether the rule should be present or absent.
@@ -258,9 +270,7 @@ def run_module():
         module.fail_json(msg="Failed to fetch port forwarding rules", info=info)
 
     rules = api.as_list(res)
-    current = find_resource(
-        module, rules, "port forward rule", name=name, resource_id=module.params.get("id")
-    )
+    current = find_resource(module, rules, "port forward rule", name=name, resource_id=module.params.get("id"))
 
     if state == "absent":
         if current:
@@ -333,8 +343,6 @@ def run_module():
     if getattr(module, "_diff", False) is True:
         exit_kwargs["diff"] = make_diff({}, result_rule)
     module.exit_json(**exit_kwargs)
-
-
 
 
 if __name__ == "__main__":

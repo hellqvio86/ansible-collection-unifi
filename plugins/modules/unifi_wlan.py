@@ -42,6 +42,18 @@ options:
         description: Path to CA bundle file for TLS verification.
         required: false
         type: path
+    unifi_session_cookie:
+        description: Pre-authenticated session cookie string.
+        type: str
+        required: false
+    unifi_csrf_token:
+        description: Pre-authenticated CSRF token.
+        type: str
+        required: false
+    id:
+        description: ID of the WLAN configuration.
+        type: str
+        required: false
     state:
         description: Whether the WLAN should be present or absent.
         choices: [ present, absent ]
@@ -209,7 +221,9 @@ def run_module():
             if changed:
                 if not module.check_mode:
                     res, info = api.request(
-                        f"/proxy/network/api/s/{site}/rest/wlanconf/{existing['_id']}", method="PUT", data=desired_payload
+                        f"/proxy/network/api/s/{site}/rest/wlanconf/{existing['_id']}",
+                        method="PUT",
+                        data=desired_payload,
                     )
                     res_list = api.as_list(res)
                     result_wlan = res_list[0] if res_list else res
@@ -222,7 +236,9 @@ def run_module():
         if existing:
             changed = True
             if not module.check_mode:
-                _, info = api.request(f"/proxy/network/api/s/{site}/rest/wlanconf/{existing['_id']}", method="DELETE")
+                del_res, info = api.request(
+                    f"/proxy/network/api/s/{site}/rest/wlanconf/{existing['_id']}", method="DELETE"
+                )
                 if info["status"] not in [200, 204]:
                     module.fail_json(msg="Failed to delete WLAN configuration", info=info)
             result_wlan = None
@@ -233,9 +249,7 @@ def run_module():
         after = result_wlan if result_wlan else {}
         exit_kwargs["diff"] = make_diff(before, after)
 
-
     module.exit_json(**exit_kwargs)
-
 
 
 if __name__ == "__main__":

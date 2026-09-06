@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.0.28
+
+### Security Fixes
+- **`unifi_info`**: Strictly allowlist safe device fields to prevent sensitive device configuration and credential leakage.
+- **`security_docs`**: Add formal vulnerability reporting process (`SECURITY.md`) and contribution guidelines (`CONTRIBUTING.md`).
+
+### New Features & Refactoring
+- **`ansible-test sanity`**: Integrate full 34-suite `ansible-test sanity` validation (including `validate-modules`, `pep8`, `pylint`, `shebang`, `yamllint`) into `make lint` and CI via `scripts/run_sanity.sh`.
+- **`documentation`**: Complete `EXAMPLES` and `RETURN` blocks across all 17 modules and implement automated documentation generation (`scripts/generate_docs.py`) with `--check` CI enforcement.
+- **`version_sync`**: Enforce version synchronization between `galaxy.yml` and `README.md` with automated test and CI check (`scripts/check_version_sync.py`).
+- **`testing`**: Add mock HTTP integration test suite (`tests/integration/test_transport_integration.py`) verifying authentication cookie extraction, 401 token refresh, 429 retry backoff, and 503 error handling.
+- **`code_quality`**: Enforce 120-character line limit in Ruff, eliminate PyLint naming warnings, and align module argument specs with Ansible collection standards.
+
 ## 0.0.27
 
 ### Security Fixes

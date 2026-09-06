@@ -54,6 +54,8 @@ For environments where you authenticate once externally or via an authentication
     name: "MySSID"
 ```
 
+> **Note on Session Lifetimes**: Session cookie and CSRF authentication is single-shot. Unlike `username`/`password` authentication, expired session cookies cannot automatically re-login. If the session expires mid-playbook, requests will fail immediately with HTTP 401/403. For long-running playbooks, use `api_key` (recommended) or `username`/`password`.
+
 ---
 
 ## 3. Username & Password (Legacy Fallback)

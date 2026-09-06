@@ -106,7 +106,7 @@ def test_nat_rule_no_change():
         patch(f"{_MODULE}.AnsibleModule") as mock_module_class,
         patch(f"{_MODULE}.UnifiAPI") as mock_api_class,
     ):
-        mock_module, _ = _setup_mocks(
+        mock_module, mock_api = _setup_mocks(
             mock_module_class,
             mock_api_class,
             _base_params(),
@@ -211,7 +211,7 @@ def test_nat_rule_absent_already_gone():
         patch(f"{_MODULE}.AnsibleModule") as mock_module_class,
         patch(f"{_MODULE}.UnifiAPI") as mock_api_class,
     ):
-        mock_module, _ = _setup_mocks(
+        mock_module, mock_api = _setup_mocks(
             mock_module_class,
             mock_api_class,
             _base_params(state="absent", outbound_interface=""),
@@ -234,7 +234,7 @@ def test_nat_rule_ambiguous_fails():
         patch(f"{_MODULE}.AnsibleModule") as mock_module_class,
         patch(f"{_MODULE}.UnifiAPI") as mock_api_class,
     ):
-        mock_module, _ = _setup_mocks(
+        mock_module, mock_api = _setup_mocks(
             mock_module_class,
             mock_api_class,
             _base_params(outbound_interface=""),

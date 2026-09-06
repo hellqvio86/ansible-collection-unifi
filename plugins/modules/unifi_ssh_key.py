@@ -24,10 +24,14 @@ options:
         description: UniFi controller password.
         required: false
         type: str
+    site:
+        description: UniFi site name.
+        type: str
+        default: default
     validate_certs:
         description: Verify SSL certificates.
-        default: true
         type: bool
+        default: true
     api_key:
         description:
             - Token for direct API authentication (UniFi OS 3.x+ / Network 8.x+).
@@ -39,6 +43,14 @@ options:
         description: Path to CA bundle file for TLS verification.
         required: false
         type: path
+    unifi_session_cookie:
+        description: Pre-authenticated session cookie string.
+        type: str
+        required: false
+    unifi_csrf_token:
+        description: Pre-authenticated CSRF token.
+        type: str
+        required: false
     keys:
         description: List of SSH public keys to ensure are present or absent.
         required: false
@@ -52,6 +64,21 @@ options:
         type: str
 author:
     - hellqvio86 (@hellqvio86)
+"""
+
+EXAMPLES = r"""
+- name: Register admin keys
+  hellqvio86.unifi.unifi_ssh_key:
+    keys:
+      - "ssh-rsa AAAAB3Nza..."
+      - "ssh-ed25519 AAAAC3Nza..."
+"""
+
+RETURN = r"""
+ssh_keys:
+    description: Registered SSH keys on the controller.
+    type: list
+    returned: always
 """
 
 from ansible.module_utils.basic import AnsibleModule
@@ -70,7 +97,7 @@ def run_module():
         api_key=dict(type="str", no_log=True, required=False),
         unifi_session_cookie=dict(type="str", no_log=True, required=False),
         unifi_csrf_token=dict(type="str", no_log=True, required=False),
-        keys=dict(type="list", elements="str", required=False, default=[]),
+        keys=dict(type="list", elements="str", required=False, default=[], no_log=False),
         state=dict(type="str", choices=["present", "absent"], default="present"),
     )
 

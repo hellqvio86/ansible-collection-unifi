@@ -11,23 +11,90 @@ description:
     - Assign or remove switch profiles from UniFi switches.
     - Supports single assignment mode and batch mode.
 options:
-    host: {type: str, required: false}
-    username: {type: str, required: false}
-    password: {type: str, required: false}
-    site: {type: str, default: default}
-    validate_certs: {type: bool, default: true}
-    ca_path: {type: path, required: false}
-    state: {type: str, choices: [present, absent], default: present}
-    switch_name: {type: str}
-    switch_mac: {type: str}
-    switch_ip: {type: str}
-    profile_name: {type: str}
+    host:
+        description: The host of the UniFi controller.
+        type: str
+        required: false
+    username:
+        description: UniFi controller administrator username.
+        type: str
+        required: false
+    password:
+        description: UniFi controller administrator password.
+        type: str
+        required: false
+    site:
+        description: UniFi site name.
+        type: str
+        default: default
+    validate_certs:
+        description: Verify SSL certificates.
+        type: bool
+        default: true
+    ca_path:
+        description: Path to CA bundle file for TLS verification.
+        type: path
+        required: false
+    api_key:
+        description: Token for direct API authentication.
+        type: str
+        required: false
+    unifi_session_cookie:
+        description: Pre-authenticated session cookie string.
+        type: str
+        required: false
+    unifi_csrf_token:
+        description: Pre-authenticated CSRF token.
+        type: str
+        required: false
+    state:
+        description: Whether the assignment should be present or absent.
+        type: str
+        choices: [present, absent]
+        default: present
+    switch_name:
+        description: Name of the switch to target.
+        type: str
+        required: false
+    switch_mac:
+        description: MAC address of the switch.
+        type: str
+        required: false
+    switch_ip:
+        description: IP address of the switch.
+        type: str
+        required: false
+    profile_name:
+        description: Name of the switch profile to assign.
+        type: str
+        required: false
     assignments:
         description: Batch input for switch profile assignments.
         type: list
         elements: dict
+        required: false
+    switch_profiles:
+        description: Pre-fetched list of switch profiles to avoid additional API lookups.
+        type: list
+        elements: dict
+        required: false
 author:
     - hellqvio86 (@hellqvio86)
+"""
+
+EXAMPLES = r"""
+- name: Assign Access Profile
+  hellqvio86.unifi.unifi_switch_profile_assignment:
+    switch_name: "Main-Switch"
+    profile_name: "Standard Access Profile"
+    state: present
+"""
+
+RETURN = r"""
+switch_profile_assignment:
+    description: Details of the switch profile assignment.
+    type: dict
+    returned: always
 """
 
 from ansible.module_utils.basic import AnsibleModule
@@ -201,7 +268,10 @@ def run_module():
                     # Resolve port profile name to ID
                     if port_prof_name not in portconf_map:
                         module.fail_json(
-                            msg=f"Port profile '{port_prof_name}' not found for port {port_idx} in switch profile '{profile_name}'"
+                            msg=(
+                                f"Port profile '{port_prof_name}' not found for port {port_idx} "
+                                f"in switch profile '{profile_name}'"
+                            )
                         )
                     profile_id = portconf_map[port_prof_name]
 

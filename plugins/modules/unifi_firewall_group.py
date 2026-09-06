@@ -42,6 +42,18 @@ options:
         description: Path to CA bundle file for TLS verification.
         required: false
         type: path
+    unifi_session_cookie:
+        description: Pre-authenticated session cookie string.
+        type: str
+        required: false
+    unifi_csrf_token:
+        description: Pre-authenticated CSRF token.
+        type: str
+        required: false
+    id:
+        description: ID of the firewall group.
+        type: str
+        required: false
     state:
         description: Whether the group should be present or absent.
         choices: [ present, absent ]
@@ -49,7 +61,7 @@ options:
         type: str
     name:
         description: Name of the firewall group.
-        required: false
+        required: true
         type: str
     group_type:
         description: Type of the group.
@@ -95,7 +107,7 @@ from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import 
 )
 
 
-def _build_desired_payload(name: str, group_type: str, group_members: list | None) -> dict:
+def _build_desired_payload(name: str, group_type: str, group_members=None) -> dict:
     """Build the desired firewall group payload."""
     return {
         "name": name,
@@ -146,9 +158,7 @@ def run_module():
     res, info = api.request(f"/proxy/network/api/s/{site}/rest/firewallgroup")
     groups = api.as_list(res)
 
-    existing = find_resource(
-        module, groups, "firewall group", name=name, resource_id=module.params.get("id")
-    )
+    existing = find_resource(module, groups, "firewall group", name=name, resource_id=module.params.get("id"))
 
     changed = False
     result_group = existing
@@ -195,7 +205,7 @@ def run_module():
         if existing:
             changed = True
             if not module.check_mode:
-                _, info = api.request(
+                del_res, info = api.request(
                     f"/proxy/network/api/s/{site}/rest/firewallgroup/{existing['_id']}", method="DELETE"
                 )
                 if info["status"] not in [200, 204]:
@@ -208,9 +218,7 @@ def run_module():
         after = result_group if result_group else {}
         exit_kwargs["diff"] = make_diff(before, after)
 
-
     module.exit_json(**exit_kwargs)
-
 
 
 if __name__ == "__main__":

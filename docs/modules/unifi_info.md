@@ -1,19 +1,27 @@
 # hellqvio86.unifi.unifi_info
 
-Gather information about UniFi infrastructure.
+Gather information about UniFi infrastructure
 
 ## Description
-The `unifi_info` module is the "Read-Only" engine of the collection. It allows you to gather the current state of your controller to audit or bootstrap your IaC.
+Gather details about WiFi networks, firewall groups, zones, policies, and settings from a UniFi controller.
 
 ## Parameters
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `gather_subset` | list | No | `['wifi', 'firewall_groups', 'firewall_zones', 'firewall_policies', 'rsyslog']` | Which subsets of data to gather. |
+| `host` | str | No |  | The host of the UniFi controller (IP or FQDN). |
+| `username` | str | No |  | UniFi controller administrator username. |
+| `password` | str | No |  | UniFi controller administrator password. |
+| `site` | str | No | `default` | UniFi site name. |
+| `validate_certs` | bool | No | `True` | Verify SSL certificates. |
+| `ca_path` | path | No |  | Path to CA bundle file for TLS verification. |
+| `api_key` | str | No |  | Token for direct API authentication. |
+| `unifi_session_cookie` | str | No |  | Pre-authenticated session cookie string. |
+| `unifi_csrf_token` | str | No |  | Pre-authenticated CSRF token. |
+| `gather_subset` | list | No | `['wifi', 'firewall_groups', 'firewall_zones', 'firewall_policies', 'rsyslog']` | List of subsets to gather. Choices: `wifi`, `firewall_groups`, `firewall_zones`, `firewall_policies`, `rsyslog`, `port_profiles`, `devices`, `dhcp_reservations`, `networks`, `system_settings`, `port_forward`. |
 
 ## Examples
 
-### 1. Gather Everything (Full Audit)
 ```yaml
 - name: Gather all UniFi state
   hellqvio86.unifi.unifi_info:
@@ -25,47 +33,15 @@ The `unifi_info` module is the "Read-Only" engine of the collection. It allows y
       - rsyslog
       - port_profiles
   register: unifi_state
-```
 
-### 2. Targeted: WiFi Networks Only
-```yaml
 - name: Gather WiFi details
   hellqvio86.unifi.unifi_info:
     gather_subset: ["wifi"]
   register: wifi_state
-
-- name: Debug WiFi names
-  debug:
-    msg: "Found SSIDs: {{ wifi_state.unifi_info.wifi | map(attribute='name') | list }}"
-```
-
-### 3. Targeted: Firewall Groups & Policies
-```yaml
-- name: Gather Firewall state
-  hellqvio86.unifi.unifi_info:
-    gather_subset:
-      - firewall_groups
-      - firewall_policies
-  register: fw_state
-```
-
-### 4. Targeted: System Settings (Syslog)
-```yaml
-- name: Check Syslog configuration
-  hellqvio86.unifi.unifi_info:
-    gather_subset: ["rsyslog"]
-  register: syslog_state
 ```
 
 ## Return Values
-The module returns a dictionary `unifi_info` containing keys for each requested subset.
 
-| Key | Type | Description |
-|-----|------|-------------|
-| `wifi` | list | List of wireless network configurations. |
-| `firewall_groups` | list | List of IP and Port groups. |
-| `firewall_zones` | list | List of network zones. |
-| `firewall_policies` | list | List of Policy Engine rules. |
-| `rsyslog` | dict | Current remote syslog configuration. |
-| `port_profiles` | list | List of switch port profiles. |
-| `devices` | list | Raw data for all managed devices. |
+| Return Value | Type | Returned | Description |
+|--------------|------|----------|-------------|
+| `unifi_info` | dict | always | Information gathered from the UniFi controller keyed by subset. |

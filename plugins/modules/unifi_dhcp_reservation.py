@@ -44,6 +44,14 @@ options:
         description: Path to CA bundle file for TLS verification.
         required: false
         type: path
+    unifi_session_cookie:
+        description: Pre-authenticated session cookie string.
+        type: str
+        required: false
+    unifi_csrf_token:
+        description: Pre-authenticated CSRF token.
+        type: str
+        required: false
     state:
         description:
             - Whether the DHCP reservation should be present or absent.
@@ -238,7 +246,6 @@ def run_module():
             else:
                 result_client = {**client, **desired_payload}
 
-
         module.exit_json(
             changed=changed,
             before=before,
@@ -292,7 +299,6 @@ def run_module():
                 result_client = res_list[0] if res_list else res
             else:
                 result_client = {**client, "use_fixedip": False, "fixed_ip": ""}
-
 
         module.exit_json(
             changed=changed,

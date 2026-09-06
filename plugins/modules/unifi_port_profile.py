@@ -41,6 +41,18 @@ options:
         description: Path to CA bundle file for TLS verification.
         required: false
         type: path
+    unifi_session_cookie:
+        description: Pre-authenticated session cookie string.
+        type: str
+        required: false
+    unifi_csrf_token:
+        description: Pre-authenticated CSRF token.
+        type: str
+        required: false
+    id:
+        description: ID of the port profile.
+        type: str
+        required: false
     state:
         description: Whether the profile should be present or absent.
         choices: [ present, absent ]
@@ -48,7 +60,7 @@ options:
         type: str
     name:
         description: Name of the port profile.
-        required: false
+        required: true
         type: str
     native_network_name:
         description: Name of the native (untagged) network.
@@ -62,6 +74,22 @@ options:
         type: bool
 author:
     - hellqvio86 (@hellqvio86)
+"""
+
+EXAMPLES = r"""
+- name: Create IoT Port Profile
+  hellqvio86.unifi.unifi_port_profile:
+    name: "IoT Ports"
+    native_network_name: "IoT"
+    tagged_network_names: ["Camera"]
+    state: present
+"""
+
+RETURN = r"""
+port_profile:
+    description: Configuration of the port profile.
+    type: dict
+    returned: always
 """
 
 from ansible.module_utils.basic import AnsibleModule
@@ -184,7 +212,9 @@ def run_module():
             if changed:
                 if not module.check_mode:
                     res, info = api.request(
-                        f"/proxy/network/api/s/{site}/rest/portconf/{existing['_id']}", method="PUT", data=desired_payload
+                        f"/proxy/network/api/s/{site}/rest/portconf/{existing['_id']}",
+                        method="PUT",
+                        data=desired_payload,
                     )
                     res_list = api.as_list(res)
                     result_profile = res_list[0] if res_list else res
@@ -197,7 +227,9 @@ def run_module():
         if existing:
             changed = True
             if not module.check_mode:
-                _, info = api.request(f"/proxy/network/api/s/{site}/rest/portconf/{existing['_id']}", method="DELETE")
+                del_res, info = api.request(
+                    f"/proxy/network/api/s/{site}/rest/portconf/{existing['_id']}", method="DELETE"
+                )
                 if info["status"] not in [200, 204]:
                     module.fail_json(msg="Failed to delete port profile", info=info)
             result_profile = None
@@ -208,9 +240,7 @@ def run_module():
         after = result_profile if result_profile else {}
         exit_kwargs["diff"] = make_diff(before, after)
 
-
     module.exit_json(**exit_kwargs)
-
 
 
 if __name__ == "__main__":

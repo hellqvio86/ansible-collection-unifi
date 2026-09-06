@@ -1,4 +1,4 @@
-.PHONY: venv test lint format clean help build publish smoke-test
+.PHONY: venv test lint format clean help build publish smoke-test docs sanity
 
 VENV := .venv
 PYTHON := $(VENV)/bin/python
@@ -45,11 +45,20 @@ setup-structure:
 	fi
 
 test: venv setup-structure
-	PYTHONPATH=. $(PYTEST) tests/unit
+	PYTHONPATH=. $(PYTEST)
 
 lint: venv setup-structure
+	$(PYTHON) scripts/check_version_sync.py
+	$(PYTHON) scripts/generate_docs.py --check
 	$(RUFF) check .
 	ANSIBLE_HOME=.ansible ANSIBLE_LOCAL_TEMP=.ansible/tmp $(ANSIBLE_LINT) .
+	bash scripts/run_sanity.sh
+
+sanity: venv
+	bash scripts/run_sanity.sh
+
+docs: venv
+	$(PYTHON) scripts/generate_docs.py
 
 format: venv
 	$(RUFF) format .

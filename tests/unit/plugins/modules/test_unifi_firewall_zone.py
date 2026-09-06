@@ -16,6 +16,14 @@ def test_build_desired_payload_basic():
     assert result["network_ids"] == []
 
 
+def test_build_desired_payload_with_type_and_description():
+    result = _build_desired_payload("Internal", "lan", "Main LAN zone")
+    assert result["name"] == "Internal"
+    assert result["type"] == "LAN"
+    assert result["description"] == "Main LAN zone"
+    assert result["network_ids"] == []
+
+
 def test_build_desired_payload_special_chars():
     result = _build_desired_payload("Guest WiFi Zone")
     assert result["name"] == "Guest WiFi Zone"
@@ -63,7 +71,7 @@ def test_zone_create():
 
         mock_api.request.side_effect = [
             ([], {"status": 200}),
-            ([{"_id": "zone1", "name": "Internal", "type": "LAN"}], {"status": 201}),
+            ([{"_id": "zone1", "name": "Internal", "type": "LAN", "description": "Main LAN zone"}], {"status": 201}),
         ]
 
         run_module()
@@ -72,6 +80,8 @@ def test_zone_create():
         post_call = mock_api.request.call_args_list[1]
         assert post_call[1]["method"] == "POST"
         assert post_call[1]["data"]["name"] == "Internal"
+        assert post_call[1]["data"]["type"] == "LAN"
+        assert post_call[1]["data"]["description"] == "Main LAN zone"
         assert post_call[1]["data"]["network_ids"] == []
 
         mock_module.exit_json.assert_called_once()
@@ -155,15 +165,23 @@ def test_zone_update():
 
         mock_api.request.side_effect = [
             ([{"_id": "zone1", "name": "Internal", "type": "LAN", "description": "Main LAN zone"}], {"status": 200}),
+            (
+                [{"_id": "zone1", "name": "Internal", "type": "custom", "description": "Updated description"}],
+                {"status": 200},
+            ),
         ]
 
         run_module()
 
-        assert mock_api.request.call_count == 1
+        assert mock_api.request.call_count == 2
+        put_call = mock_api.request.call_args_list[1]
+        assert put_call[1]["method"] == "PUT"
+        assert put_call[1]["data"]["name"] == "Internal"
+        assert put_call[1]["data"]["description"] == "Updated description"
 
         mock_module.exit_json.assert_called_once()
         kwargs = mock_module.exit_json.call_args[1]
-        assert kwargs["changed"] is False
+        assert kwargs["changed"] is True
 
 
 def test_zone_absent():

@@ -246,7 +246,11 @@ firewall_policy:
 
 from ansible.module_utils.basic import AnsibleModule
 
-from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI, make_diff
+from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import (
+    UnifiAPI,
+    make_diff,
+    resource_has_drift,
+)
 
 
 def run_module():
@@ -575,72 +579,47 @@ def apply_policy(module, api, site, zone_map, network_map, policies, desired):
 
 
 def policy_needs_update(existing, desired_payload):
-    def match_field(side):
-        target = side.get("matching_target")
+    """Determine if existing policy differs from desired_payload using canonical comparison."""
+    existing_norm = dict(existing)
+    desired_norm = dict(desired_payload)
+
+    for side in ("source", "destination"):
+        ex_side = dict(existing.get(side) or {})
+        des_side = dict(desired_payload.get(side) or {})
+
+        # Normalize port
+        ex_side["port"] = str(ex_side.get("port") or "")
+        des_side["port"] = str(des_side.get("port") or "")
+
+        # Normalize match_opposite_ports
+        ex_side["match_opposite_ports"] = bool(ex_side.get("match_opposite_ports", False))
+        des_side["match_opposite_ports"] = bool(des_side.get("match_opposite_ports", False))
+
+        target = des_side.get("matching_target", "ANY")
         if target == "NETWORK":
-            return "network_ids"
-        if target == "IP":
-            return "ips"
-        if target == "DOMAIN":
-            return "ips"
-        return None
+            des_side.setdefault("ips", [])
+            ex_side.setdefault("ips", [])
+            des_side.setdefault("network_ids", [])
+            ex_side.setdefault("network_ids", [])
+        elif target in ("IP", "DOMAIN"):
+            des_side.setdefault("network_ids", [])
+            ex_side.setdefault("network_ids", [])
+            des_side.setdefault("ips", [])
+            ex_side.setdefault("ips", [])
+        else:  # ANY
+            des_side.setdefault("ips", [])
+            ex_side.setdefault("ips", [])
+            des_side.setdefault("network_ids", [])
+            ex_side.setdefault("network_ids", [])
 
-    for key in [
-        "action",
-        "protocol",
-        "ip_version",
-        "index",
-        "enabled",
-        "logging",
-        "connection_state_type",
-        "create_allow_respond",
-        "match_ip_sec",
-        "match_opposite_protocol",
-        "icmp_typename",
-        "icmp_v6_typename",
-    ]:
-        if existing.get(key) != desired_payload.get(key):
-            return True
+        existing_norm[side] = ex_side
+        desired_norm[side] = des_side
 
-    if existing.get("schedule") != desired_payload.get("schedule"):
-        return True
-
-    if sorted(existing.get("connection_states", [])) != sorted(desired_payload.get("connection_states", [])):
-        return True
-
-    for side in ["source", "destination"]:
-        existing_side = existing.get(side, {})
-        desired_side = desired_payload.get(side, {})
-
-        if existing_side.get("matching_target") != desired_side.get("matching_target"):
-            return True
-
-        if existing_side.get("port_matching_type") != desired_side.get("port_matching_type"):
-            return True
-
-        if existing_side.get("port", "") != desired_side.get("port", ""):
-            return True
-
-        if existing_side.get("match_opposite_ports", False) != desired_side.get("match_opposite_ports", False):
-            return True
-
-    src_field = match_field(desired_payload["source"])
-    if src_field:
-        if sorted(existing["source"].get(src_field, [])) != sorted(desired_payload["source"].get(src_field, [])):
-            return True
-    elif existing["source"].get("ips") or existing["source"].get("network_ids"):
-        return True
-
-    dst_field = match_field(desired_payload["destination"])
-    if dst_field:
-        if sorted(existing["destination"].get(dst_field, [])) != sorted(
-            desired_payload["destination"].get(dst_field, [])
-        ):
-            return True
-    elif existing["destination"].get("ips") or existing["destination"].get("network_ids"):
-        return True
-
-    return False
+    return resource_has_drift(
+        existing_norm,
+        desired_norm,
+        ignored_keys={"_id", "id", "site_id", "matching_target_type"},
+    )
 
 
 if __name__ == "__main__":

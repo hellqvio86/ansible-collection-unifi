@@ -54,7 +54,7 @@ Or include it in your `requirements.yml`:
 ```yaml
 collections:
   - name: hellqvio86.unifi
-    version: 0.0.28
+    version: 0.0.29
 ```
 
 ## Getting Started: Dump Your Current State

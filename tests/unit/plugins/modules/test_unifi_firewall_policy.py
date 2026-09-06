@@ -473,3 +473,87 @@ def test_firewall_policy_drift_update_match_opposite_ports():
         mock_module.exit_json.assert_called_once()
         kwargs = mock_module.exit_json.call_args[1]
         assert kwargs["changed"] is True
+
+
+def test_firewall_policy_noop_with_string_index_and_coerced_types():
+    """Regression test asserting index as a string or bool as string in controller response does not trigger drift."""
+    params = {
+        "host": "192.0.2.1",
+        "username": "admin",
+        "password": "password",
+        "site": "default",
+        "validate_certs": False,
+        "state": "present",
+        "name": "Noop Policy",
+        "action": "ALLOW",
+        "protocol": "all",
+        "index": 10000,
+        "enabled": True,
+        "logging": False,
+        "source": {"zone": "Internal"},
+        "destination": {"zone": "Internal"},
+        "policies": None,
+    }
+
+    with (
+        patch(
+            "ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_policy.AnsibleModule"
+        ) as mock_module_class,
+        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_policy.UnifiAPI") as mock_api_class,
+    ):
+        mock_module = mock_module_class.return_value
+        mock_module.params = params
+        mock_module.check_mode = False
+        mock_module.fail_json.side_effect = Exception("fail_json")
+
+        mock_api = mock_api_class.return_value
+        mock_api.as_list.side_effect = lambda x: (
+            x
+            if isinstance(x, list)
+            else (x.get("data", []) if isinstance(x, dict) and isinstance(x.get("data"), list) else [])
+        )
+
+        existing_policy = {
+            "name": "Noop Policy",
+            "_id": "pol3",
+            "action": "ALLOW",
+            "protocol": "all",
+            "ip_version": "BOTH",
+            "index": "10000",  # String coercion from controller
+            "enabled": "true",  # String boolean coercion
+            "logging": False,
+            "schedule": {"mode": "ALWAYS"},
+            "connection_state_type": "ALL",
+            "connection_states": [],
+            "create_allow_respond": True,
+            "icmp_typename": "ANY",
+            "icmp_v6_typename": "ANY",
+            "match_ip_sec": False,
+            "match_opposite_protocol": False,
+            "source": {
+                "zone_id": "zone123",
+                "matching_target": "ANY",
+                "match_opposite_ports": False,
+                "port_matching_type": "ANY",
+            },
+            "destination": {
+                "zone_id": "zone123",
+                "matching_target": "ANY",
+                "match_opposite_ports": False,
+                "port_matching_type": "ANY",
+            },
+        }
+
+        mock_api.request.side_effect = [
+            ([{"name": "Internal", "_id": "zone123"}], {"status": 200}),
+            ([], {"status": 200}),
+            ([existing_policy], {"status": 200}),
+        ]
+
+        run_module()
+
+        # No mutating calls (POST/PUT/DELETE)
+        assert mock_api.request.call_count == 3
+        mock_module.exit_json.assert_called_once()
+        kwargs = mock_module.exit_json.call_args[1]
+        assert kwargs["changed"] is False

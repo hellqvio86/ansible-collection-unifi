@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.29
+
+### Bug Fixes
+- **`unifi_firewall_zone`**: Wire `type` and `description` parameters into the desired payload and implement drift detection with in-place `PUT` updates via `resource_has_drift`.
+- **`unifi_firewall_policy`**: Refactor idempotency comparison to use the shared `resource_has_drift` and `canonical_compare` helpers, supporting int/string coercion (e.g. `index`) and boolean string coercion.
+
+### CI/CD
+- **`ci`**: Add dedicated `sanity` job to `.github/workflows/ci.yml` running `make sanity` (`ansible-test sanity`).
+
 ## 0.0.28
 
 ### Security Fixes

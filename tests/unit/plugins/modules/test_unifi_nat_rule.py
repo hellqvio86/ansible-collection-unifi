@@ -52,13 +52,22 @@ def test_nat_rule_create():
     """Creating a rule that does not yet exist should POST and report changed=True."""
     created_rule = {
         "_id": "nat-1",
-        "name": "SNAT HA to IoT",
-        "type": "masquerade",
-        "src_address": "192.0.2.10",
-        "dst_address": "198.51.100.0/24",
-        "outbound_network_id": "net-iot-1",
+        "description": "SNAT HA to IoT",
+        "type": "MASQUERADE",
+        "ip_version": "IPV4",
+        "out_interface": "net-iot-1",
         "enabled": True,
         "logging": False,
+        "setting_preference": "manual",
+        "protocol": "ALL",
+        "source_filter": {
+            "address": "192.0.2.10",
+            "filter_type": "ADDRESS_AND_PORT",
+        },
+        "destination_filter": {
+            "address": "198.51.100.0/24",
+            "filter_type": "ADDRESS_AND_PORT",
+        },
     }
 
     with (
@@ -85,21 +94,36 @@ def test_nat_rule_create():
 
         post_call = mock_api.request.call_args_list[2]
         assert post_call[1]["method"] == "POST"
-        assert post_call[1]["data"]["name"] == "SNAT HA to IoT"
-        assert post_call[1]["data"]["outbound_network_id"] == "net-iot-1"
+        assert post_call[1]["data"]["description"] == "SNAT HA to IoT"
+        assert post_call[1]["data"]["out_interface"] == "net-iot-1"
 
 
 def test_nat_rule_no_change():
     """If the rule already matches desired state, exit with changed=False."""
     existing_rule = {
         "_id": "nat-1",
-        "name": "SNAT HA to IoT",
-        "type": "masquerade",
-        "src_address": "192.0.2.10",
-        "dst_address": "198.51.100.0/24",
-        "outbound_network_id": "net-iot-1",
+        "description": "SNAT HA to IoT",
+        "type": "MASQUERADE",
+        "ip_version": "IPV4",
+        "out_interface": "net-iot-1",
         "enabled": True,
         "logging": False,
+        "setting_preference": "manual",
+        "protocol": "ALL",
+        "source_filter": {
+            "address": "192.0.2.10",
+            "filter_type": "ADDRESS_AND_PORT",
+            "firewall_group_ids": [],
+            "invert_address": False,
+            "invert_port": False,
+        },
+        "destination_filter": {
+            "address": "198.51.100.0/24",
+            "filter_type": "ADDRESS_AND_PORT",
+            "firewall_group_ids": [],
+            "invert_address": False,
+            "invert_port": False,
+        },
     }
 
     with (
@@ -127,13 +151,28 @@ def test_nat_rule_update():
     """If the rule exists but differs, it should PUT and report changed=True."""
     existing_rule = {
         "_id": "nat-1",
-        "name": "SNAT HA to IoT",
-        "type": "masquerade",
-        "src_address": "192.0.2.10",
-        "dst_address": "198.51.100.0/24",
-        "outbound_network_id": "net-iot-1",
+        "description": "SNAT HA to IoT",
+        "type": "MASQUERADE",
+        "ip_version": "IPV4",
+        "out_interface": "net-iot-1",
         "enabled": False,  # will be toggled to True
         "logging": False,
+        "setting_preference": "manual",
+        "protocol": "ALL",
+        "source_filter": {
+            "address": "192.0.2.10",
+            "filter_type": "ADDRESS_AND_PORT",
+            "firewall_group_ids": [],
+            "invert_address": False,
+            "invert_port": False,
+        },
+        "destination_filter": {
+            "address": "198.51.100.0/24",
+            "filter_type": "ADDRESS_AND_PORT",
+            "firewall_group_ids": [],
+            "invert_address": False,
+            "invert_port": False,
+        },
     }
     updated_rule = {**existing_rule, "enabled": True}
 
@@ -170,10 +209,8 @@ def test_nat_rule_delete():
     """
     existing_rule = {
         "_id": "nat-1",
-        "name": "SNAT HA to IoT",
-        "type": "masquerade",
-        "src_address": "192.0.2.10",
-        "dst_address": "198.51.100.0/24",
+        "description": "SNAT HA to IoT",
+        "type": "MASQUERADE",
         "enabled": True,
         "logging": False,
     }
@@ -241,8 +278,8 @@ def test_nat_rule_ambiguous_fails():
             [
                 (
                     [
-                        {"_id": "nat-1", "name": "SNAT HA to IoT"},
-                        {"_id": "nat-2", "name": "SNAT HA to IoT"},
+                        {"_id": "nat-1", "description": "SNAT HA to IoT"},
+                        {"_id": "nat-2", "description": "SNAT HA to IoT"},
                     ],
                     {"status": 200},
                 ),

@@ -81,9 +81,39 @@ ssh_keys:
     returned: always
 """
 
+import base64
+import datetime
+import hashlib
+
 from ansible.module_utils.basic import AnsibleModule
 
 from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import UnifiAPI
+
+
+def _parse_ssh_key(key_str: str) -> dict:
+    parts = key_str.strip().split()
+    if len(parts) < 2:
+        return {}
+    k_type = parts[0]
+    k_b64 = parts[1]
+    k_comment = parts[2] if len(parts) > 2 else ""
+    name = k_comment.split("@")[-1] if "@" in k_comment else (k_comment or "ssh-key")
+    try:
+        raw = base64.b64decode(k_b64)
+        md5 = hashlib.md5(raw).hexdigest()  # noqa: S324 - UniFi MD5 fingerprint format
+        fp = ":".join(md5[i : i + 2] for i in range(0, 32, 2))
+    except Exception:
+        fp = ""
+
+    now_iso = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return {
+        "name": name,
+        "type": k_type,
+        "key": k_b64,
+        "comment": k_comment,
+        "fingerprint": fp,
+        "date": now_iso,
+    }
 
 
 def run_module():
@@ -106,6 +136,7 @@ def run_module():
     host = module.params["host"]
     username = module.params["username"]
     password = module.params["password"]
+    site = module.params.get("site", "default")
     validate_certs = module.params["validate_certs"]
     desired_keys = module.params.get("keys") or []
     state = module.params["state"]
@@ -124,34 +155,72 @@ def run_module():
     )
     api.login()
 
-    # 2. Get current user settings (contains sshKeys)
+    # 2. Check if legacy /api/users/self provides sshKeys
     user_info, info = api.request("/api/users/self")
-    if not user_info:
-        module.fail_json(msg="Failed to fetch user info", info=info)
+    if user_info and "sshKeys" in user_info:
+        current_keys = user_info.get("sshKeys", [])
+        new_key_list = current_keys
+        changed = False
 
-    current_keys = user_info.get("sshKeys", [])
-    new_key_list = current_keys
+        if state == "present":
+            missing_keys = [k for k in desired_keys if k not in current_keys]
+            if missing_keys:
+                changed = True
+                new_key_list = list(dict.fromkeys(current_keys + desired_keys))
+        elif state == "absent":
+            keys_to_remove = [k for k in desired_keys if k in current_keys]
+            if keys_to_remove:
+                changed = True
+                new_key_list = [k for k in current_keys if k not in desired_keys]
+
+        if changed and not module.check_mode:
+            res, patch_info = api.request("/api/users/self", method="PATCH", data={"sshKeys": new_key_list})
+            if patch_info.get("status") != 200:
+                module.fail_json(msg="Failed to update SSH keys", info=patch_info)
+
+        module.exit_json(changed=changed, keys_count=len(new_key_list))
+        return
+
+    # 3. UniFi Network controller setting/mgmt endpoint
+    mgmt_res, mgmt_info = api.request(f"/proxy/network/api/s/{site}/get/setting/mgmt")
+    mgmt_list = api.as_list(mgmt_res) if mgmt_res else []
+    mgmt = mgmt_list[0] if mgmt_list and isinstance(mgmt_list[0], dict) else None
+    if not mgmt or "_id" not in mgmt:
+        module.fail_json(msg="Failed to fetch management settings for SSH keys", info=mgmt_info)
+
+    existing_keys = mgmt.get("x_ssh_keys", [])
+    existing_keys_b64 = {k.get("key") for k in existing_keys if isinstance(k, dict) and k.get("key")}
+
+    parsed_desired = [_parse_ssh_key(k) for k in desired_keys if k and _parse_ssh_key(k).get("key")]
+    desired_b64 = {p["key"] for p in parsed_desired if p.get("key")}
+
     changed = False
+    new_keys = list(existing_keys)
 
-    # 3. Check for differences and update deterministically
     if state == "present":
-        missing_keys = [k for k in desired_keys if k not in current_keys]
-        if missing_keys:
-            changed = True
-            new_key_list = list(dict.fromkeys(current_keys + desired_keys))
+        for p in parsed_desired:
+            if p["key"] not in existing_keys_b64:
+                changed = True
+                new_keys.append(p)
+                existing_keys_b64.add(p["key"])
     elif state == "absent":
-        keys_to_remove = [k for k in desired_keys if k in current_keys]
-        if keys_to_remove:
+        to_remove = existing_keys_b64.intersection(desired_b64)
+        if to_remove:
             changed = True
-            new_key_list = [k for k in current_keys if k not in desired_keys]
+            new_keys = [k for k in existing_keys if isinstance(k, dict) and k.get("key") not in to_remove]
 
     if changed and not module.check_mode:
-        # Update via PATCH /api/users/self
-        res, info = api.request("/api/users/self", method="PATCH", data={"sshKeys": new_key_list})
-        if info["status"] != 200:
-            module.fail_json(msg="Failed to update SSH keys", info=info)
+        payload = dict(mgmt)
+        payload["x_ssh_keys"] = new_keys
+        res, put_info = api.request(
+            f"/proxy/network/api/s/{site}/set/setting/mgmt/{mgmt['_id']}",
+            method="PUT",
+            data=payload,
+        )
+        if put_info.get("status") != 200:
+            module.fail_json(msg="Failed to update SSH keys in setting/mgmt", info=put_info)
 
-    module.exit_json(changed=changed, keys_count=len(new_key_list))
+    module.exit_json(changed=changed, keys_count=len(new_keys))
 
 
 if __name__ == "__main__":

@@ -95,23 +95,22 @@ from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import 
     UnifiAPI,
     find_resource,
     make_diff,
-    resource_has_drift,
 )
 
 
 def _build_desired_payload(
     name: str, zone_type=None, description=None
 ) -> dict:
-    """Build the desired firewall zone payload."""
-    payload = {
+    """Build the desired firewall zone payload.
+
+    Note: The UniFi firewall zone API v2 only accepts 'name' and 'network_ids'.
+    Parameters like 'zone_type' and 'description' are accepted by Ansible for
+    semantic inventory categorization but must not be included in API payloads.
+    """
+    return {
         "name": name,
         "network_ids": [],
     }
-    if zone_type is not None:
-        payload["type"] = zone_type.upper() if zone_type.lower() != "custom" else "custom"
-    if description is not None:
-        payload["description"] = description
-    return payload
 
 
 def run_module():
@@ -183,25 +182,27 @@ def run_module():
             else:
                 result_zone = desired_payload
         else:
-            existing_cmp = dict(existing)
-            if "type" in existing_cmp and "type" in desired_payload:
-                if str(existing_cmp["type"]).lower() == str(desired_payload["type"]).lower():
-                    existing_cmp["type"] = desired_payload["type"]
-
-            if resource_has_drift(existing_cmp, desired_payload, ignored_keys={"network_ids"}):
+            # The zone already exists with this name. UniFi firewall zones only expose 'name'
+            # and 'network_ids' in the v2 API, and network membership is managed on networks/VLANs.
+            # If the zone is matched by ID and renamed, perform an in-place PUT update.
+            if existing.get("name") != module.params["name"]:
                 changed = True
                 if not module.check_mode:
+                    update_payload = {
+                        "name": module.params["name"],
+                        "network_ids": existing.get("network_ids", []),
+                    }
                     res, info = api.request(
                         f"/proxy/network/v2/api/site/{site}/firewall/zone/{existing['_id']}",
                         method="PUT",
-                        data=desired_payload,
+                        data=update_payload,
                     )
                     res_list = api.as_list(res)
                     result_zone = res_list[0] if res_list else res
                     if not result_zone or info["status"] not in [200, 201]:
                         module.fail_json(msg="Failed to update firewall zone", info=info)
                 else:
-                    result_zone = {**existing, **desired_payload}
+                    result_zone = {**existing, "name": module.params["name"]}
             else:
                 changed = False
 

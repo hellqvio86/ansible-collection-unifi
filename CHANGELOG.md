@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.0.31
+
+### Bug Fixes
+- **`unifi_nat_rule`**: Align NAT rule API payload and endpoint with UniFi Network v2 Policy Engine (`/proxy/network/v2/api/site/{site}/nat`), using `description`, `source_filter`, `destination_filter`, `out_interface`, `setting_preference: manual`, and `protocol: ALL`.
+- **`unifi_ssh_key`**: Add support for UniFi Network controller management settings endpoint (`/proxy/network/api/s/{site}/set/setting/mgmt`), parsing public keys and managing `x_ssh_keys` while preserving legacy `/api/users/self` fallback. Resolves HTTP 405 Method Not Allowed on UniFi OS 4.x / Network 10.6+.
+- **`unifi_user_certificate`**: Add standard library fallback (`base64` and `hashlib`) for computing X.509 SHA-1 fingerprints when external `cryptography` library is absent in the execution environment.
+
+## 0.0.30
+
+### Bug Fixes
+- **`unifi_firewall_zone`**: Remove `type` and `description` from the API payload (UniFi v2 firewall zone DTO does not recognize `type` or `description`, causing HTTP 400 `Unrecognized field "type"`). Keep zone matching idempotent and support in-place renaming via `id`.
+- **`unifi_api`**: Prioritize `SESSION` authentication over `USER_PASS` in `UnifiAuth.auth_mode` when `session_cookie` is present. This prevents repeated `/api/auth/login` calls on every loop iteration, resolving HTTP 429 login rate limiting on controllers.
+
 ## 0.0.29
 
 ### Bug Fixes

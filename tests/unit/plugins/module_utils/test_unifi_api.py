@@ -457,6 +457,24 @@ def test_unifi_api_no_credentials_fail():
     assert "api_key" in fail_msg
 
 
+def test_unifi_api_auth_mode_prefers_session_over_user_pass():
+    from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import AuthMode
+
+    module = MagicMock()
+    api = UnifiAPI(
+        module,
+        host="192.0.2.1",
+        username="admin",
+        password="secretpassword",
+        session_cookie="TOKEN=jwt.session.token",
+        csrf_token="csrf123",
+    )
+    assert api.auth_mode == AuthMode.SESSION
+    with patch("ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api.fetch_url") as mock_fetch:
+        assert api.login() is True
+        mock_fetch.assert_not_called()
+
+
 def test_unifi_api_sanitize_info():
     from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import _sanitize_info
 

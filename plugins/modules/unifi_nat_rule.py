@@ -8,7 +8,7 @@ module: unifi_nat_rule
 short_description: Manage UniFi Source NAT / Masquerade rules via the controller API
 description:
   - Creates, updates, or deletes Source NAT (SNAT) or Masquerade rules on a UniFi
-    controller using the C(/proxy/network/v2/api/site/{site}/firewall/nat) endpoint.
+    controller using the C(/proxy/network/v2/api/site/{site}/nat) endpoint.
   - Rules are matched by name for idempotency; an existing rule with the same name
     is updated in-place rather than duplicated.
   - This module never uses SSH or direct iptables; all changes go through the HTTP API.
@@ -164,7 +164,7 @@ from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import 
     validate_ip_address,
 )
 
-_NAT_PATH = "/proxy/network/v2/api/site/{site}/firewall/nat"
+_NAT_PATH = "/proxy/network/v2/api/site/{site}/nat"
 _NETCONF_PATH = "/proxy/network/api/s/{site}/rest/networkconf"
 
 
@@ -193,29 +193,60 @@ def _build_desired(
     logging: bool,
 ) -> dict:
     """Build the desired NAT rule payload."""
+    type_upper = rule_type.upper()
+    if type_upper == "SOURCE":
+        type_upper = "SNAT"
+
     payload: dict = {
-        "name": name,
-        "type": rule_type,
-        "src_address": src_address,
-        "dst_address": dst_address,
+        "description": name,
+        "type": type_upper,
+        "ip_version": "IPV4",
         "enabled": enabled,
         "logging": logging,
+        "setting_preference": "manual",
+        "protocol": "ALL",
     }
+
     if outbound_network_id:
-        payload["outbound_network_id"] = outbound_network_id
-    if translated_src:
-        payload["translated_src"] = translated_src
+        payload["out_interface"] = outbound_network_id
+
+    if src_address:
+        payload["source_filter"] = {
+            "address": src_address,
+            "filter_type": "ADDRESS_AND_PORT",
+            "firewall_group_ids": [],
+            "invert_address": False,
+            "invert_port": False,
+        }
+    else:
+        payload["source_filter"] = {"filter_type": "NONE"}
+
+    if dst_address:
+        payload["destination_filter"] = {
+            "address": dst_address,
+            "filter_type": "ADDRESS_AND_PORT",
+            "firewall_group_ids": [],
+            "invert_address": False,
+            "invert_port": False,
+        }
+    else:
+        payload["destination_filter"] = {"filter_type": "NONE"}
+
     return payload
 
 
 def _rules_differ(current, desired):
-    """Return True if any key in desired differs from current (ignoring _id)."""
-    return resource_has_drift(current, desired)
+    """Return True if any key in desired differs from current (ignoring _id and read-only attributes)."""
+    ignored = {"_id", "rule_index", "is_predefined", "exclude", "pppoe_use_base_interface"}
+    return resource_has_drift(current, desired, ignored_keys=ignored)
 
 
 def _find_rule(module, rules, name, rule_id=None):
-    """Return the rule dict whose id or name matches, failing if multiple rules match."""
-    return find_resource(module, rules, "NAT rule", name=name, resource_id=rule_id)
+    """Return the rule dict whose id or description matches, failing if multiple rules match."""
+    match = find_resource(module, rules, "NAT rule", name=name, resource_id=rule_id, natural_key_field="description")
+    if match is None and name is not None:
+        match = find_resource(module, rules, "NAT rule", name=name, resource_id=rule_id, natural_key_field="name")
+    return match
 
 
 def run_module():

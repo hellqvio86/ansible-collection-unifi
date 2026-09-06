@@ -207,3 +207,85 @@ def test_ssh_key_deterministic_ordering():
         last_call = mock_api.request.call_args_list[1]
         # Preserves original key order then appended desired keys
         assert last_call[1]["data"]["sshKeys"] == ["key-1", "key-b", "key-c", "key-a"]
+
+
+def test_ssh_key_setting_mgmt_present():
+    params = {
+        "host": "192.0.2.1",
+        "username": "admin",
+        "password": "password",
+        "validate_certs": False,
+        "keys": ["ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC123 user@host"],
+        "state": "present",
+    }
+
+    with (
+        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_ssh_key.AnsibleModule") as mock_module_class,
+        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_ssh_key.UnifiAPI") as mock_api_class,
+    ):
+        mock_module = mock_module_class.return_value
+        mock_module.params = params
+        mock_module.check_mode = False
+        mock_module.fail_json.side_effect = Exception("fail_json")
+
+        mock_api = mock_api_class.return_value
+        mock_api.as_list.side_effect = lambda x: [x] if isinstance(x, dict) else (x or [])
+
+        # 1. /api/users/self (no sshKeys) -> 2. get setting/mgmt -> 3. put setting/mgmt
+        mock_api.request.side_effect = [
+            ({"id": "user-1"}, {"status": 200}),
+            ({"_id": "mgmt-1", "key": "mgmt", "x_ssh_keys": []}, {"status": 200}),
+            ({"_id": "mgmt-1", "key": "mgmt", "x_ssh_keys": []}, {"status": 200}),
+        ]
+
+        run_module()
+
+        assert mock_api.request.call_count == 3
+        put_call = mock_api.request.call_args_list[2]
+        assert put_call[1]["method"] == "PUT"
+        assert len(put_call[1]["data"]["x_ssh_keys"]) == 1
+        assert put_call[1]["data"]["x_ssh_keys"][0]["key"] == "AAAAB3NzaC1yc2EAAAADAQABAAABgQC123"
+        mock_module.exit_json.assert_called_once_with(changed=True, keys_count=1)
+
+
+def test_ssh_key_setting_mgmt_absent():
+    existing_key = {
+        "name": "host",
+        "type": "ssh-rsa",
+        "key": "AAAAB3NzaC1yc2EAAAADAQABAAABgQC123",
+        "comment": "user@host",
+    }
+    params = {
+        "host": "192.0.2.1",
+        "username": "admin",
+        "password": "password",
+        "validate_certs": False,
+        "keys": ["ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC123 user@host"],
+        "state": "absent",
+    }
+
+    with (
+        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_ssh_key.AnsibleModule") as mock_module_class,
+        patch("ansible_collections.hellqvio86.unifi.plugins.modules.unifi_ssh_key.UnifiAPI") as mock_api_class,
+    ):
+        mock_module = mock_module_class.return_value
+        mock_module.params = params
+        mock_module.check_mode = False
+        mock_module.fail_json.side_effect = Exception("fail_json")
+
+        mock_api = mock_api_class.return_value
+        mock_api.as_list.side_effect = lambda x: [x] if isinstance(x, dict) else (x or [])
+
+        mock_api.request.side_effect = [
+            ({"id": "user-1"}, {"status": 200}),
+            ({"_id": "mgmt-1", "key": "mgmt", "x_ssh_keys": [existing_key]}, {"status": 200}),
+            ({"_id": "mgmt-1", "key": "mgmt", "x_ssh_keys": []}, {"status": 200}),
+        ]
+
+        run_module()
+
+        assert mock_api.request.call_count == 3
+        put_call = mock_api.request.call_args_list[2]
+        assert put_call[1]["method"] == "PUT"
+        assert len(put_call[1]["data"]["x_ssh_keys"]) == 0
+        mock_module.exit_json.assert_called_once_with(changed=True, keys_count=0)

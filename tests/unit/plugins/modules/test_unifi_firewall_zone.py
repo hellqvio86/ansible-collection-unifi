@@ -19,9 +19,9 @@ def test_build_desired_payload_basic():
 def test_build_desired_payload_with_type_and_description():
     result = _build_desired_payload("Internal", "lan", "Main LAN zone")
     assert result["name"] == "Internal"
-    assert result["type"] == "LAN"
-    assert result["description"] == "Main LAN zone"
     assert result["network_ids"] == []
+    assert "type" not in result
+    assert "description" not in result
 
 
 def test_build_desired_payload_special_chars():
@@ -71,7 +71,7 @@ def test_zone_create():
 
         mock_api.request.side_effect = [
             ([], {"status": 200}),
-            ([{"_id": "zone1", "name": "Internal", "type": "LAN", "description": "Main LAN zone"}], {"status": 201}),
+            ([{"_id": "zone1", "name": "Internal"}], {"status": 201}),
         ]
 
         run_module()
@@ -80,9 +80,9 @@ def test_zone_create():
         post_call = mock_api.request.call_args_list[1]
         assert post_call[1]["method"] == "POST"
         assert post_call[1]["data"]["name"] == "Internal"
-        assert post_call[1]["data"]["type"] == "LAN"
-        assert post_call[1]["data"]["description"] == "Main LAN zone"
         assert post_call[1]["data"]["network_ids"] == []
+        assert "type" not in post_call[1]["data"]
+        assert "description" not in post_call[1]["data"]
 
         mock_module.exit_json.assert_called_once()
         kwargs = mock_module.exit_json.call_args[1]
@@ -140,9 +140,8 @@ def test_zone_update():
         "site": "default",
         "validate_certs": False,
         "state": "present",
-        "name": "Internal",
-        "type": "custom",
-        "description": "Updated description",
+        "id": "zone1",
+        "name": "RenamedZone",
     }
 
     with (
@@ -164,9 +163,9 @@ def test_zone_update():
         )
 
         mock_api.request.side_effect = [
-            ([{"_id": "zone1", "name": "Internal", "type": "LAN", "description": "Main LAN zone"}], {"status": 200}),
+            ([{"_id": "zone1", "name": "Internal", "network_ids": ["net-1"]}], {"status": 200}),
             (
-                [{"_id": "zone1", "name": "Internal", "type": "custom", "description": "Updated description"}],
+                [{"_id": "zone1", "name": "RenamedZone", "network_ids": ["net-1"]}],
                 {"status": 200},
             ),
         ]
@@ -176,8 +175,8 @@ def test_zone_update():
         assert mock_api.request.call_count == 2
         put_call = mock_api.request.call_args_list[1]
         assert put_call[1]["method"] == "PUT"
-        assert put_call[1]["data"]["name"] == "Internal"
-        assert put_call[1]["data"]["description"] == "Updated description"
+        assert put_call[1]["data"]["name"] == "RenamedZone"
+        assert put_call[1]["data"]["network_ids"] == ["net-1"]
 
         mock_module.exit_json.assert_called_once()
         kwargs = mock_module.exit_json.call_args[1]

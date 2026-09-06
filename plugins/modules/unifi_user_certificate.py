@@ -93,6 +93,8 @@ certificate:
     returned: always
 """
 
+import base64
+import hashlib
 from typing import Any
 
 from ansible.module_utils.basic import AnsibleModule
@@ -181,16 +183,29 @@ def run_module():
     local_fingerprint = None
     if state == "present":
         try:
-            from cryptography import x509
-            from cryptography.hazmat.primitives import hashes
+            try:
+                from cryptography import x509
+                from cryptography.hazmat.primitives import hashes
 
-            # Extract only the first certificate (leaf) in the PEM chain
-            first_pem = cert.split("-----END CERTIFICATE-----")[0] + "-----END CERTIFICATE-----"
-            cert_obj = x509.load_pem_x509_certificate(first_pem.encode("utf-8"))
-            fp_hex = cert_obj.fingerprint(hashes.SHA1()).hex().upper()
-            local_fingerprint = ":".join(fp_hex[i : i + 2] for i in range(0, 40, 2))
-        except Exception:
-            module.fail_json(msg="Failed to compute certificate fingerprint: invalid certificate structure or encoding")
+                first_pem = cert.split("-----END CERTIFICATE-----")[0] + "-----END CERTIFICATE-----"
+                cert_obj = x509.load_pem_x509_certificate(first_pem.encode("utf-8"))
+                fp_hex = cert_obj.fingerprint(hashes.SHA1()).hex().upper()
+                local_fingerprint = ":".join(fp_hex[i : i + 2] for i in range(0, 40, 2))
+            except ImportError:
+                pem_parts = cert.split("-----END CERTIFICATE-----")
+                if not pem_parts or "-----BEGIN CERTIFICATE-----" not in pem_parts[0]:
+                    raise ValueError("invalid certificate structure or encoding") from None
+                leaf_pem = pem_parts[0]
+                b64_lines = [
+                    line.strip()
+                    for line in leaf_pem.splitlines()
+                    if line.strip() and not line.startswith("-----")
+                ]
+                der_bytes = base64.b64decode("".join(b64_lines))
+                sha1_hex = hashlib.sha1(der_bytes).hexdigest().upper()
+                local_fingerprint = ":".join(sha1_hex[i : i + 2] for i in range(0, 40, 2))
+        except Exception as e:
+            module.fail_json(msg=f"Failed to compute certificate fingerprint: {e}")
 
     changed = False
     result = None

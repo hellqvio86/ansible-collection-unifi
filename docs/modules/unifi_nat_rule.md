@@ -3,7 +3,7 @@
 Manage UniFi Source NAT / Masquerade rules via the controller API
 
 ## Description
-Creates, updates, or deletes Source NAT (SNAT) or Masquerade rules on a UniFi controller using the `/proxy/network/v2/api/site/{site}/firewall/nat` endpoint.
+Creates, updates, or deletes Source NAT (SNAT) or Masquerade rules on a UniFi controller using the `/proxy/network/v2/api/site/{site}/nat` endpoint.
 
 Rules are matched by name for idempotency; an existing rule with the same name is updated in-place rather than duplicated.
 

@@ -725,10 +725,10 @@ class UnifiAuth:
     def auth_mode(self) -> str:
         if self.api_key:
             return AuthMode.API_KEY
+        if self.session_cookie:
+            return AuthMode.SESSION
         if self.username and self.password:
             return AuthMode.USER_PASS
-        if self.session_cookie and self.csrf_token:
-            return AuthMode.SESSION
         return AuthMode.NONE
 
     def get_auth_headers(self) -> dict[str, str]:
@@ -1034,7 +1034,7 @@ class UnifiAPI:
         payload = json.dumps(data) if data else None
         response, info = self.transport.fetch_with_retry(url, method, headers, payload)
 
-        if info.get("status") in [401, 403] and self.auth_mode == AuthMode.USER_PASS:
+        if info.get("status") in [401, 403] and (self.auth.username and self.auth.password):
             self.auth.clear_session()
             self.login()
             headers = {"Content-Type": "application/json"}

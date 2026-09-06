@@ -43,4 +43,14 @@ else
     ANSIBLE_TEST="ansible-test"
 fi
 
-"$ANSIBLE_TEST" sanity --local "$@"
+# Conditionally skip legacy Python 2 boilerplate tests on older ansible-core (e.g. 2.16)
+SKIP_ARGS=()
+HELP_TEXT="$("$ANSIBLE_TEST" sanity --help 2>&1 || true)"
+if echo "$HELP_TEXT" | grep -q "future-import-boilerplate"; then
+    SKIP_ARGS+=(--skip-test future-import-boilerplate)
+fi
+if echo "$HELP_TEXT" | grep -q "metaclass-boilerplate"; then
+    SKIP_ARGS+=(--skip-test metaclass-boilerplate)
+fi
+
+"$ANSIBLE_TEST" sanity --local ${SKIP_ARGS[@]+"${SKIP_ARGS[@]}"} "$@"

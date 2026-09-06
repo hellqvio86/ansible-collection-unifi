@@ -1,54 +1,77 @@
 # hellqvio86.unifi.unifi_system_settings
 
-Manage UniFi system-wide settings (NTP, timezone, management).
+Manage UniFi system-wide settings (NTP, timezone, management)
 
 ## Description
-This module configures system-wide NTP servers, timezone, management (LED, SSH) settings on a UniFi controller.
+Configure system-wide NTP servers, timezone, management (LED, SSH), and device settings on a UniFi controller.
+
+Uses the `/proxy/network/api/s/{site}/set/setting/ntp` and `/proxy/network/api/s/{site}/set/setting/mgmt` endpoints.
 
 ## Parameters
 
-### ntp
-
-| Sub-parameter | Type | Description |
-|---|---|---|
-| `ntp.server_1` | str | Primary NTP server. |
-| `ntp.server_2` | str | Secondary NTP server. |
-| `ntp.server_3` | str | Tertiary NTP server. |
-| `ntp.server_4` | str | Quaternary NTP server. |
-| `ntp.timezone` | str | Timezone string (e.g., `Europe/Stockholm`). |
-
-### mgmt
-
-| Sub-parameter | Type | Description |
-|---|---|---|
-| `mgmt.led_enabled` | bool | Whether device LEDs are enabled globally. |
-| `mgmt.ssh_password_enabled` | bool | Whether SSH password authentication is enabled. |
-| `mgmt.ssh_bind_wildcard` | bool | Whether SSH binds to all interfaces (0.0.0.0). |
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `host` | str | No |  | The host of the UniFi controller. |
+| `username` | str | No |  | UniFi controller username. |
+| `password` | str | No |  | UniFi controller password. |
+| `site` | str | No | `default` | UniFi site name. |
+| `validate_certs` | bool | No | `True` | Verify SSL certificates. |
+| `api_key` | str | No |  | Token for direct API authentication (UniFi OS 3.x+ / Network 8.x+). Preferred over username/password. Can also be set via the `UNIFI_API_KEY` or `UNIFI_API_TOKEN` environment variables. |
+| `ca_path` | path | No |  | Path to CA bundle file for TLS verification. |
+| `unifi_session_cookie` | str | No |  | Pre-authenticated session cookie string. |
+| `unifi_csrf_token` | str | No |  | Pre-authenticated CSRF token. |
+| `ntp` | dict | No |  | NTP server and timezone configuration. Maps to the `setting/ntp` endpoint. |
+| `mgmt` | dict | No |  | Management settings (LED, SSH). Maps to the `setting/mgmt` endpoint. |
+| `switch` | dict | No |  | Global switch settings (DHCP snooping, flow control, jumbo frames, STP). Maps to the `setting/global_switch` endpoint. |
 
 ## Examples
 
-### Configure NTP servers and timezone
 ```yaml
-- name: Set NTP and timezone
+- name: Configure NTP servers and timezone
   hellqvio86.unifi.unifi_system_settings:
+    host: "192.0.2.1"
+    username: "admin"
+    password: "password"
     ntp:
       server_1: "0.pool.ntp.org"
       server_2: "1.pool.ntp.org"
       timezone: "Europe/Stockholm"
-```
 
-### Disable device LEDs
-```yaml
-- name: Turn off LEDs
+- name: Disable device LEDs
   hellqvio86.unifi.unifi_system_settings:
+    host: "192.0.2.1"
+    username: "admin"
+    password: "password"
     mgmt:
       led_enabled: false
-```
 
-### Disable SSH password auth
-```yaml
-- name: Disable SSH password login
+- name: Disable SSH password auth
   hellqvio86.unifi.unifi_system_settings:
+    host: "192.0.2.1"
+    username: "admin"
+    password: "password"
     mgmt:
       ssh_password_enabled: false
+
+- name: Configure both NTP and management settings
+  hellqvio86.unifi.unifi_system_settings:
+    host: "192.0.2.1"
+    username: "admin"
+    password: "password"
+    ntp:
+      server_1: "0.pool.ntp.org"
+      server_2: "1.pool.ntp.org"
+      server_3: ""
+      server_4: ""
+      timezone: "Europe/Stockholm"
+    mgmt:
+      led_enabled: true
+      ssh_password_enabled: false
 ```
+
+## Return Values
+
+| Return Value | Type | Returned | Description |
+|--------------|------|----------|-------------|
+| `changed` | bool | always | Whether any change was applied. |
+| `settings` | dict | always | Current state of the ntp and mgmt settings after the operation. |

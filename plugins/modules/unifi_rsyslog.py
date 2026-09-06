@@ -41,6 +41,14 @@ options:
         description: Path to CA bundle file for TLS verification.
         required: false
         type: path
+    unifi_session_cookie:
+        description: Pre-authenticated session cookie string.
+        type: str
+        required: false
+    unifi_csrf_token:
+        description: Pre-authenticated CSRF token.
+        type: str
+        required: false
     enabled:
         description: Whether remote syslog is enabled.
         type: bool
@@ -67,6 +75,20 @@ options:
         default: false
 author:
     - hellqvio86 (@hellqvio86)
+"""
+
+EXAMPLES = r"""
+- name: Configure activity logging
+  hellqvio86.unifi.unifi_rsyslog:
+    ip: "192.0.2.50"
+    enabled: true
+"""
+
+RETURN = r"""
+rsyslog:
+    description: Current remote syslog configuration.
+    type: dict
+    returned: always
 """
 
 from ansible.module_utils.basic import AnsibleModule
@@ -169,9 +191,7 @@ def run_module():
         after = result_setting if result_setting else {}
         exit_kwargs["diff"] = make_diff(before, after)
 
-
     module.exit_json(**exit_kwargs)
-
 
 
 if __name__ == "__main__":

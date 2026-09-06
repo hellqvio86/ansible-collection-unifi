@@ -174,15 +174,15 @@ def test_validate_pem_key_invalid():
 
 
 def test_verify_cert_key_pair_matching_rsa():
-    _, _, certs = validate_pem_cert(RSA_CERT)
-    _, _, key = validate_pem_key(RSA_KEY)
+    _valid, _err, certs = validate_pem_cert(RSA_CERT)
+    _valid_k, _err_k, key = validate_pem_key(RSA_KEY)
     matched, err = verify_cert_key_pair(certs[0], key)
     assert matched is True
     assert err == ""
 
 
 def test_verify_cert_key_pair_mismatch():
-    _, _, certs = validate_pem_cert(RSA_CERT)
+    _valid, _err, certs = validate_pem_cert(RSA_CERT)
     # Validate against another key (e.g. ECDSA_KEY)
     from cryptography.hazmat.primitives.asymmetric import rsa
 
@@ -194,7 +194,7 @@ def test_verify_cert_key_pair_mismatch():
 
 def test_validate_cert_chain_valid():
     chain_pem = f"{RSA_CERT}\n{CA_CERT}"
-    _, _, certs = validate_pem_cert(chain_pem)
+    _valid, _err, certs = validate_pem_cert(chain_pem)
     assert len(certs) == 2
     valid, err = validate_cert_chain(certs)
     assert valid is True
@@ -203,7 +203,7 @@ def test_validate_cert_chain_valid():
 
 def test_validate_cert_chain_broken():
     broken_chain_pem = f"{RSA_CERT}\n{FUTURE_CERT}"
-    _, _, certs = validate_pem_cert(broken_chain_pem)
+    _valid, _err, certs = validate_pem_cert(broken_chain_pem)
     assert len(certs) == 2
     valid, err = validate_cert_chain(certs)
     assert valid is False
@@ -211,14 +211,14 @@ def test_validate_cert_chain_broken():
 
 
 def test_check_cert_dates_valid():
-    _, _, certs = validate_pem_cert(RSA_CERT)
+    _valid, _err, certs = validate_pem_cert(RSA_CERT)
     valid, err, warnings = check_cert_dates(certs, warning_days=10)
     assert valid is True
     assert err == ""
 
 
 def test_check_cert_dates_future():
-    _, _, certs = validate_pem_cert(FUTURE_CERT)
+    _is_valid, _err_msg, certs = validate_pem_cert(FUTURE_CERT)
     valid, err, warnings = check_cert_dates(certs)
     assert valid is False
     assert "not yet valid" in err

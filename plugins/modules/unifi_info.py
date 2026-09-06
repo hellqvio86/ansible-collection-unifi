@@ -10,18 +10,86 @@ version_added: "0.0.1"
 description:
     - Gather details about WiFi networks, firewall groups, zones, policies, and settings from a UniFi controller.
 options:
-    host: {type: str}
-    site: {type: str, default: default}
-    validate_certs: {type: bool, default: true}
-    ca_path: {type: path, required: false}
+    host:
+        description: The host of the UniFi controller (IP or FQDN).
+        type: str
+        required: false
+    username:
+        description: UniFi controller administrator username.
+        type: str
+        required: false
+    password:
+        description: UniFi controller administrator password.
+        type: str
+        required: false
+    site:
+        description: UniFi site name.
+        type: str
+        default: default
+    validate_certs:
+        description: Verify SSL certificates.
+        type: bool
+        default: true
+    ca_path:
+        description: Path to CA bundle file for TLS verification.
+        type: path
+        required: false
+    api_key:
+        description: Token for direct API authentication.
+        type: str
+        required: false
+    unifi_session_cookie:
+        description: Pre-authenticated session cookie string.
+        type: str
+        required: false
+    unifi_csrf_token:
+        description: Pre-authenticated CSRF token.
+        type: str
+        required: false
     gather_subset:
         description: List of subsets to gather.
         type: list
         elements: str
-        choices: [ wifi, firewall_groups, firewall_zones, firewall_policies, rsyslog, port_profiles, devices, dhcp_reservations, networks, system_settings, port_forward ]
+        choices:
+            - wifi
+            - firewall_groups
+            - firewall_zones
+            - firewall_policies
+            - rsyslog
+            - port_profiles
+            - devices
+            - dhcp_reservations
+            - networks
+            - system_settings
+            - port_forward
         default: [ wifi, firewall_groups, firewall_zones, firewall_policies, rsyslog ]
 author:
     - hellqvio86 (@hellqvio86)
+"""
+
+EXAMPLES = r"""
+- name: Gather all UniFi state
+  hellqvio86.unifi.unifi_info:
+    gather_subset:
+      - wifi
+      - firewall_groups
+      - firewall_zones
+      - firewall_policies
+      - rsyslog
+      - port_profiles
+  register: unifi_state
+
+- name: Gather WiFi details
+  hellqvio86.unifi.unifi_info:
+    gather_subset: ["wifi"]
+  register: wifi_state
+"""
+
+RETURN = r"""
+unifi_info:
+    description: Information gathered from the UniFi controller keyed by subset.
+    type: dict
+    returned: always
 """
 
 import ipaddress
@@ -202,7 +270,26 @@ def run_module():
                 path=f"/proxy/network/api/s/{site}/rest/device",
                 info=info,
             )
-        results["devices"] = api.as_list(res)
+        results["devices"] = []
+        for d in api.as_list(res):
+            if not isinstance(d, dict):
+                continue
+            results["devices"].append(
+                {
+                    "name": d.get("name") or d.get("mac"),
+                    "mac": d.get("mac"),
+                    "ip": d.get("ip"),
+                    "model": d.get("model"),
+                    "type": d.get("type"),
+                    "version": d.get("version"),
+                    "adopted": d.get("adopted"),
+                    "site_id": d.get("site_id"),
+                    "state": d.get("state"),
+                    "serial": d.get("serial"),
+                    "uptime": d.get("uptime"),
+                    "last_seen": d.get("last_seen"),
+                }
+            )
 
     if "dhcp_reservations" in subset:
         res = request_or_fail(f"/proxy/network/api/s/{site}/stat/alluser", "dhcp reservations")

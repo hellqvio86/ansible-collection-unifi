@@ -555,5 +555,3 @@ def test_wlan_diff_mode_masks_passphrase():
         diff = kwargs["diff"]
         assert diff["after"]["x_passphrase"] == "********"
         assert "super_secret" not in str(diff)
-
-

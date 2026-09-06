@@ -42,6 +42,18 @@ options:
         description: Path to CA bundle file for TLS verification.
         required: false
         type: path
+    unifi_session_cookie:
+        description: Pre-authenticated session cookie string.
+        type: str
+        required: false
+    unifi_csrf_token:
+        description: Pre-authenticated CSRF token.
+        type: str
+        required: false
+    id:
+        description: ID of the firewall zone.
+        type: str
+        required: false
     state:
         description: Whether the firewall zone should be present or absent.
         choices: [ present, absent ]
@@ -49,7 +61,7 @@ options:
         type: str
     name:
         description: Name of the firewall zone.
-        required: false
+        required: true
         type: str
     type:
         description: Type of the firewall zone.
@@ -163,7 +175,7 @@ def run_module():
         if existing:
             changed = True
             if not module.check_mode:
-                _, info = api.request(
+                del_res, info = api.request(
                     f"/proxy/network/v2/api/site/{site}/firewall/zone/{existing['_id']}", method="DELETE"
                 )
                 if info["status"] not in [200, 204]:
@@ -176,9 +188,7 @@ def run_module():
         after = result_zone if result_zone else {}
         exit_kwargs["diff"] = make_diff(before, after)
 
-
     module.exit_json(**exit_kwargs)
-
 
 
 if __name__ == "__main__":

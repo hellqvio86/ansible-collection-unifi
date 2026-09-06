@@ -1,30 +1,37 @@
 # hellqvio86.unifi.unifi_dhcp_reservation
 
-Manage DHCP fixed IP reservations on a UniFi controller.
+Manage DHCP fixed IP reservations on a UniFi controller
 
 ## Description
+Create, update, or delete DHCP fixed IP (static) reservations for known client devices on a UniFi controller.
 
-Create, update, or delete DHCP fixed IP (static) reservations for known client devices. The client must already be known to the UniFi controller (must have connected at least once).
+The client device must already be known to the controller (have connected at least once).
 
-Typically used in a loop over a list of desired reservations (see intent-based example below). When used with session reuse parameters, all loop iterations share a single authentication session to avoid UniFi rate limits.
+Uses the `/proxy/network/api/s/{site}/stat/alluser` endpoint to discover known clients and `/proxy/network/api/s/{site}/rest/user/{_id}` to apply changes.
 
 ## Parameters
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `mac` | str | Yes | | MAC address of the client device. |
-| `state` | str | No | `present` | Whether the reservation should be `present` or `absent`. |
-| `fixed_ip` | str | Yes (if present) | | Static IP address to assign. Required when `state=present`. |
-| `name` | str | No | | Friendly name to assign to the client. |
-| `network_name` | str | No | | Name of the network (LAN) for the reservation. |
-| `unifi_session_cookie` | str | No | | Reuse an existing UniFi session cookie to avoid repeated logins. |
-| `unifi_csrf_token` | str | No | | CSRF token corresponding to the session cookie. |
+| `host` | str | No |  | The host of the UniFi controller. |
+| `username` | str | No |  | UniFi controller username. |
+| `password` | str | No |  | UniFi controller password. |
+| `site` | str | No | `default` | UniFi site name. |
+| `validate_certs` | bool | No | `True` | Verify SSL certificates. |
+| `api_key` | str | No |  | Token for direct API authentication (UniFi OS 3.x+ / Network 8.x+). Preferred over username/password. Can also be set via the `UNIFI_API_KEY` or `UNIFI_API_TOKEN` environment variables. |
+| `ca_path` | path | No |  | Path to CA bundle file for TLS verification. |
+| `unifi_session_cookie` | str | No |  | Pre-authenticated session cookie string. |
+| `unifi_csrf_token` | str | No |  | Pre-authenticated CSRF token. |
+| `state` | str | No | `present` | Whether the DHCP reservation should be present or absent. `present` ensures the client has a fixed IP reservation. `absent` removes the fixed IP reservation from the client. Choices: `present`, `absent`. |
+| `mac` | str | Yes |  | MAC address of the client device. The client must already be known to the UniFi controller. |
+| `name` | str | No |  | Friendly name to assign to the client device. If not provided, the existing name is kept. |
+| `fixed_ip` | str | No |  | Static IP address to assign to the client. Required when `state=present`. |
+| `network_name` | str | No |  | Name of the network (LAN) for the fixed IP reservation. If not provided, the existing network assignment is kept. |
 
 ## Examples
 
-### Create a single reservation
 ```yaml
-- name: Ensure Example Device has a static IP
+- name: Ensure a DHCP reservation exists
   hellqvio86.unifi.unifi_dhcp_reservation:
     host: "192.0.2.1"
     username: "admin"
@@ -33,12 +40,8 @@ Typically used in a loop over a list of desired reservations (see intent-based e
     name: "Example Device"
     fixed_ip: "198.51.100.71"
     network_name: "Default"
-    state: present
-```
 
-### Remove a DHCP reservation
-```yaml
-- name: Remove static IP from a device
+- name: Remove a DHCP reservation
   hellqvio86.unifi.unifi_dhcp_reservation:
     host: "192.0.2.1"
     username: "admin"
@@ -47,45 +50,10 @@ Typically used in a loop over a list of desired reservations (see intent-based e
     state: absent
 ```
 
-### Intent-based loop with session reuse
-```yaml
-- name: Authenticate once
-  ansible.builtin.uri:
-    url: "https://{{ host }}/api/auth/login"
-    method: POST
-    body_format: json
-    body:
-      username: "{{ username }}"
-      password: "{{ password }}"
-    validate_certs: true
-    status_code: 200
-  register: _login
-
-- name: Set session facts
-  ansible.builtin.set_fact:
-    unifi_session_cookie: "{{ _login.cookies_string }}"
-    unifi_csrf_token: >-
-      {% set b64 = _login.cookies.TOKEN.split('.')[1] %}
-      {% set pad = '=' * ((4 - b64 | length % 4) % 4) %}
-      {{ (b64 ~ pad) | b64decode | from_json | json_query('csrfToken') }}
-
-- name: Apply all DHCP reservations
-  hellqvio86.unifi.unifi_dhcp_reservation:
-    host: "192.0.2.1"
-    mac: "{{ item.mac }}"
-    name: "{{ item.name | default(omit) }}"
-    fixed_ip: "{{ item.ip }}"
-    network_name: "{{ item.network | default(omit) }}"
-    state: "{{ item.state | default('present') }}"
-    unifi_session_cookie: "{{ unifi_session_cookie }}"
-    unifi_csrf_token: "{{ unifi_csrf_token }}"
-  loop: "{{ dhcp_reservations }}"
-```
-
 ## Return Values
 
-| Key | Type | Description |
-|-----|------|-------------|
-| `changed` | bool | Whether any change was applied. |
-| `reservation` | dict | Current reservation state (when state=present and client is found). |
-| `client` | dict | Current client state (when client is found). |
+| Return Value | Type | Returned | Description |
+|--------------|------|----------|-------------|
+| `changed` | bool | always | Whether any change was applied. |
+| `reservation` | dict | when state is present and client is found | The current state of the reservation after the operation. |
+| `client` | dict | when client is found | The current state of the client after the operation. |

@@ -9,7 +9,8 @@ short_description: Manage UniFi system-wide settings (NTP, timezone, management)
 version_added: "0.0.7"
 description:
     - Configure system-wide NTP servers, timezone, management (LED, SSH), and device settings on a UniFi controller.
-    - Uses the C(/proxy/network/api/s/{site}/set/setting/ntp) and C(/proxy/network/api/s/{site}/set/setting/mgmt) endpoints.
+    - Uses the C(/proxy/network/api/s/{site}/set/setting/ntp) and
+      C(/proxy/network/api/s/{site}/set/setting/mgmt) endpoints.
 options:
     host:
         description: The host of the UniFi controller.
@@ -42,6 +43,14 @@ options:
         description: Path to CA bundle file for TLS verification.
         required: false
         type: path
+    unifi_session_cookie:
+        description: Pre-authenticated session cookie string.
+        type: str
+        required: false
+    unifi_csrf_token:
+        description: Pre-authenticated CSRF token.
+        type: str
+        required: false
     ntp:
         description:
             - NTP server and timezone configuration.
@@ -74,6 +83,18 @@ options:
                 description:
                     - Whether device LEDs are enabled globally.
                 type: bool
+            led_night_mode_enabled:
+                description:
+                    - Whether LED night mode is enabled.
+                type: bool
+            led_night_mode_beg_hour:
+                description:
+                    - Beginning hour for LED night mode (0-23).
+                type: int
+            led_night_mode_end_hour:
+                description:
+                    - Ending hour for LED night mode (0-23).
+                type: int
             ssh_password_enabled:
                 description:
                     - Whether SSH password authentication is enabled.
@@ -168,7 +189,13 @@ settings:
     description: Current state of the ntp and mgmt settings after the operation.
     type: dict
     returned: always
-    sample: {"ntp": {"ntp_server_1": "0.pool.ntp.org", "timezone": "Europe/Stockholm"}, "mgmt": {"led_enabled": true, "x_ssh_auth_password_enabled": false}}
+    sample:
+        ntp:
+            ntp_server_1: "0.pool.ntp.org"
+            timezone: "Europe/Stockholm"
+        mgmt:
+            led_enabled: true
+            x_ssh_auth_password_enabled: false
 """
 
 from ansible.module_utils.basic import AnsibleModule
@@ -355,9 +382,7 @@ def run_module():
 
     # Handle global switch settings (DHCP snooping, STP, jumbo frames, etc.)
     if switch_params is not None:
-        switch_matches = [
-            s for s in settings if isinstance(s, dict) and s.get("key") in ("global_switch", "switch")
-        ]
+        switch_matches = [s for s in settings if isinstance(s, dict) and s.get("key") in ("global_switch", "switch")]
         if len(switch_matches) > 1:
             module.fail_json(msg="Ambiguous resource: multiple switch settings found on controller")
         current_switch = switch_matches[0] if switch_matches else None

@@ -18,7 +18,7 @@ description:
 options:
     host:
         description: The IP or hostname of the UniFi OS console (UDM, UDR, UCG, UXG).
-        required: true
+        required: false
         type: str
     ssh_username:
         description: SSH username (typically root).
@@ -27,7 +27,6 @@ options:
     ssh_password:
         description: SSH password.
         type: str
-        no_log: true
     ssh_key:
         description: Path to SSH private key.
         type: str
@@ -35,12 +34,10 @@ options:
         description: Content of the certificate or fullchain (PEM format).
         required: false
         type: str
-        no_log: true
     key_content:
         description: Content of the private key (PEM format).
         required: false
         type: str
-        no_log: true
     cert_path:
         description: Target path for the certificate on the UniFi OS filesystem.
         default: /data/unifi-core/config/unifi-core.crt
@@ -143,11 +140,11 @@ def run_module():
         host=dict(type="str", required=False),
         ssh_username=dict(type="str", default="root"),
         ssh_password=dict(type="str", no_log=True),
-        ssh_key=dict(type="str"),
+        ssh_key=dict(type="str", no_log=False),
         cert_content=dict(type="str", required=False, no_log=True),
         key_content=dict(type="str", required=False, no_log=True),
         cert_path=dict(type="str", default="/data/unifi-core/config/unifi-core.crt"),
-        key_path=dict(type="str", default="/data/unifi-core/config/unifi-core.key"),
+        key_path=dict(type="str", default="/data/unifi-core/config/unifi-core.key", no_log=False),
         restart_service=dict(type="bool", default=True),
         service_name=dict(type="str", default="unifi-core"),
         timeout=dict(type="int", default=30),
@@ -176,7 +173,8 @@ def run_module():
     service_name = module.params.get("service_name") or "unifi-core"
     timeout = module.params.get("timeout") or 30
     operation_timeout = module.params.get("operation_timeout") or 30
-    host_key_policy = module.params.get("host_key_policy") or "reject"  # codeql[python/tainted-ssh-host-key-verification] intentional user choice
+    # codeql[python/tainted-ssh-host-key-verification] intentional user choice
+    host_key_policy = module.params.get("host_key_policy") or "reject"
     warning_days = module.params.get("warning_days") or 30
 
     if not host:
@@ -265,7 +263,7 @@ def run_module():
                     # Verify deployed certificate on disk
                     with sftp.open(target_cert, "r") as f:
                         deployed_cert_data = f.read().decode("utf-8")
-                    valid, err, _ = validate_pem_cert(deployed_cert_data)
+                    valid, err, _certs = validate_pem_cert(deployed_cert_data)
                     if not valid:
                         raise OSError(f"Remote certificate verification failed after write: {err}")
 
@@ -285,7 +283,7 @@ def run_module():
                     # Verify deployed private key on disk
                     with sftp.open(target_key, "r") as f:
                         deployed_key_data = f.read().decode("utf-8")
-                    valid, err, _ = validate_pem_key(deployed_key_data)
+                    valid, err, _parsed_key = validate_pem_key(deployed_key_data)
                     if not valid:
                         raise OSError(f"Remote private key verification failed after write: {err}")
 
@@ -302,7 +300,10 @@ def run_module():
             if exit_status != 0:
                 err_output = stderr.read().decode("utf-8", errors="replace").strip()
                 module.fail_json(
-                    msg=f"Files updated successfully, but service '{service_name}' restart failed (exit code {exit_status}): {err_output}",
+                    msg=(
+                        f"Files updated successfully, but service '{service_name}' restart "
+                        f"failed (exit code {exit_status}): {err_output}"
+                    ),
                     changed=True,
                 )
 

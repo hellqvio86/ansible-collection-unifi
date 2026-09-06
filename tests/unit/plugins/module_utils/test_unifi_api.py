@@ -338,6 +338,26 @@ def test_unifi_api_request_401_relogin_retry():
         assert mock_fetch.call_count == 3
 
 
+def test_unifi_api_request_401_session_auth_error_message():
+    module = MagicMock()
+    api = UnifiAPI(
+        module,
+        host="192.0.2.1",
+        session_cookie="SESSION=expired_token",
+        csrf_token="csrf_expired",
+    )
+
+    with patch(
+        "ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api.fetch_url",
+        return_value=(None, {"status": 401, "msg": "Unauthorized"}),
+    ) as mock_fetch:
+        data, info = api.request("/test/endpoint")
+        assert data is None
+        assert info["status"] == 401
+        assert "Supplied session cookie or CSRF token has expired" in info["msg"]
+        assert mock_fetch.call_count == 1
+
+
 def test_unifi_api_token_auth():
     from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import AuthMode
 
@@ -366,7 +386,7 @@ def test_unifi_api_token_auth():
         assert data == {"devices": []}
         assert info["status"] == 200
         mock_fetch.assert_called_once()
-        _, kwargs = mock_fetch.call_args
+        args, kwargs = mock_fetch.call_args
         assert kwargs["headers"]["X-API-KEY"] == "secret-api-token-123"
         assert "Cookie" not in kwargs["headers"]
         assert "X-CSRF-Token" not in kwargs["headers"]
@@ -863,7 +883,7 @@ def test_unifi_api_timeout_configuration(monkeypatch):
         return_value=(MagicMock(read=lambda: b"{}"), {"status": 200}),
     ) as mock_fetch:
         api3.request("/test")
-        _, kwargs = mock_fetch.call_args
+        args, kwargs = mock_fetch.call_args
         assert kwargs["timeout"] == 60
 
 
@@ -925,6 +945,3 @@ def test_unifi_api_validate_feature_support():
     with patch.object(api, "get_network_version", return_value="8.1.113"):
         api.validate_feature_support("policy_engine")
         module.fail_json.assert_not_called()
-
-
-

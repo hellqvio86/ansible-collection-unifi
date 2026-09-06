@@ -42,6 +42,18 @@ options:
         description: Path to CA bundle file for TLS verification.
         required: false
         type: path
+    unifi_session_cookie:
+        description: Pre-authenticated session cookie string.
+        type: str
+        required: false
+    unifi_csrf_token:
+        description: Pre-authenticated CSRF token.
+        type: str
+        required: false
+    id:
+        description: ID of the network configuration.
+        type: str
+        required: false
     state:
         description:
             - Whether DHCP server should be configured or disabled on the network.
@@ -251,9 +263,7 @@ def run_module():
         module.fail_json(msg="Failed to fetch network configurations", info=info)
 
     networks = api.as_list(res)
-    current = find_resource(
-        module, networks, "network", name=network_name, resource_id=module.params.get("id")
-    )
+    current = find_resource(module, networks, "network", name=network_name, resource_id=module.params.get("id"))
     if not current:
         module.fail_json(msg=f"Network '{network_name}' not found")
 
@@ -285,9 +295,7 @@ def run_module():
         after = result_network if result_network else {}
         exit_kwargs["diff"] = make_diff(before, after)
 
-
     module.exit_json(**exit_kwargs)
-
 
 
 if __name__ == "__main__":

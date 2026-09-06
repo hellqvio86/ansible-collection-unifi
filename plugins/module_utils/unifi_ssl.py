@@ -1,5 +1,7 @@
 # MIT License (see LICENSE.md)
 
+from __future__ import annotations
+
 import datetime
 import os
 import re
@@ -114,7 +116,8 @@ def validate_cert_chain(certs: list[Any]) -> tuple[bool, str]:
         if child.issuer != issuer_candidate.subject:
             return (
                 False,
-                f"Certificate chain broken at index {i}: issuer '{child.issuer.rfc4514_string()}' does not match next subject '{issuer_candidate.subject.rfc4514_string()}'.",
+                f"Certificate chain broken at index {i}: issuer '{child.issuer.rfc4514_string()}' "
+                f"does not match next subject '{issuer_candidate.subject.rfc4514_string()}'.",
             )
     return True, ""
 

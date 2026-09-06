@@ -185,4 +185,3 @@ def test_port_profile_duplicate_fails():
         mock_module.fail_json.assert_called_once()
         msg = mock_module.fail_json.call_args[1]["msg"]
         assert "Ambiguous resource" in msg
-

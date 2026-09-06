@@ -19,11 +19,9 @@ options:
   username:
     description: Controller admin username.
     type: str
-    no_log: true
   password:
     description: Controller admin password.
     type: str
-    no_log: true
   site:
     description: UniFi site name.
     type: str
@@ -36,15 +34,21 @@ options:
     description: Path to CA bundle file for TLS verification.
     type: path
     required: false
+  api_key:
+    description: Token for direct API authentication.
+    type: str
+    required: false
   unifi_session_cookie:
     description: Pre-authenticated session cookie (skips login step).
     type: str
-    no_log: true
     required: false
   unifi_csrf_token:
     description: Pre-authenticated CSRF token (skips login step).
     type: str
-    no_log: true
+    required: false
+  id:
+    description: ID of the NAT rule.
+    type: str
     required: false
   state:
     description: Whether the rule should exist.
@@ -61,15 +65,16 @@ options:
     description:
       - NAT rule type.
       - C(masquerade) hides the source behind the outbound interface IP (many-to-one).
-      - C(source) translates to a specific address set in C(translated_src).
-    choices: [masquerade, source]
+      - C(snat) translates the source address.
+      - C(dnat) translates the destination address.
+    choices: [masquerade, snat, dnat]
     default: masquerade
     type: str
   src_address:
     description:
       - Source IP or CIDR to match before translation (e.g. C(192.0.2.10) or C(192.0.2.0/24)).
     type: str
-    required: true
+    default: ""
   dst_address:
     description:
       - Destination IP or CIDR to match (e.g. C(198.51.100.0/24)).
@@ -148,8 +153,6 @@ rule:
     returned: always
 """
 
-from typing import Any
-
 from ansible.module_utils.basic import AnsibleModule
 
 from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import (
@@ -188,9 +191,9 @@ def _build_desired(
     translated_src: str,
     enabled: bool,
     logging: bool,
-) -> dict[str, Any]:
+) -> dict:
     """Build the desired NAT rule payload."""
-    payload: dict[str, Any] = {
+    payload: dict = {
         "name": name,
         "type": rule_type,
         "src_address": src_address,
@@ -205,19 +208,17 @@ def _build_desired(
     return payload
 
 
-def _rules_differ(current: dict[str, Any], desired: dict[str, Any]) -> bool:
+def _rules_differ(current, desired):
     """Return True if any key in desired differs from current (ignoring _id)."""
     return resource_has_drift(current, desired)
 
 
-def _find_rule(
-    module: AnsibleModule, rules: list[Any], name: str, rule_id: str | None = None
-) -> dict[str, Any] | None:
+def _find_rule(module, rules, name, rule_id=None):
     """Return the rule dict whose id or name matches, failing if multiple rules match."""
     return find_resource(module, rules, "NAT rule", name=name, resource_id=rule_id)
 
 
-def run_module() -> None:
+def run_module():
     module_args = dict(
         host=dict(type="str"),
         username=dict(type="str", no_log=True),
@@ -284,7 +285,7 @@ def run_module() -> None:
             module.exit_json(**exit_kwargs)
             return
         if not module.check_mode:
-            _, del_info = api.request(f"{nat_path}/{current['_id']}", method="DELETE")
+            del_res, del_info = api.request(f"{nat_path}/{current['_id']}", method="DELETE")
             if del_info["status"] not in [200, 204]:
                 module.fail_json(msg="Failed to delete NAT rule", info=del_info, name=name)
                 return
@@ -343,8 +344,6 @@ def run_module() -> None:
     if getattr(module, "_diff", False) is True:
         exit_kwargs["diff"] = make_diff({}, result_rule)
     module.exit_json(**exit_kwargs)
-
-
 
 
 if __name__ == "__main__":

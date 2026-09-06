@@ -545,4 +545,3 @@ def test_dhcp_server_duplicate_network_fails():
         mock_module.fail_json.assert_called_once()
         msg = mock_module.fail_json.call_args[1]["msg"]
         assert "Ambiguous resource" in msg
-

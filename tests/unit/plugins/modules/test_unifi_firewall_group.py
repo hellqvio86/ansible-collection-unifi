@@ -369,7 +369,6 @@ def test_firewall_group_check_mode():
         assert mock_module.exit_json.call_args[1]["changed"] is True
 
 
-
 def test_firewall_group_duplicate_fails():
     params = {
         "host": "192.0.2.1",
@@ -419,4 +418,3 @@ def test_firewall_group_duplicate_fails():
         mock_module.fail_json.assert_called_once()
         msg = mock_module.fail_json.call_args[1]["msg"]
         assert "Ambiguous resource" in msg
-

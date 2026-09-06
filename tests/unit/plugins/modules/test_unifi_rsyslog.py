@@ -43,7 +43,6 @@ def test_build_desired_payload_debug_mode():
     assert result["log_all_contents"] is False
 
 
-
 def test_rsyslog_create():
     params = {
         "host": "192.0.2.1",

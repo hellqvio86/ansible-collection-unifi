@@ -1,30 +1,36 @@
-# unifi_dhcp_server
+# hellqvio86.unifi.unifi_dhcp_server
 
-Manage DHCP server settings on a UniFi network.
+Manage DHCP server settings on a UniFi network
 
-## Synopsis
+## Description
+Configure DHCP server settings (range, lease time, DNS, gateway) for a network on a UniFi controller.
 
-Configure DHCP server settings (range, lease time, DNS, gateway) for a network on a UniFi controller. Uses the `/proxy/network/api/s/{site}/rest/networkconf` endpoint to manage DHCP settings per network.
+Uses the `/proxy/network/api/s/{site}/rest/networkconf` endpoint to manage DHCP settings per network.
 
 ## Parameters
 
-| Parameter     | Type | Required | Default | Description |
-|---------------|------|----------|---------|-------------|
-| `host`        | str  | no       |         | UniFi controller host |
-| `username`    | str  | no       |         | UniFi controller username |
-| `password`    | str  | no       |         | UniFi controller password |
-| `site`        | str  | no       | default | UniFi site name |
-| `validate_certs` | bool | no    | true    | Verify SSL certificates |
-| `state`       | str  | no       | present | Whether DHCP server should be configured (`present`) or disabled (`absent`) |
-| `network`     | str  | yes      |         | Name of the network (LAN) to configure DHCP on |
-| `enabled`     | bool | no       | true    | Whether the DHCP server is enabled |
-| `dhcp_start`  | str  | no       |         | Start IP of the DHCP range (required when enabled) |
-| `dhcp_stop`   | str  | no       |         | End IP of the DHCP range (required when enabled) |
-| `lease_time`  | int  | no       |         | DHCP lease time in seconds |
-| `dns_1`       | str  | no       |         | Primary DNS server |
-| `dns_2`       | str  | no       |         | Secondary DNS server |
-| `gateway`     | str  | no       |         | Gateway IP override |
-| `domain`      | str  | no       |         | DHCP domain name |
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `host` | str | No |  | The host of the UniFi controller. |
+| `username` | str | No |  | UniFi controller username. |
+| `password` | str | No |  | UniFi controller password. |
+| `site` | str | No | `default` | UniFi site name. |
+| `validate_certs` | bool | No | `True` | Verify SSL certificates. |
+| `api_key` | str | No |  | Token for direct API authentication (UniFi OS 3.x+ / Network 8.x+). Preferred over username/password. Can also be set via the `UNIFI_API_KEY` or `UNIFI_API_TOKEN` environment variables. |
+| `ca_path` | path | No |  | Path to CA bundle file for TLS verification. |
+| `unifi_session_cookie` | str | No |  | Pre-authenticated session cookie string. |
+| `unifi_csrf_token` | str | No |  | Pre-authenticated CSRF token. |
+| `id` | str | No |  | ID of the network configuration. |
+| `state` | str | No | `present` | Whether DHCP server should be configured or disabled on the network. `present` ensures DHCP settings are applied. `absent` disables the DHCP server on the network. Choices: `present`, `absent`. |
+| `network` | str | Yes |  | Name of the network (LAN) to configure DHCP on. |
+| `enabled` | bool | No | `True` | Whether the DHCP server is enabled on this network. When `state=absent`, this is forced to `false`. |
+| `dhcp_start` | str | No |  | Start IP address of the DHCP range (e.g., `192.168.1.100`). Required when `enabled=true` and `state=present`. |
+| `dhcp_stop` | str | No |  | End IP address of the DHCP range (e.g., `192.168.1.200`). Required when `enabled=true` and `state=present`. |
+| `lease_time` | int | No |  | DHCP lease time in seconds. |
+| `dns_1` | str | No |  | Primary DNS server IP address. |
+| `dns_2` | str | No |  | Secondary DNS server IP address. |
+| `gateway` | str | No |  | Gateway IP address override. If not set, the network's configured gateway is used. |
+| `domain` | str | No |  | DHCP domain name (e.g., `lan.example.com`). |
 
 ## Examples
 
@@ -63,7 +69,7 @@ Configure DHCP server settings (range, lease time, DNS, gateway) for a network o
 
 ## Return Values
 
-| Key | Type | Description |
-|-----|------|-------------|
-| `changed` | bool | Whether any change was applied |
-| `network` | dict | The current state of the network configuration after the operation |
+| Return Value | Type | Returned | Description |
+|--------------|------|----------|-------------|
+| `changed` | bool | always | Whether any change was applied. |
+| `network` | dict | always | The current state of the network configuration after the operation. |

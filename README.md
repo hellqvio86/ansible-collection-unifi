@@ -4,8 +4,8 @@
 [![Tests](https://github.com/hellqvio86/ansible-collection-unifi/actions/workflows/ci.yml/badge.svg?job=test)](https://github.com/hellqvio86/ansible-collection-unifi/actions/workflows/ci.yml)
 [![Ansible Galaxy](https://img.shields.io/ansible/collection/v/hellqvio86/unifi?logo=ansible&logoColor=black&label=Ansible%20Galaxy)](https://galaxy.ansible.com/hellqvio86/unifi)
 
-> [!CAUTION]
-> **Alpha Status**: This collection is currently in early alpha. APIs and module arguments are subject to breaking changes. Use with caution in production environments.
+> [!NOTE]
+> **Release Status**: This collection is under active development (v0.0.x) progressing toward v0.1.0 (Beta) and v1.0.0 milestones. Core APIs and modules are thoroughly tested with strict typing, but minor breaking improvements may occur between 0.0.x minor releases per SemVer.
 
 > [!IMPORTANT]
 > **Disclaimer**: This project is an independent open-source initiative and is **not** affiliated with, sponsored by, or endorsed by Ubiquiti Inc. UniFi and Ubiquiti are trademarks of Ubiquiti Inc.
@@ -39,7 +39,7 @@ See [Compatibility Guide](docs/compatibility.md) for detailed architecture, endp
 ### System & Settings
 - `hellqvio86.unifi.unifi_rsyslog`: Configure remote syslog (Activity Logging) settings.
 - `hellqvio86.unifi.unifi_ssh_key`: Manage system-level SSH keys for persistent access.
-- `hellqvio86.unifi.unifi_ssl_config`: Deploy SSL certificates via modulated SSH.
+- `hellqvio86.unifi.unifi_ssl_config`: Deploy SSL certificates via SSH/SFTP to the controller.
 - `hellqvio86.unifi.unifi_user_certificate`: Manage user-facing certificates via UniFi OS API.
 - `hellqvio86.unifi.unifi_info`: Gather comprehensive infrastructure state.
 
@@ -54,7 +54,7 @@ Or include it in your `requirements.yml`:
 ```yaml
 collections:
   - name: hellqvio86.unifi
-    version: 0.0.12
+    version: 0.0.28
 ```
 
 ## Getting Started: Dump Your Current State

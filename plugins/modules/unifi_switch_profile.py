@@ -41,6 +41,18 @@ options:
         description: Path to CA bundle file for TLS verification.
         required: false
         type: path
+    unifi_session_cookie:
+        description: Pre-authenticated session cookie string.
+        type: str
+        required: false
+    unifi_csrf_token:
+        description: Pre-authenticated CSRF token.
+        type: str
+        required: false
+    id:
+        description: ID of the switch profile.
+        type: str
+        required: false
     state:
         description: Whether the profile should be present or absent.
         choices: [ present, absent ]
@@ -48,7 +60,7 @@ options:
         type: str
     name:
         description: Name of the switch profile.
-        required: false
+        required: true
         type: str
     model:
         description: Switch model this profile applies to (e.g., USMINI).
@@ -62,6 +74,24 @@ options:
         type: dict
 author:
     - hellqvio86 (@hellqvio86)
+"""
+
+EXAMPLES = r"""
+- name: Create Switch Profile
+  hellqvio86.unifi.unifi_switch_profile:
+    name: "Access Switch Profile"
+    model: "USMINI"
+    port_profile_overrides:
+      1: "WAN"
+      2: "IoT"
+      3: "IoT"
+"""
+
+RETURN = r"""
+switch_profile:
+    description: Configuration of the switch profile.
+    type: dict
+    returned: always
 """
 
 from ansible.module_utils.basic import AnsibleModule
@@ -138,9 +168,7 @@ def run_module():
         )
     profiles = api.as_list(res)
 
-    existing = find_resource(
-        module, profiles, "switch profile", name=name, resource_id=module.params.get("id")
-    )
+    existing = find_resource(module, profiles, "switch profile", name=name, resource_id=module.params.get("id"))
 
     changed = False
     result_profile = existing
@@ -180,7 +208,7 @@ def run_module():
         if existing:
             changed = True
             if not module.check_mode:
-                _, info = api.request(
+                del_res, info = api.request(
                     f"/proxy/network/api/s/{site}/rest/switchprofile/{existing['_id']}", method="DELETE"
                 )
                 if info["status"] not in [200, 204]:
@@ -193,9 +221,7 @@ def run_module():
         after = result_profile if result_profile else {}
         exit_kwargs["diff"] = make_diff(before, after)
 
-
     module.exit_json(**exit_kwargs)
-
 
 
 if __name__ == "__main__":

@@ -6,7 +6,7 @@ import sys
 
 
 def run_cmd(args, cwd=None):
-    res = subprocess.run(args, capture_output=True, text=True, cwd=cwd)
+    res = subprocess.run(args, capture_output=True, text=True, cwd=cwd, check=False)
     return res.stdout.strip(), res.stderr.strip(), res.returncode
 
 
@@ -34,29 +34,29 @@ def get_changelog_versions():
 
 def get_start_commit(prev_version):
     # 1. Check if tag v{prev_version} exists
-    _, _, rc = run_cmd(["git", "rev-parse", f"v{prev_version}"])
+    cmd_out, cmd_err, rc = run_cmd(["git", "rev-parse", f"v{prev_version}"])
     if rc == 0:
         return f"v{prev_version}"
 
     # 2. Search git log for commit that set version to prev_version
-    out, _, rc = run_cmd(["git", "log", "-S", f"version: {prev_version}", "--oneline"])
+    out, cmd_err, rc = run_cmd(["git", "log", "-S", f"version: {prev_version}", "--oneline"])
     if rc == 0 and out:
         first_line = out.splitlines()[0]
         commit_hash = first_line.split()[0]
         return commit_hash
 
     # 3. Get the latest tag
-    out, _, rc = run_cmd(["git", "describe", "--tags", "--abbrev=0"])
+    out, cmd_err, rc = run_cmd(["git", "describe", "--tags", "--abbrev=0"])
     if rc == 0 and out:
         return out.strip()
 
     # 4. Fallback to first commit
-    out, _, rc = run_cmd(["git", "rev-list", "--max-parents=0", "HEAD"])
+    out, cmd_err, rc = run_cmd(["git", "rev-list", "--max-parents=0", "HEAD"])
     return out.strip() if out else "HEAD"
 
 
 def parse_commits(start_commit):
-    out, _, rc = run_cmd(["git", "log", f"{start_commit}..HEAD", "--oneline"])
+    out, cmd_err, rc = run_cmd(["git", "log", f"{start_commit}..HEAD", "--oneline"])
     if rc != 0 or not out:
         return []
     commits = []
@@ -64,7 +64,7 @@ def parse_commits(start_commit):
         if not line:
             continue
         commit_hash = line.split()[0]
-        subj, _, _ = run_cmd(["git", "show", "-s", "--format=%s", commit_hash])
+        subj, cmd_err, rc = run_cmd(["git", "show", "-s", "--format=%s", commit_hash])
         commits.append(subj)
     return commits
 
@@ -182,12 +182,12 @@ def update_changelog():
     if start_commit:
         commits = parse_commits(start_commit)
     else:
-        out, _, _ = run_cmd(["git", "log", "--oneline"])
+        out, cmd_err, rc = run_cmd(["git", "log", "--oneline"])
         commits = []
         for line in out.splitlines():
             if line:
                 commit_hash = line.split()[0]
-                subj, _, _ = run_cmd(["git", "show", "-s", "--format=%s", commit_hash])
+                subj, cmd_err, rc = run_cmd(["git", "show", "-s", "--format=%s", commit_hash])
                 commits.append(subj)
 
     categories = categorize_commits(commits)

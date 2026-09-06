@@ -1,4 +1,4 @@
-# Note: debug/ is a working directory, it will not be committed, therefore it will not be a part of the next review.
+from __future__ import annotations
 
 import base64
 import hashlib
@@ -183,7 +183,9 @@ def sanitize_diff(obj: Any) -> Any:
         sanitized = {}
         for k, v in obj.items():
             k_lower = str(k).lower()
-            if any(s in k_lower for s in ("password", "passphrase", "secret", "token", "api_key", "key", "cert", "psk")):
+            if any(
+                s in k_lower for s in ("password", "passphrase", "secret", "token", "api_key", "key", "cert", "psk")
+            ):
                 sanitized[k] = "********"
             else:
                 sanitized[k] = sanitize_diff(v)
@@ -219,14 +221,10 @@ def find_resource(
     """
     if resource_id:
         id_matches = [
-            r
-            for r in resources
-            if isinstance(r, dict) and (r.get("_id") == resource_id or r.get("id") == resource_id)
+            r for r in resources if isinstance(r, dict) and (r.get("_id") == resource_id or r.get("id") == resource_id)
         ]
         if len(id_matches) > 1:
-            module.fail_json(
-                msg=f"Ambiguous resource: multiple {resource_type} resources match id '{resource_id}'"
-            )
+            module.fail_json(msg=f"Ambiguous resource: multiple {resource_type} resources match id '{resource_id}'")
         if id_matches:
             return id_matches[0]
         return None
@@ -251,8 +249,10 @@ def find_resource(
         if len(matches) > 1:
             crit_desc = f" with {extra_criteria}" if extra_criteria else ""
             module.fail_json(
-                msg=f"Ambiguous resource: multiple {resource_type} resources match {natural_key_field} '{name}'{crit_desc}. "
-                "Specify 'id' or resolve duplicate resources on the controller."
+                msg=(
+                    f"Ambiguous resource: multiple {resource_type} resources match {natural_key_field} '{name}'"
+                    f"{crit_desc}. Specify 'id' or resolve duplicate resources on the controller."
+                )
             )
         return matches[0] if matches else None
 
@@ -350,7 +350,9 @@ def canonical_compare(existing: Any, desired: Any, sort_lists: bool = True) -> b
             try:
                 sorted_exist = sorted(existing)
                 sorted_des = sorted(desired)
-                return all(canonical_compare(e, d, sort_lists=True) for e, d in zip(sorted_exist, sorted_des, strict=False))
+                return all(
+                    canonical_compare(e, d, sort_lists=True) for e, d in zip(sorted_exist, sorted_des, strict=False)
+                )
             except TypeError:
                 unmatched_des = list(desired)
                 for e in existing:
@@ -416,12 +418,12 @@ class ControllerVersion:
             self.minor = int(m.group(2))
             self.patch = int(m.group(3)) if m.group(3) else 0
 
-    def __ge__(self, other: "ControllerVersion | tuple[int, ...]") -> bool:
+    def __ge__(self, other: ControllerVersion | tuple[int, ...]) -> bool:
         if isinstance(other, tuple):
             return (self.major, self.minor, self.patch) >= other
         return (self.major, self.minor, self.patch) >= (other.major, other.minor, other.patch)
 
-    def __lt__(self, other: "ControllerVersion | tuple[int, ...]") -> bool:
+    def __lt__(self, other: ControllerVersion | tuple[int, ...]) -> bool:
         if isinstance(other, tuple):
             return (self.major, self.minor, self.patch) < other
         return (self.major, self.minor, self.patch) < (other.major, other.minor, other.patch)
@@ -569,7 +571,10 @@ class UnifiTransport:
     ) -> None:
         self.module = module
         self.host = host
-        self.base_url = f"https://{self.host}"
+        if self.host.startswith(("http://", "https://")):
+            self.base_url = self.host.rstrip("/")
+        else:
+            self.base_url = f"https://{self.host}"
         self.validate_certs = validate_certs
         self.ca_path = ca_path
         self.timeout = timeout
@@ -931,7 +936,10 @@ class UnifiAPI:
                 msg="UniFi host not provided. Set 'host' parameter or 'UNIFI_HOST' environment variable."
             )
 
-        self.base_url = f"https://{self.host}"
+        if self.host.startswith(("http://", "https://")):
+            self.base_url = self.host.rstrip("/")
+        else:
+            self.base_url = f"https://{self.host}"
 
         # Ensure the module has parameters set as expected by fetch_url
         if hasattr(self.module, "params") and isinstance(self.module.params, dict):
@@ -1034,7 +1042,15 @@ class UnifiAPI:
             response, info = self.transport.fetch_with_retry(url, method, headers, payload)
 
         if info.get("status") not in [200, 201, 204]:
-            return None, self.sanitize_error(info, endpoint=path)
+            sanitized = self.sanitize_error(info, endpoint=path)
+            if info.get("status") in [401, 403] and self.auth_mode == AuthMode.SESSION:
+                sanitized["msg"] = (
+                    f"Supplied session cookie or CSRF token has expired or is invalid (HTTP {info.get('status')}) "
+                    f"for endpoint '{path}'. Session-cookie authentication cannot automatically re-login. "
+                    "Provide a fresh session cookie/CSRF token or switch to api_key or "
+                    "username/password authentication."
+                )
+            return None, sanitized
 
         sanitized_info = _sanitize_info(info) or {}
 
@@ -1080,7 +1096,7 @@ class UnifiAPI:
 
     def get_network_version(self, site: str = "default") -> str | None:
         """Fetch the UniFi Network application version."""
-        res, _ = self.request(f"/proxy/network/api/s/{site}/stat/sysinfo")
+        res, _info = self.request(f"/proxy/network/api/s/{site}/stat/sysinfo")
         if isinstance(res, dict):
             data = res.get("data")
             if isinstance(data, list) and data and isinstance(data[0], dict):
@@ -1089,7 +1105,7 @@ class UnifiAPI:
 
     def get_os_version(self) -> str | None:
         """Fetch the UniFi OS system version."""
-        res, _ = self.request("/api/system/info")
+        res, _info = self.request("/api/system/info")
         if isinstance(res, dict):
             return res.get("version")
         return None
@@ -1126,6 +1142,7 @@ def unifi_argument_spec() -> dict[str, dict[str, Any]]:
 # ---------------------------------------------------------------------------
 # Argument validation helpers (8.x)
 # ---------------------------------------------------------------------------
+
 
 def validate_ip_address(module: Any, value: str, param_name: str) -> str:
     """Validate that *value* is a well-formed IPv4 or IPv6 address.
@@ -1194,9 +1211,7 @@ def validate_port_range(module: Any, value: str, param_name: str) -> str:
         lo = validate_port(module, parts[0].strip(), param_name)
         hi = validate_port(module, parts[1].strip(), param_name)
         if lo > hi:
-            module.fail_json(
-                msg=f"Invalid port range for '{param_name}': {value!r} — start port must be ≤ end port"
-            )
+            module.fail_json(msg=f"Invalid port range for '{param_name}': {value!r} — start port must be ≤ end port")
     else:
         module.fail_json(msg=f"Invalid port range for '{param_name}': {value!r}")
     return value

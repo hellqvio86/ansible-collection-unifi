@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# (c) 2026, hellqvio86 (@hellqvio86)
+# (c) 2026, Olof Hellqvist (@hellqvio86)
 # MIT License (see LICENSE.md)
 
 DOCUMENTATION = r"""
@@ -75,7 +75,7 @@ options:
         type: bool
         default: true
 author:
-    - hellqvio86 (@hellqvio86)
+    - Olof Hellqvist (@hellqvio86)
 """
 
 EXAMPLES = r"""
@@ -197,9 +197,7 @@ def run_module():
                     raise ValueError("invalid certificate structure or encoding") from None
                 leaf_pem = pem_parts[0]
                 b64_lines = [
-                    line.strip()
-                    for line in leaf_pem.splitlines()
-                    if line.strip() and not line.startswith("-----")
+                    line.strip() for line in leaf_pem.splitlines() if line.strip() and not line.startswith("-----")
                 ]
                 der_bytes = base64.b64decode("".join(b64_lines))
                 sha1_hex = hashlib.sha1(der_bytes).hexdigest().upper()

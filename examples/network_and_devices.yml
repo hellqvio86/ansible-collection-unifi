@@ -1,0 +1,65 @@
+---
+- name: Manage UniFi Networks and Hardware Devices
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  # The "Login Step": Define credentials once for all modules in this play
+  module_defaults:
+    group/hellqvio86.unifi.unifi:
+      host: "{{ lookup('env', 'UNIFI_HOST') | default('192.0.2.1', true) }}"
+      # Preferred authentication method for UniFi OS 3.x+:
+      api_key: "{{ lookup('env', 'UNIFI_API_KEY') | default(omit, true) }}"
+      # Fallback username/password for older controllers:
+      username: "{{ lookup('env', 'UNIFI_USERNAME') | default('admin', true) }}"
+      password: "{{ lookup('env', 'UNIFI_PASSWORD') | default('password', true) }}"
+      site: "{{ lookup('env', 'UNIFI_SITE') | default('default', true) }}"
+      validate_certs: "{{ lookup('env', 'UNIFI_VALIDATE_CERTS') | default('true', true) | bool }}"
+
+  tasks:
+    - name: Ensure Corporate VLAN 20 exists with DHCP
+      hellqvio86.unifi.unifi_network:
+        name: "Staff Network"
+        purpose: corporate
+        vlan: 20
+        vlan_enabled: true
+        ip_subnet: "192.168.20.1/24"
+        dhcpd_enabled: true
+        dhcp_start: "192.168.20.100"
+        dhcp_stop: "192.168.20.200"
+        dhcp_dns_1: "1.1.1.1"
+        dhcp_dns_2: "8.8.8.8"
+        igmp_snooping: true
+        multicast_dns: true
+        state: present
+
+    - name: Ensure Isolated Guest VLAN 30 exists
+      hellqvio86.unifi.unifi_network:
+        name: "Guest Network"
+        purpose: guest
+        vlan: 30
+        vlan_enabled: true
+        ip_subnet: "192.168.30.1/24"
+        dhcpd_enabled: true
+        dhcp_start: "192.168.30.50"
+        dhcp_stop: "192.168.30.250"
+        state: present
+
+    - name: Configure Access Point name and LED
+      hellqvio86.unifi.unifi_device:
+        mac: "70:a7:41:11:22:33"
+        name: "AP-Office"
+        adopt: true
+        led_override: "off"
+        mgmt_network: "Staff Network"
+        note: "Installed on ceiling in Room 204"
+        state: present
+
+    - name: Ensure Staff WiFi broadcast is present
+      hellqvio86.unifi.unifi_wlan:
+        name: "Staff-WiFi"
+        passphrase: "{{ vault_staff_wifi_passphrase | default('SuperSecretPass123!') }}"
+        network: "Staff Network"
+        security: "wpapsk"
+        wlan_bands: "both"
+        state: present

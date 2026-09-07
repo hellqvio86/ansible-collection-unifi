@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# (c) 2026, hellqvio86 (@hellqvio86)
+# (c) 2026, Olof Hellqvist (@hellqvio86)
 # MIT License (see LICENSE.md)
 
 DOCUMENTATION = r"""
@@ -79,7 +79,7 @@ options:
         elements: dict
         required: false
 author:
-    - hellqvio86 (@hellqvio86)
+    - Olof Hellqvist (@hellqvio86)
 """
 
 EXAMPLES = r"""

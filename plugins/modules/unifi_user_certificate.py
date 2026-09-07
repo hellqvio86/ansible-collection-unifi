@@ -200,7 +200,8 @@ def run_module():
                     line.strip() for line in leaf_pem.splitlines() if line.strip() and not line.startswith("-----")
                 ]
                 der_bytes = base64.b64decode("".join(b64_lines))
-                sha1_hex = hashlib.sha1(der_bytes).hexdigest().upper()
+                # codeql[py/weak-sensitive-data-hashing] UniFi requires X.509 SHA-1 fingerprint
+                sha1_hex = hashlib.sha1(der_bytes, usedforsecurity=False).hexdigest().upper()
                 local_fingerprint = ":".join(sha1_hex[i : i + 2] for i in range(0, 40, 2))
         except Exception as e:
             module.fail_json(msg=f"Failed to compute certificate fingerprint: {e}")

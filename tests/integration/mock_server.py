@@ -270,7 +270,8 @@ class MockUniFiRequestHandler(BaseHTTPRequestHandler):
                         if line.strip() and not line.startswith("-----")
                     ]
                     der = base64.b64decode("".join(b64_lines))
-                    sha1_hex = hashlib.sha1(der).hexdigest().upper()
+                    # codeql[py/weak-sensitive-data-hashing] UniFi requires X.509 SHA-1 fingerprint
+                    sha1_hex = hashlib.sha1(der, usedforsecurity=False).hexdigest().upper()
                     local_fp = ":".join(sha1_hex[i : i + 2] for i in range(0, 40, 2))
             except Exception:
                 pass

@@ -1,10 +1,13 @@
+plugins/modules/unifi_device.py validate-modules:missing-gplv3-license
 plugins/modules/unifi_dhcp_reservation.py validate-modules:missing-gplv3-license
 plugins/modules/unifi_dhcp_server.py validate-modules:missing-gplv3-license
 plugins/modules/unifi_firewall_group.py validate-modules:missing-gplv3-license
 plugins/modules/unifi_firewall_policy.py validate-modules:missing-gplv3-license
 plugins/modules/unifi_firewall_zone.py validate-modules:missing-gplv3-license
 plugins/modules/unifi_info.py validate-modules:missing-gplv3-license
+plugins/modules/unifi_login.py validate-modules:missing-gplv3-license
 plugins/modules/unifi_nat_rule.py validate-modules:missing-gplv3-license
+plugins/modules/unifi_network.py validate-modules:missing-gplv3-license
 plugins/modules/unifi_port_forward.py validate-modules:missing-gplv3-license
 plugins/modules/unifi_port_profile.py validate-modules:missing-gplv3-license
 plugins/modules/unifi_rsyslog.py validate-modules:missing-gplv3-license

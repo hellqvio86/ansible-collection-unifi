@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# (c) 2026, hellqvio86 (@hellqvio86)
+# (c) 2026, Olof Hellqvist (@hellqvio86)
 # MIT License (see LICENSE.md)
 
 DOCUMENTATION = r"""
@@ -76,7 +76,7 @@ options:
         default: 30
         type: int
 author:
-    - hellqvio86 (@hellqvio86)
+    - Olof Hellqvist (@hellqvio86)
 """
 
 EXAMPLES = r"""
@@ -220,10 +220,11 @@ def run_module():
     try:
         ssh = paramiko.SSHClient()
         ssh.load_system_host_keys()
-        # codeql[python/tainted-ssh-host-key-verification] controlled by explicit user parameter with safe default
         if host_key_policy == "auto_add":
+            # codeql[py/paramiko-missing-host-key-validation] controlled by explicit user parameter with safe default
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         elif host_key_policy == "warning":
+            # codeql[py/paramiko-missing-host-key-validation] controlled by explicit user parameter with safe default
             ssh.set_missing_host_key_policy(paramiko.WarningPolicy())
         else:
             ssh.set_missing_host_key_policy(paramiko.RejectPolicy())

@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# (c) 2026, hellqvio86 (@hellqvio86)
+# (c) 2026, Olof Hellqvist (@hellqvio86)
 # MIT License (see LICENSE.md)
 
 DOCUMENTATION = r"""
@@ -72,7 +72,7 @@ options:
         description: Description of the firewall zone.
         type: str
 author:
-    - hellqvio86 (@hellqvio86)
+    - Olof Hellqvist (@hellqvio86)
 """
 
 EXAMPLES = r"""
@@ -98,9 +98,7 @@ from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_api import 
 )
 
 
-def _build_desired_payload(
-    name: str, zone_type=None, description=None
-) -> dict:
+def _build_desired_payload(name: str, zone_type=None, description=None) -> dict:
     """Build the desired firewall zone payload.
 
     Note: The UniFi firewall zone API v2 only accepts 'name' and 'network_ids'.

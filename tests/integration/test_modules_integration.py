@@ -29,6 +29,9 @@ from ansible_collections.hellqvio86.unifi.plugins.modules.unifi_firewall_zone im
 from ansible_collections.hellqvio86.unifi.plugins.modules.unifi_info import (
     run_module as run_info,
 )
+from ansible_collections.hellqvio86.unifi.plugins.modules.unifi_login import (
+    run_module as run_login,
+)
 from ansible_collections.hellqvio86.unifi.plugins.modules.unifi_nat_rule import (
     run_module as run_nat_rule,
 )
@@ -929,3 +932,45 @@ def test_device_lifecycle(unifi_server: MockUniFiServer) -> None:
     # 6. Idempotent delete
     res_del_idem = run_test_module(run_device, del_params)
     assert res_del_idem.get("changed") is False
+
+
+def test_login_integration(unifi_server: MockUniFiServer) -> None:
+    """Verify unifi_login produces valid reusable session tokens for subsequent modules."""
+    unifi_server.reset()
+
+    # 1. Check mode
+    chk_params = {
+        "host": unifi_server.url,
+        "username": "admin",
+        "password": "secretpassword",
+        "site": "default",
+        "validate_certs": False,
+    }
+    res_chk = run_test_module(run_login, chk_params, check_mode=True)
+    assert res_chk.get("changed") is False
+    assert "unifi_session" in res_chk
+    assert res_chk["unifi_session"]["session_cookie"] == "check-mode-cookie"
+
+    # 2. Real login execution
+    res_login = run_test_module(run_login, chk_params)
+    assert res_login.get("changed") is False
+    assert "unifi_session" in res_login
+    session = res_login["unifi_session"]
+    assert "session_cookie" in session and session["session_cookie"]
+    assert "csrf_token" in session and session["csrf_token"]
+    assert len(session.get("sites", [])) >= 1
+
+    # 3. Use returned tokens in another module without providing username/password
+    wlan_params = {
+        "host": unifi_server.url,
+        "unifi_session_cookie": session["session_cookie"],
+        "unifi_csrf_token": session["csrf_token"],
+        "site": session["site"],
+        "validate_certs": False,
+        "name": "TokenAuthWiFi",
+        "passphrase": "supersecurepassword123",
+        "state": "present",
+    }
+    res_wlan = run_test_module(run_wlan, wlan_params)
+    assert res_wlan.get("changed") is True
+    assert res_wlan.get("wlan", {}).get("name") == "TokenAuthWiFi"

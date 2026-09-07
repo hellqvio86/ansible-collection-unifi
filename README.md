@@ -25,7 +25,7 @@ See [Compatibility Guide](docs/compatibility.md) for detailed architecture, endp
 
 ## Included Modules
 
-The collection provides 19 purpose-built modules across four core areas:
+The collection provides 20 purpose-built modules across four core areas:
 
 ### 1. Network & Hardware Infrastructure
 | Module | Description | Minimum Version |
@@ -51,6 +51,7 @@ The collection provides 19 purpose-built modules across four core areas:
 ### 3. System & Controller Administration
 | Module | Description | Minimum Version |
 | :--- | :--- | :--- |
+| [`unifi_login`](docs/modules/unifi_login.md) | Authenticate with controller and retrieve reusable session cookies, CSRF tokens, and site lists. | Network 7.0+ |
 | [`unifi_system_settings`](docs/modules/unifi_system_settings.md) | Manage controller NTP, timezone, management LED, SSH access, and switch flow control/snooping. | Network 7.0+ |
 | [`unifi_rsyslog`](docs/modules/unifi_rsyslog.md) | Configure remote syslog target and activity logging. | Network 7.0+ |
 | [`unifi_ssh_key`](docs/modules/unifi_ssh_key.md) | Manage persistent system-level SSH public keys for controller admins. | UniFi OS 3.0+ |
@@ -83,7 +84,7 @@ The collection supports three authentication methods, evaluated in order of prec
 1. **API Key (`api_key` / `UNIFI_API_KEY`)** — *Recommended for UniFi OS 3.x+ / Network 8.x+*  
    Token-based authentication passing the `X-API-KEY` header directly to UniFi OS. No login handshake or cookie management required.
 2. **Pre-authenticated Session (`unifi_session_cookie` + `unifi_csrf_token`)**  
-   Useful in high-throughput CI/CD pipelines or wrapper playbooks to eliminate repeated login requests across task boundaries.
+   Use the [`unifi_login`](docs/modules/unifi_login.md) module to perform a single login handshake at the start of your playbook and register reusable session tokens, eliminating repeated authentication requests across dozens of subsequent tasks.
 3. **Username & Password (`username` + `password` / `UNIFI_USERNAME`, `UNIFI_PASSWORD`)**  
    Authenticates via `/api/auth/login` and automatically manages session cookies and CSRF tokens across the task lifecycle.
 

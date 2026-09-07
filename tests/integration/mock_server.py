@@ -349,6 +349,15 @@ class MockUniFiRequestHandler(BaseHTTPRequestHandler):
             self._send_json(200, self.state.users_self)
             return
 
+        # 1b. /api/self/sites
+        if path in ("/api/self/sites", "/proxy/network/api/self/sites"):
+            sites_data = [
+                {"name": s, "desc": s.capitalize(), "role": "admin"}
+                for s in self.state.sites.keys()
+            ]
+            self._send_json(200, {"data": sites_data})
+            return
+
         # 2. /api/userCertificates
         if path == "/api/userCertificates":
             self._send_json(200, self.state.user_certificates)

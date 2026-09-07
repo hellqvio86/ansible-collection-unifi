@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.0.32
+
+### New Features
+- **`unifi_network`**: New module to manage corporate, guest, and Layer-2 VLAN-only networks, subnets, DHCP server options (start/stop ranges, lease time, gateway, DNS overrides), DHCP guarding, mDNS, and IGMP snooping.
+- **`unifi_device`**: New module to manage UniFi hardware devices (Access Points, Switches, Gateways): device adoption, naming/alias, LED status override, outdoor mode, management network/VLAN assignment, operational notes, and forget/unmanage.
+- **`unifi_login`**: New authentication module to authenticate against a UniFi controller and return reusable session tokens (`session_cookie`, `csrf_token`) and discovered sites (`sites`), eliminating redundant login handshakes across multi-task playbooks.
+- **`integration_testing`**: High-fidelity in-memory stateful mock UniFi controller (`tests/integration/mock_server.py`) and comprehensive integration test suite (`tests/integration/test_modules_integration.py`) covering all 20 modules for create, update, delete, idempotency, and check mode.
+- **`examples`**: Added runnable playbooks for network & device provisioning (`examples/network_and_devices.yml`) and firewall policies (`examples/firewall_and_security.yml`).
+
+### Improvements & Documentation
+- **`documentation`**: Full module documentation generated for all 20 modules in `docs/modules/` with automated CI verification.
+- **`readme`**: Expanded README with structured module catalog (20 modules), explicit authentication precedence (`api_key` > `unifi_session_cookie` > user/pass), security hardening notes, and onboarding state dump schema.
+- **`attribution`**: Updated author and copyright attribution across all collection modules to **Olof Hellqvist (@hellqvio86)** under MIT license.
+
 ## 0.0.31
 
 ### Bug Fixes

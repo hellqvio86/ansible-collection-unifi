@@ -19,9 +19,11 @@ All code contributions should adhere to the quality standards defined in [agents
    cd ansible-collection-unifi
    ```
 
-2. Set up the development virtual environment:
+2. Set up the development virtual environment and git hooks:
    ```bash
    make venv
+   # or install hooks explicitly:
+   make hooks
    ```
 
 3. Run the test suite:

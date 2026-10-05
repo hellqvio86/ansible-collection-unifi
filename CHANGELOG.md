@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.0.33
+
+### Bug Fixes
+- **`ssl`**: Fix certificate validity window unit tests by generating dynamic relative certificates and adding optional reference timestamp support in `check_cert_dates`.
+
+### CI/CD & Development
+- **`ci`**: Enable CI/CD workflow execution on push across all branches.
+- **`hooks`**: Add Git pre-push hook (`.githooks/pre-push`, `make hooks`) to automatically run linting and testing prior to `git push`.
+
+### Dependencies
+- **`cryptography`**: Bump cryptography dependency requirement to >=50.0.2,<51.0.0.
+
 ## 0.0.32
 
 ### New Features

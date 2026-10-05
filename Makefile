@@ -1,4 +1,4 @@
-.PHONY: venv test lint format clean help build publish smoke-test docs sanity
+.PHONY: venv test lint format clean help build publish smoke-test docs sanity hooks
 
 VENV := .venv
 PYTHON := $(VENV)/bin/python
@@ -20,7 +20,7 @@ export ANSIBLE_COLLECTIONS_PATH ?= $(CURDIR)/.ansible/collections:$(CURDIR)
 
 help:
 	@echo "Available targets:"
-	@echo "  venv        Create virtual environment and install dependencies"
+	@echo "  venv        Create virtual environment, install dependencies, and setup hooks"
 	@echo "  test        Run unit tests"
 	@echo "  lint        Run ruff and ansible-lint"
 	@echo "  format      Run ruff format"
@@ -28,6 +28,7 @@ help:
 	@echo "  build       Build the Ansible collection tarball"
 	@echo "  smoke-test  Build and test installation into clean location"
 	@echo "  publish     Publish the collection to Ansible Galaxy"
+	@echo "  hooks       Install git pre-push hook (runs lint and test before push)"
 
 $(VENV):
 	python3 -m venv $(VENV)
@@ -36,7 +37,14 @@ $(VENV):
 	if [ -f requirements.txt ]; then $(PIP) install -r requirements.txt; fi
 	if [ -f tests/requirements.txt ]; then $(PIP) install -r tests/requirements.txt; fi
 
-venv: $(VENV)
+hooks:
+	@mkdir -p .git/hooks
+	@cp .githooks/pre-push .git/hooks/pre-push
+	@chmod +x .git/hooks/pre-push .githooks/pre-push
+	@git config core.hooksPath .githooks 2>/dev/null || true
+	@echo "Git pre-push hook installed."
+
+venv: $(VENV) hooks
 
 setup-structure:
 	@mkdir -p ansible_collections/$(NAMESPACE)

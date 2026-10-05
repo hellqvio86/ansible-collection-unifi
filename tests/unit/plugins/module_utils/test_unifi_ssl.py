@@ -1,6 +1,11 @@
+import datetime
 from unittest.mock import MagicMock
 
 import pytest
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ec, rsa
+from cryptography.x509.oid import NameOID
 
 from ansible_collections.hellqvio86.unifi.plugins.module_utils.unifi_ssl import (
     atomic_sftp_replace,
@@ -183,9 +188,6 @@ def test_verify_cert_key_pair_matching_rsa():
 
 def test_verify_cert_key_pair_mismatch():
     _valid, _err, certs = validate_pem_cert(RSA_CERT)
-    # Validate against another key (e.g. ECDSA_KEY)
-    from cryptography.hazmat.primitives.asymmetric import rsa
-
     other_key = rsa.generate_private_key(65537, 2048)
     matched, err = verify_cert_key_pair(certs[0], other_key)
     assert matched is False
@@ -210,18 +212,75 @@ def test_validate_cert_chain_broken():
     assert "chain broken" in err
 
 
+def _generate_test_cert(
+    offset_days: int = 0,
+    days_valid: int = 90,
+    cn: str = "cert.example.com",
+) -> str:
+    key = ec.generate_private_key(ec.SECP256R1())
+    now = datetime.datetime.now(datetime.timezone.utc)
+    nvb = now + datetime.timedelta(days=offset_days)
+    nva = nvb + datetime.timedelta(days=days_valid)
+    subj = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, cn)])
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subj)
+        .issuer_name(subj)
+        .public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(nvb)
+        .not_valid_after(nva)
+        .sign(key, hashes.SHA256())
+    )
+    return cert.public_bytes(serialization.Encoding.PEM).decode("utf-8")
+
+
 def test_check_cert_dates_valid():
-    _valid, _err, certs = validate_pem_cert(RSA_CERT)
+    cert_pem = _generate_test_cert(offset_days=-1, days_valid=90)
+    _valid, _err, certs = validate_pem_cert(cert_pem)
     valid, err, warnings = check_cert_dates(certs, warning_days=10)
     assert valid is True
     assert err == ""
+    assert len(warnings) == 0
 
 
 def test_check_cert_dates_future():
-    _is_valid, _err_msg, certs = validate_pem_cert(FUTURE_CERT)
+    cert_pem = _generate_test_cert(offset_days=30, days_valid=90)
+    _is_valid, _err_msg, certs = validate_pem_cert(cert_pem)
     valid, err, warnings = check_cert_dates(certs)
     assert valid is False
     assert "not yet valid" in err
+
+
+def test_check_cert_dates_expired():
+    cert_pem = _generate_test_cert(offset_days=-60, days_valid=30)
+    _is_valid, _err_msg, certs = validate_pem_cert(cert_pem)
+    valid, err, warnings = check_cert_dates(certs)
+    assert valid is False
+    assert "expired" in err
+
+
+def test_check_cert_dates_warning_soon():
+    cert_pem = _generate_test_cert(offset_days=-1, days_valid=10)
+    _is_valid, _err_msg, certs = validate_pem_cert(cert_pem)
+    valid, err, warnings = check_cert_dates(certs, warning_days=30)
+    assert valid is True
+    assert len(warnings) == 1
+    assert "expires soon" in warnings[0]
+
+
+def test_check_cert_dates_custom_now():
+    cert_pem = _generate_test_cert(offset_days=0, days_valid=30)
+    _is_valid, _err_msg, certs = validate_pem_cert(cert_pem)
+    past_now = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=10)
+    valid, err, _warnings = check_cert_dates(certs, now=past_now)
+    assert valid is False
+    assert "not yet valid" in err
+
+    future_now = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=100)
+    valid, err, _warnings = check_cert_dates(certs, now=future_now)
+    assert valid is False
+    assert "expired" in err
 
 
 def test_sanitize_ssh_error_redaction():

@@ -122,12 +122,17 @@ def validate_cert_chain(certs: list[Any]) -> tuple[bool, str]:
     return True, ""
 
 
-def check_cert_dates(certs: list[Any], warning_days: int = 30) -> tuple[bool, str, list[str]]:
+def check_cert_dates(
+    certs: list[Any],
+    warning_days: int = 30,
+    now: datetime.datetime | None = None,
+) -> tuple[bool, str, list[str]]:
     """Check validity dates of certificates in the chain.
 
     Returns (is_valid, error_msg, warnings_list).
     """
-    now = datetime.datetime.now(datetime.timezone.utc)
+    if now is None:
+        now = datetime.datetime.now(datetime.timezone.utc)
     warnings: list[str] = []
 
     for idx, cert in enumerate(certs):

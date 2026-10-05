@@ -74,7 +74,7 @@ Or declare it in your `requirements.yml`:
 ```yaml
 collections:
   - name: hellqvio86.unifi
-    version: 0.0.32
+    version: 0.0.33
 ```
 
 ## Authentication Precedence

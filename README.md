@@ -162,3 +162,9 @@ make build     # Build collection tarball into releases/
 ## License
 
 [MIT](LICENSE.md) — Copyright (c) 2026 Olof Hellqvist (@hellqvio86)
+
+<p align="right">
+  <a href="https://www.buymeacoffee.com/olofhellqvc">
+    <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" height="48">
+  </a>
+</p>

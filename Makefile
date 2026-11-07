@@ -1,4 +1,4 @@
-.PHONY: venv test lint format clean help build publish smoke-test docs sanity hooks
+.PHONY: venv test lint format clean help build publish smoke-test docs sanity hooks renovate renovate-summary
 
 VENV := .venv
 PYTHON := $(VENV)/bin/python
@@ -95,3 +95,9 @@ publish: build
 		exit 1; \
 	fi
 	ANSIBLE_GALAXY_API_KEY=$${ANSIBLE_GALAXY_API_KEY:-$(GALAXY_API_KEY)} $(VENV)/bin/ansible-galaxy collection publish releases/$(NAMESPACE)-$(COLLECTION_NAME)-$(VERSION).tar.gz
+
+renovate:
+	@./bin/renovate/run.sh
+
+renovate-summary:
+	@./bin/renovate/run.sh --summary

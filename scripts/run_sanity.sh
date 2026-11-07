@@ -33,6 +33,8 @@ rsync -a \
     --exclude='releases' \
     --exclude='debug' \
     --exclude='ansible_collections' \
+    --exclude='bin' \
+    --exclude='renovate.json' \
     "$REPO_ROOT/" "$TARGET_DIR/"
 
 cd "$TARGET_DIR"
